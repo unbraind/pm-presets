@@ -1,6 +1,6 @@
 {
   "name": "pm-presets",
-  "version": "2026.5.28",
+  "version": "2026.5.29",
   "description": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
   "author": "@unbraind",
   "entry": "./dist/index.js",
@@ -20,7 +20,11 @@
       "description": "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
       "idPrefix": "bug-",
       "governance": "strict",
-      "templates": ["incident", "hotfix-task", "regression"]
+      "templates": [
+        "incident",
+        "hotfix-task",
+        "regression"
+      ]
     },
     {
       "id": "indie-dev",
@@ -29,7 +33,10 @@
       "description": "Minimal-ceremony workspace for solo developers and personal projects.",
       "idPrefix": "indie-",
       "governance": "minimal",
-      "templates": ["idea", "task"]
+      "templates": [
+        "idea",
+        "task"
+      ]
     },
     {
       "id": "open-source",
@@ -38,7 +45,11 @@
       "description": "Issue triage, milestone releases, and contributor-friendly templates for OSS maintainers.",
       "idPrefix": "oss-",
       "governance": "default",
-      "templates": ["bug-report", "feature-request", "good-first-issue"]
+      "templates": [
+        "bug-report",
+        "feature-request",
+        "good-first-issue"
+      ]
     },
     {
       "id": "software-sprint",
@@ -47,7 +58,12 @@
       "description": "Sprint-based team workflow with epics, features, tasks, and bugs.",
       "idPrefix": "sprint-",
       "governance": "default",
-      "templates": ["epic", "feature", "task", "bug"]
+      "templates": [
+        "epic",
+        "feature",
+        "task",
+        "bug"
+      ]
     },
     {
       "id": "startup-roadmap",
@@ -56,7 +72,11 @@
       "description": "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
       "idPrefix": "road-",
       "governance": "default",
-      "templates": ["initiative", "feature", "milestone"]
+      "templates": [
+        "initiative",
+        "feature",
+        "milestone"
+      ]
     }
   ]
 }
