@@ -1,0 +1,62 @@
+{
+  "name": "pm-presets",
+  "version": "2026.5.28",
+  "description": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
+  "author": "@unbraind",
+  "entry": "./dist/index.js",
+  "priority": 50,
+  "capabilities": [
+    "commands",
+    "schema"
+  ],
+  "pm": {
+    "compatibility": "v2"
+  },
+  "presets": [
+    {
+      "id": "bug-triage",
+      "command": "triage-setup",
+      "displayName": "Bug Triage",
+      "description": "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
+      "idPrefix": "bug-",
+      "governance": "strict",
+      "templates": ["incident", "hotfix-task", "regression"]
+    },
+    {
+      "id": "indie-dev",
+      "command": "indie-setup",
+      "displayName": "Indie Dev",
+      "description": "Minimal-ceremony workspace for solo developers and personal projects.",
+      "idPrefix": "indie-",
+      "governance": "minimal",
+      "templates": ["idea", "task"]
+    },
+    {
+      "id": "open-source",
+      "command": "oss-setup",
+      "displayName": "Open Source",
+      "description": "Issue triage, milestone releases, and contributor-friendly templates for OSS maintainers.",
+      "idPrefix": "oss-",
+      "governance": "default",
+      "templates": ["bug-report", "feature-request", "good-first-issue"]
+    },
+    {
+      "id": "software-sprint",
+      "command": "sprint-setup",
+      "displayName": "Software Sprint",
+      "description": "Sprint-based team workflow with epics, features, tasks, and bugs.",
+      "idPrefix": "sprint-",
+      "governance": "default",
+      "templates": ["epic", "feature", "task", "bug"]
+    },
+    {
+      "id": "startup-roadmap",
+      "command": "roadmap-setup",
+      "displayName": "Startup Roadmap",
+      "description": "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
+      "idPrefix": "road-",
+      "governance": "default",
+      "templates": ["initiative", "feature", "milestone"]
+    }
+  ]
+}

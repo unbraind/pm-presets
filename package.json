@@ -1,0 +1,112 @@
+{
+  "name": "pm-presets",
+  "version": "2026.5.28",
+  "description": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unbraind/pm-presets.git"
+  },
+  "bugs": {
+    "url": "https://github.com/unbraind/pm-presets/issues"
+  },
+  "homepage": "https://github.com/unbraind/pm-presets#readme",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "default": "./dist/registry.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "manifest.json",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck",
+    "test": "node --test --experimental-strip-types tests/registry.test.ts",
+    "audit:prod": "npm audit --omit=dev",
+    "pack:dry-run": "npm pack --dry-run",
+    "changelog": "pm-changelog --pm-root .agents/pm --mode prepend --output CHANGELOG.md --release-version-from-package --since-previous-tag --until-release-tag --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm",
+    "changelog:full": "pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm",
+    "changelog:check": "pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --check",
+    "release:check": "npm run typecheck && npm run build && npm run audit:prod && npm run pack:dry-run && npm run changelog:check"
+  },
+  "peerDependencies": {
+    "@unbrained/pm-cli": ">=2026.5.24"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "@unbrained/pm-cli": "^2026.5.24",
+    "pm-changelog": "^2026.5.25",
+    "@types/node": "^25.9.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "author": "@unbraind",
+  "license": "MIT",
+  "keywords": [
+    "bug-triage",
+    "indie-dev",
+    "open-source",
+    "pm-cli",
+    "pm-package",
+    "pm-preset",
+    "pm-presets",
+    "preset",
+    "software-sprint",
+    "startup-roadmap",
+    "workspace"
+  ],
+  "pm": {
+    "aliases": [
+      "presets",
+      "bug-triage",
+      "indie-dev",
+      "open-source",
+      "software-sprint",
+      "startup-roadmap"
+    ],
+    "extensions": [
+      "."
+    ],
+    "catalog": {
+      "display_name": "pm Presets",
+      "category": "preset",
+      "summary": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
+      "tags": [
+        "preset",
+        "official",
+        "bug-triage",
+        "indie-dev",
+        "open-source",
+        "software-sprint",
+        "startup-roadmap"
+      ],
+      "links": {
+        "docs": "https://github.com/unbraind/pm-presets#readme",
+        "npm": "https://www.npmjs.com/package/pm-presets",
+        "repository": "https://github.com/unbraind/pm-presets",
+        "report": "https://github.com/unbraind/pm-presets/issues"
+      }
+    },
+    "docs": [
+      "README.md",
+      "CHANGELOG.md"
+    ],
+    "examples": [
+      "README.md"
+    ]
+  }
+}
