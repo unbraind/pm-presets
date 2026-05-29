@@ -19,22 +19,27 @@ import { runOpenSourceSetup } from "./presets/open-source/index.js";
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 const defineExtension = ((extension) => extension);
+// pm-cli's loose-option matcher (extension-command-options.ts) only recognizes
+// flag definitions whose `long`/`short` include their dash prefixes. Declaring
+// `long: "dry-run"` (no `--`) makes the flag invisible to `--help` AND rejected
+// at parse time as "Unknown option". Always include the prefixes.
 const COMMON_FLAGS = [
     {
-        long: "force",
-        short: "f",
+        long: "--force",
+        short: "-f",
         type: "boolean",
         description: "Overwrite existing settings.json and template files without prompting.",
     },
     {
-        long: "dry-run",
-        short: "n",
+        long: "--dry-run",
+        short: "-n",
         type: "boolean",
         description: "Preview what would be written without making any changes.",
     },
     {
-        long: "prefix",
-        short: "p",
+        long: "--prefix",
+        short: "-p",
+        value_name: "<prefix>",
         type: "string",
         description: "Override the id_prefix written to settings.json.",
     },

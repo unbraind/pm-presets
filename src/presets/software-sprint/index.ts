@@ -2,6 +2,8 @@ import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 export const SETTINGS = {
@@ -100,24 +102,21 @@ function writeJsonFile(filePath: string, data: object, dryRun: boolean): void {
 // ─── Command Handler ──────────────────────────────────────────────────────────
 
 export async function runSoftwareSprintSetup(context: CommandHandlerContext): Promise<void> {
-  const { options, pm_root } = context;
-  const force = Boolean(options["force"]);
-  const dryRun = Boolean(options["dry-run"]);
-  const prefixOverride = options["prefix"] as string | undefined;
+  const { options } = context;
+  const force = readBooleanOption(options, "force");
+  const dryRun = readBooleanOption(options, "dryRun", "dry-run");
+  const prefixOverride = readStringOption(options, "prefix");
 
-  const cwd = pm_root ?? process.cwd();
-  const pmDir = path.join(cwd, ".agents", "pm");
+  const pmDir = resolvePmDir(context);
   const settingsPath = path.join(pmDir, "settings.json");
   const templatesDir = path.join(pmDir, "templates");
 
   // Step 1: verify pm workspace exists
   if (!fs.existsSync(pmDir)) {
-    console.error(
-      "Error: .agents/pm/ directory not found.\n" +
+    throw new Error(
+      `pm workspace not found. Expected directory: ${pmDir}\n` +
         "Run `pm init` first to initialise a pm workspace, then re-run `pm sprint-setup`."
     );
-    process.exitCode = 1;
-    return;
   }
 
   console.log(

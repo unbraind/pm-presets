@@ -2,6 +2,8 @@ import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 import fs from "node:fs";
 import path from "node:path";
 
+import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 export const SETTINGS = {
@@ -85,23 +87,21 @@ export const TEMPLATES: Record<string, unknown> = {
 // ─── Command Handler ──────────────────────────────────────────────────────────
 
 export async function runOpenSourceSetup(context: CommandHandlerContext): Promise<void> {
-  const { options, pm_root } = context;
-  const force = Boolean(options["force"]);
-  const dryRun = Boolean(options["dry-run"]);
-  const prefix = (options["prefix"] as string) || "oss-";
+  const { options } = context;
+  const force = readBooleanOption(options, "force");
+  const dryRun = readBooleanOption(options, "dryRun", "dry-run");
+  const prefix = readStringOption(options, "prefix") ?? "oss-";
 
-  const cwd = pm_root ?? process.cwd();
-  const pmDir = path.resolve(cwd, ".agents", "pm");
+  const pmDir = resolvePmDir(context);
   const settingsPath = path.join(pmDir, "settings.json");
   const templatesDir = path.join(pmDir, "templates");
 
   // 1. Verify .agents/pm/ exists
   if (!fs.existsSync(pmDir)) {
-    console.error(
+    throw new Error(
       `pm workspace not found at ${pmDir}.\n` +
         `Run 'pm init' first to initialise the workspace, then re-run 'pm oss-setup'.`
     );
-    process.exit(1);
   }
 
   // 2. Write settings.json

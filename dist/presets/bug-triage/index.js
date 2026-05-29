@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
 // ─── Settings ────────────────────────────────────────────────────────────────
 export const SETTINGS = {
     id_prefix: "bug-",
@@ -95,19 +96,19 @@ export const TEMPLATES = {
 };
 // ─── Command Handler ──────────────────────────────────────────────────────────
 export function runBugTriageSetup(context) {
-    const { options, pm_root } = context;
-    const cwd = pm_root ?? process.cwd();
-    const pmDir = path.resolve(cwd, ".agents/pm");
+    const { options } = context;
+    // pm-cli passes `pm_root` already pointing at the `.agents/pm` storage dir.
+    // Do NOT append `.agents/pm` again or the path doubles to `.agents/pm/.agents/pm`.
+    const pmDir = resolvePmDir(context);
     const settingsPath = path.join(pmDir, "settings.json");
     const templatesDir = path.join(pmDir, "templates");
-    const isDryRun = Boolean(options["dry-run"]);
-    const isForce = Boolean(options["force"]);
-    const prefixOverride = options["prefix"];
+    const isDryRun = readBooleanOption(options, "dryRun", "dry-run");
+    const isForce = readBooleanOption(options, "force");
+    const prefixOverride = readStringOption(options, "prefix");
     // 1. Check .agents/pm/ exists
     if (!fs.existsSync(pmDir)) {
-        console.error(`pm workspace not found. Expected directory: ${pmDir}\n` +
+        throw new Error(`pm workspace not found. Expected directory: ${pmDir}\n` +
             `Run "pm init" first to initialise a pm workspace in this project.`);
-        return;
     }
     // 2. Build settings (optionally override prefix)
     const settings = prefixOverride !== undefined

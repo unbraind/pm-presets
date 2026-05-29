@@ -2,6 +2,8 @@ import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 export const SETTINGS = {
@@ -126,24 +128,19 @@ function writeJsonFile(
 // ─── Command Handler ──────────────────────────────────────────────────────────
 
 export async function runStartupRoadmapSetup(context: CommandHandlerContext): Promise<void> {
-  const { options, pm_root } = context;
-  const force = Boolean(options["force"]);
-  const dryRun = Boolean(options["dry-run"]);
-  const prefixOverride =
-    typeof options["prefix"] === "string" && options["prefix"] !== ""
-      ? (options["prefix"] as string)
-      : null;
+  const { options } = context;
+  const force = readBooleanOption(options, "force");
+  const dryRun = readBooleanOption(options, "dryRun", "dry-run");
+  const prefixOverride = readStringOption(options, "prefix") ?? null;
 
-  const cwd = pm_root ?? process.cwd();
-  const pmDir = path.join(cwd, ".agents", "pm");
+  const pmDir = resolvePmDir(context);
 
   // 1. Verify .agents/pm/ exists
   if (!fs.existsSync(pmDir)) {
-    console.error(
-      `Error: pm workspace not found at ${pmDir}\n` +
+    throw new Error(
+      `pm workspace not found at ${pmDir}\n` +
         `Run "pm init" first to initialise the workspace.`
     );
-    process.exit(1);
   }
 
   console.log(`Applying startup-roadmap preset to: ${pmDir}`);
