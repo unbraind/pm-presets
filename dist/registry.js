@@ -16,7 +16,7 @@ export const PRESET_REGISTRY = [
         description: "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
         command: "triage-setup",
         idPrefix: "bug-",
-        governance: "strict",
+        governance: "custom",
         templates: ["incident", "hotfix-task", "regression"],
     },
     {
@@ -52,7 +52,7 @@ export const PRESET_REGISTRY = [
         description: "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
         command: "roadmap-setup",
         idPrefix: "road-",
-        governance: "default",
+        governance: "custom",
         templates: ["initiative", "feature", "milestone"],
     },
 ];

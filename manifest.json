@@ -19,7 +19,7 @@
       "displayName": "Bug Triage",
       "description": "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
       "idPrefix": "bug-",
-      "governance": "strict",
+      "governance": "custom",
       "templates": [
         "incident",
         "hotfix-task",
@@ -71,7 +71,7 @@
       "displayName": "Startup Roadmap",
       "description": "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
       "idPrefix": "road-",
-      "governance": "default",
+      "governance": "custom",
       "templates": [
         "initiative",
         "feature",

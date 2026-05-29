@@ -12,11 +12,11 @@ pm install github.com/unbraind/pm-presets --project
 
 | Preset | Command | Governance | Best For |
 |---|---|---|---|
-| **bug-triage** | `pm triage-setup` | strict | Incident response, triage teams |
+| **bug-triage** | `pm triage-setup` | custom strict-close | Incident response, triage teams |
 | **indie-dev** | `pm indie-setup` | minimal | Solo developers, personal projects |
 | **open-source** | `pm oss-setup` | standard | OSS maintainers with community contributors |
 | **software-sprint** | `pm sprint-setup` | standard | Engineering teams running sprints |
-| **startup-roadmap** | `pm roadmap-setup` | standard | Startups with investor-facing roadmaps |
+| **startup-roadmap** | `pm roadmap-setup` | custom | Startups with investor-facing roadmaps |
 
 ## Usage
 
@@ -40,15 +40,19 @@ All commands share the same flags:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--force` | `-f` | Overwrite existing settings.json and templates |
+| `--force` | `-f` | Overwrite existing preset template files |
 | `--dry-run` | `-n` | Preview changes without writing any files |
 | `--prefix` | `-p` | Override the id_prefix in settings.json |
+
+Each setup command installs valid `pm create` templates and registers the
+`templates show` runtime handler required by the current pm CLI, so
+`pm create --template <name>` works after installing and applying this package.
 
 ## Presets in Detail
 
 ### bug-triage
 
-**Governance:** strict — ownership and root-cause metadata required to close items.
+**Governance:** custom strict-close — progressive creation with strict ownership and close validation.
 
 **Templates:** `incident`, `hotfix-task`, `regression`
 
@@ -116,7 +120,7 @@ pm create --template bug
 
 ### startup-roadmap
 
-**Governance:** standard with rich metadata — captures business value and strategic context.
+**Governance:** custom with rich metadata — captures business value and strategic context.
 
 **Templates:** `initiative`, `feature`, `milestone`
 
@@ -137,11 +141,11 @@ If you previously installed individual `pm-preset-*` packages, uninstall them
 and install `pm-presets` instead:
 
 ```bash
-pm uninstall pm-preset-bug-triage
-pm uninstall pm-preset-indie-dev
-pm uninstall pm-preset-open-source
-pm uninstall pm-preset-software-sprint
-pm uninstall pm-preset-startup-roadmap
+pm package uninstall pm-preset-bug-triage --project
+pm package uninstall pm-preset-indie-dev --project
+pm package uninstall pm-preset-open-source --project
+pm package uninstall pm-preset-software-sprint --project
+pm package uninstall pm-preset-startup-roadmap --project
 
 pm install github.com/unbraind/pm-presets --project
 ```

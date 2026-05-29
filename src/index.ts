@@ -19,6 +19,7 @@ import type { defineExtension as defineExtensionType } from "@unbrained/pm-cli/s
 import { runBugTriageSetup } from "./presets/bug-triage/index.js";
 import { runIndieDevSetup } from "./presets/indie-dev/index.js";
 import { runOpenSourceSetup } from "./presets/open-source/index.js";
+import { runTemplatesList, runTemplatesShow } from "./presets/shared.js";
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 
@@ -95,6 +96,38 @@ export default defineExtension({
         "Apply the startup-roadmap preset: investor-grade milestones, strategic initiatives, and quarterly planning.",
       flags: COMMON_FLAGS,
       run: runStartupRoadmapSetup,
+    });
+
+    // ── create-template runtime ─────────────────────────────────────────────
+    // pm create --template resolves through a package-owned "templates show"
+    // command. pm-presets provides the handler for templates it installs so
+    // presets work without requiring users to install a second package.
+    api.registerCommand({
+      name: "templates",
+      action: "templates-list",
+      description: "List create templates installed in this pm workspace.",
+      run: runTemplatesList,
+    });
+
+    api.registerCommand({
+      name: "templates list",
+      action: "templates-list",
+      description: "List create templates installed in this pm workspace.",
+      run: runTemplatesList,
+    });
+
+    api.registerCommand({
+      name: "templates show",
+      action: "templates-show",
+      description: "Show a create template installed in this pm workspace.",
+      arguments: [
+        {
+          name: "name",
+          required: true,
+          description: "Template name.",
+        },
+      ],
+      run: runTemplatesShow,
     });
   },
 });

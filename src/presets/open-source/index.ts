@@ -1,184 +1,80 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
-import fs from "node:fs";
-import path from "node:path";
 
-import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
-
-// ─── Settings ────────────────────────────────────────────────────────────────
+import {
+  applyPreset,
+  storedTemplate,
+  type PresetSettingsPatch,
+  type PresetTemplateMap,
+} from "../shared.js";
 
 export const SETTINGS = {
   id_prefix: "oss-",
   governance: {
     preset: "default",
-    ownership_enforcement: "off",
+    ownership_enforcement: "warn",
     create_mode_default: "progressive",
     close_validation_default: "warn",
+    parent_reference: "warn",
     metadata_profile: "core",
+    create_default_type: "Issue",
   },
   validation: {
-    sprint_release_format: "off",
+    sprint_release_format: "warn",
     parent_reference: "warn",
+    metadata_profile: "core",
   },
-  item_types: {
-    definitions: [
-      { name: "Epic", description: "A major feature or milestone release" },
-      { name: "Feature", description: "A user-facing improvement or addition" },
-      { name: "Issue", description: "A bug or regression report" },
-      { name: "Task", description: "A contributor task or good-first-issue" },
+} satisfies PresetSettingsPatch;
+
+export const TEMPLATES = {
+  "bug-report.json": storedTemplate("bug-report", {
+    type: "Issue",
+    priority: "2",
+    tags: "bug,community",
+    reporter: "TBD",
+    affectedVersion: "TBD",
+    component: "TBD",
+    reproSteps: "1. TBD",
+    expectedResult: "TBD",
+    actualResult: "TBD",
+    acceptanceCriteria:
+      "Maintainer can reproduce or has enough detail to classify the report.",
+    body:
+      "## Summary\nTBD\n\n## Reproduction\nTBD\n\n## Environment\nTBD\n\n## Upstream Issue\nTBD\n\n## Logs or Screenshots\nTBD\n",
+  }),
+  "feature-request.json": storedTemplate("feature-request", {
+    type: "Feature",
+    priority: "2",
+    tags: "feature-request,community",
+    value: "TBD",
+    impact: "TBD",
+    whyNow: "TBD",
+    acceptanceCriteria:
+      "Scope is clear, alternatives are considered, and maintainers can decide on next action.",
+    body:
+      "## Requested By\nTBD\n\n## Use Case\nTBD\n\n## Proposed Solution\nTBD\n\n## Alternatives\nTBD\n\n## Upstream Issue\nTBD\n\n## Milestone\nTBD\n",
+  }),
+  "good-first-issue.json": storedTemplate("good-first-issue", {
+    type: "Task",
+    priority: "3",
+    tags: "good-first-issue,help-wanted,contributor-friendly",
+    estimatedMinutes: "120",
+    acceptanceCriteria:
+      "Issue is scoped for a first-time contributor and includes validation steps.",
+    body:
+      "## Task\nTBD\n\n## Skill Level\nbeginner\n\n## Relevant Files\nTBD\n\n## Mentorship Contact\nTBD\n\n## Related Docs\nTBD\n\n## Validation\nTBD\n",
+  }),
+} satisfies PresetTemplateMap;
+
+export function runOpenSourceSetup(context: CommandHandlerContext): void {
+  applyPreset(context, {
+    label: "Open source",
+    settings: SETTINGS,
+    templates: TEMPLATES,
+    nextSteps: [
+      'pm create --template bug-report --title "Investigate community bug"',
+      'pm create --template feature-request --title "Evaluate feature request"',
+      'pm create --template good-first-issue --title "Prepare contributor task"',
+      "pm list",
     ],
-  },
-  search: { mode: "keyword" },
-  calendar: { default_view: "month", first_day_of_week: 1 },
-  telemetry: { enabled: false },
-} as const;
-
-// ─── Templates ───────────────────────────────────────────────────────────────
-
-const TEMPLATE_BUG_REPORT = {
-  type: "Issue",
-  priority: "medium",
-  tags: ["bug", "community"],
-  meta: {
-    reported_by: "",
-    version: "",
-    os_platform: "",
-    steps_to_reproduce: "",
-    expected_behavior: "",
-    actual_behavior: "",
-    logs_or_screenshots: "",
-    upstream_issue_url: "",
-  },
-};
-
-const TEMPLATE_FEATURE_REQUEST = {
-  type: "Feature",
-  priority: "medium",
-  tags: ["feature-request", "community"],
-  meta: {
-    requested_by: "",
-    use_case: "",
-    proposed_solution: "",
-    alternatives_considered: "",
-    upstream_issue_url: "",
-    milestone: "",
-  },
-};
-
-const TEMPLATE_GOOD_FIRST_ISSUE = {
-  type: "Task",
-  priority: "low",
-  tags: ["good-first-issue", "help-wanted", "contributor-friendly"],
-  meta: {
-    skill_level: "beginner",
-    estimated_hours: "",
-    relevant_files: "",
-    mentorship_contact: "",
-    related_docs_url: "",
-    pr_checklist: "tests passing, docs updated if needed, changelog entry",
-  },
-};
-
-export const TEMPLATES: Record<string, unknown> = {
-  "bug-report.json": TEMPLATE_BUG_REPORT,
-  "feature-request.json": TEMPLATE_FEATURE_REQUEST,
-  "good-first-issue.json": TEMPLATE_GOOD_FIRST_ISSUE,
-};
-
-// ─── Command Handler ──────────────────────────────────────────────────────────
-
-export async function runOpenSourceSetup(context: CommandHandlerContext): Promise<void> {
-  const { options } = context;
-  const force = readBooleanOption(options, "force");
-  const dryRun = readBooleanOption(options, "dryRun", "dry-run");
-  const prefix = readStringOption(options, "prefix") ?? "oss-";
-
-  const pmDir = resolvePmDir(context);
-  const settingsPath = path.join(pmDir, "settings.json");
-  const templatesDir = path.join(pmDir, "templates");
-
-  // 1. Verify .agents/pm/ exists
-  if (!fs.existsSync(pmDir)) {
-    throw new Error(
-      `pm workspace not found at ${pmDir}.\n` +
-        `Run 'pm init' first to initialise the workspace, then re-run 'pm oss-setup'.`
-    );
-  }
-
-  // 2. Write settings.json
-  const effectiveSettings = {
-    ...SETTINGS,
-    id_prefix: prefix,
-  };
-
-  const settingsExists = fs.existsSync(settingsPath);
-
-  if (settingsExists && !force) {
-    console.warn(
-      `settings.json already exists at ${settingsPath}.\n` +
-        `Use --force to overwrite it.`
-    );
-  } else {
-    if (dryRun) {
-      console.log(
-        `[dry-run] Would write settings.json to ${settingsPath}`
-      );
-    } else {
-      if (settingsExists && force) {
-        console.warn(`Overwriting existing settings.json (--force).`);
-      }
-      fs.writeFileSync(
-        settingsPath,
-        JSON.stringify(effectiveSettings, null, 2) + "\n",
-        "utf8"
-      );
-      console.log(`Wrote settings.json to ${settingsPath}`);
-    }
-  }
-
-  // 3. Create templates/ directory and write template files
-  if (dryRun) {
-    console.log(
-      `[dry-run] Would create templates directory at ${templatesDir}`
-    );
-    for (const filename of Object.keys(TEMPLATES)) {
-      console.log(
-        `[dry-run] Would write template ${filename} to ${path.join(templatesDir, filename)}`
-      );
-    }
-  } else {
-    fs.mkdirSync(templatesDir, { recursive: true });
-    console.log(`Created templates directory at ${templatesDir}`);
-
-    for (const [filename, template] of Object.entries(TEMPLATES)) {
-      const templatePath = path.join(templatesDir, filename);
-      fs.writeFileSync(
-        templatePath,
-        JSON.stringify(template, null, 2) + "\n",
-        "utf8"
-      );
-      console.log(`Wrote template: ${filename}`);
-    }
-  }
-
-  // 4. Print next steps
-  console.log(
-    dryRun
-      ? "Dry-run complete — no files were written."
-      : "Open-source preset applied successfully!"
-  );
-
-  console.log(
-    [
-      "",
-      "Next steps:",
-      "  Create a bug report:      pm create --template bug-report",
-      "  Request a feature:        pm create --template feature-request",
-      "  Add a good-first-issue:   pm create --template good-first-issue",
-      "  List all items:           pm list",
-      "  Open the board:           pm board",
-      "",
-      "Tip: tag your next milestone Epic with a target date and run",
-      "  'pm board --group milestone' for a milestone-oriented view.",
-    ].join("\n")
-  );
+  });
 }

@@ -1,40 +1,29 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 export declare const SETTINGS: {
-    readonly id_prefix: "bug-";
-    readonly governance: {
-        readonly preset: "strict";
-        readonly ownership_enforcement: "strict";
-        readonly create_mode_default: "strict";
-        readonly close_validation_default: "strict";
-        readonly metadata_profile: "strict";
+    id_prefix: string;
+    governance: {
+        preset: "custom";
+        ownership_enforcement: "strict";
+        create_mode_default: "progressive";
+        close_validation_default: "strict";
+        parent_reference: "strict_error";
+        metadata_profile: "strict";
+        force_required_for_stale_lock: true;
+        create_default_type: string;
     };
-    readonly validation: {
-        readonly sprint_release_format: "strict_error";
-        readonly parent_reference: "warn";
+    validation: {
+        sprint_release_format: "strict_error";
+        parent_reference: "warn";
+        metadata_profile: "strict";
     };
-    readonly item_types: {
-        readonly definitions: readonly [{
-            readonly name: "Issue";
-            readonly description: "A defect, incident, or regression requiring investigation and resolution";
-        }, {
-            readonly name: "Task";
-            readonly description: "A remediation, hotfix, or follow-up task linked to an incident";
-        }];
-    };
-    readonly testing: {
-        readonly record_results_to_items: true;
-    };
-    readonly search: {
-        readonly mode: "keyword";
-    };
-    readonly calendar: {
-        readonly default_view: "agenda";
-        readonly first_day_of_week: 1;
-    };
-    readonly telemetry: {
-        readonly enabled: false;
+    testing: {
+        record_results_to_items: true;
     };
 };
-export declare const TEMPLATES: Record<string, unknown>;
+export declare const TEMPLATES: {
+    "incident.json": import("../shared.js").StoredCreateTemplateDocument;
+    "hotfix-task.json": import("../shared.js").StoredCreateTemplateDocument;
+    "regression.json": import("../shared.js").StoredCreateTemplateDocument;
+};
 export declare function runBugTriageSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

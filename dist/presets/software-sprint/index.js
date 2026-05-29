@@ -1,7 +1,4 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { readBooleanOption, readStringOption, resolvePmDir } from "../shared.js";
-// ─── Settings ────────────────────────────────────────────────────────────────
+import { applyPreset, storedTemplate, } from "../shared.js";
 export const SETTINGS = {
     id_prefix: "sprint-",
     governance: {
@@ -9,155 +6,81 @@ export const SETTINGS = {
         ownership_enforcement: "warn",
         create_mode_default: "progressive",
         close_validation_default: "warn",
+        parent_reference: "warn",
+        metadata_profile: "core",
+        create_default_type: "Task",
+    },
+    validation: {
+        sprint_release_format: "warn",
+        parent_reference: "warn",
         metadata_profile: "core",
     },
-    search: { mode: "keyword" },
-    calendar: { default_view: "week", first_day_of_week: 1 },
-    telemetry: { enabled: false },
-};
-// ─── Templates ───────────────────────────────────────────────────────────────
-const TEMPLATE_BUG = {
-    name: "bug",
-    type: "Issue",
-    priority: "high",
-    tags: ["bug"],
-    meta: {
-        sprint: "",
-        severity: "",
-        environment: "",
-        steps_to_reproduce: "",
-        expected_behavior: "",
-        actual_behavior: "",
-        assignee: "",
-        pr_link: "",
-    },
-};
-const TEMPLATE_EPIC = {
-    name: "epic",
-    type: "Epic",
-    priority: "medium",
-    tags: ["epic"],
-    meta: {
-        objective: "",
-        success_criteria: "",
-        target_quarter: "",
-        stakeholder: "",
-        estimated_sprints: "",
-    },
-};
-const TEMPLATE_FEATURE = {
-    name: "feature",
-    type: "Feature",
-    priority: "medium",
-    tags: ["feature"],
-    meta: {
-        sprint: "",
-        acceptance_criteria: "",
-        design_link: "",
-        story_points: "",
-        reviewer: "",
-    },
-};
-const TEMPLATE_TASK = {
-    name: "task",
-    type: "Task",
-    priority: "medium",
-    tags: ["task"],
-    meta: {
-        sprint: "",
-        estimate_hours: "",
-        assignee: "",
-        pr_link: "",
-        blocked_by: "",
+    testing: {
+        record_results_to_items: true,
     },
 };
 export const TEMPLATES = {
-    "bug.json": TEMPLATE_BUG,
-    "epic.json": TEMPLATE_EPIC,
-    "feature.json": TEMPLATE_FEATURE,
-    "task.json": TEMPLATE_TASK,
+    "bug.json": storedTemplate("bug", {
+        type: "Issue",
+        priority: "1",
+        tags: "bug,sprint",
+        sprint: "current",
+        severity: "high",
+        environment: "TBD",
+        component: "TBD",
+        assignee: "TBD",
+        reproSteps: "1. TBD",
+        expectedResult: "TBD",
+        actualResult: "TBD",
+        acceptanceCriteria: "Bug is fixed, covered by validation, and ready for sprint review.",
+        body: "## Reproduction\nTBD\n\n## Fix Notes\nTBD\n",
+    }),
+    "epic.json": storedTemplate("epic", {
+        type: "Epic",
+        priority: "2",
+        tags: "epic,sprint",
+        goal: "TBD",
+        objective: "TBD",
+        release: "TBD",
+        risk: "medium",
+        acceptanceCriteria: "Epic has a clear outcome, scoped child work, and release target.",
+        body: "## Objective\nTBD\n\n## Stakeholder\nTBD\n\n## Estimated Sprints\nTBD\n\n## Success Criteria\nTBD\n\n## Scope\nTBD\n",
+    }),
+    "feature.json": storedTemplate("feature", {
+        type: "Feature",
+        priority: "2",
+        tags: "feature,sprint",
+        sprint: "current",
+        estimatedMinutes: "240",
+        reviewer: "TBD",
+        risk: "medium",
+        confidence: "high",
+        acceptanceCriteria: "Feature meets acceptance criteria, has tests, and is reviewed.",
+        body: "## User Story\nTBD\n\n## Design Link\nTBD\n\n## Implementation Notes\nTBD\n",
+    }),
+    "task.json": storedTemplate("task", {
+        type: "Task",
+        priority: "2",
+        tags: "task,sprint",
+        sprint: "current",
+        estimatedMinutes: "90",
+        assignee: "TBD",
+        acceptanceCriteria: "Task is complete and linked validation is green.",
+        body: "## Work\nTBD\n\n## Blocked By\nTBD\n\n## Pull Request\nTBD\n\n## Validation\nTBD\n",
+    }),
 };
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function writeJsonFile(filePath, data, dryRun) {
-    if (dryRun) {
-        console.log(`  [dry-run] Would write: ${filePath}`);
-        return;
-    }
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
-}
-// ─── Command Handler ──────────────────────────────────────────────────────────
-export async function runSoftwareSprintSetup(context) {
-    const { options } = context;
-    const force = readBooleanOption(options, "force");
-    const dryRun = readBooleanOption(options, "dryRun", "dry-run");
-    const prefixOverride = readStringOption(options, "prefix");
-    const pmDir = resolvePmDir(context);
-    const settingsPath = path.join(pmDir, "settings.json");
-    const templatesDir = path.join(pmDir, "templates");
-    // Step 1: verify pm workspace exists
-    if (!fs.existsSync(pmDir)) {
-        throw new Error(`pm workspace not found. Expected directory: ${pmDir}\n` +
-            "Run `pm init` first to initialise a pm workspace, then re-run `pm sprint-setup`.");
-    }
-    console.log(dryRun
-        ? "Dry-run mode — no files will be written.\n"
-        : "Applying software-sprint preset...\n");
-    // Step 2: write settings.json
-    if (fs.existsSync(settingsPath) && !force) {
-        console.warn(`Warning: ${settingsPath} already exists. Use --force to overwrite.`);
-    }
-    else {
-        const settings = {
-            ...SETTINGS,
-            ...(prefixOverride !== undefined
-                ? { id_prefix: prefixOverride }
-                : {}),
-        };
-        writeJsonFile(settingsPath, settings, dryRun);
-        if (!dryRun) {
-            console.log(`  Wrote settings.json (id_prefix: "${settings.id_prefix}")`);
-        }
-    }
-    // Step 3: write templates
-    for (const [filename, template] of Object.entries(TEMPLATES)) {
-        const templatePath = path.join(templatesDir, filename);
-        if (fs.existsSync(templatePath) && !force) {
-            console.warn(`Warning: ${templatePath} already exists. Use --force to overwrite.`);
-            continue;
-        }
-        writeJsonFile(templatePath, template, dryRun);
-        if (!dryRun) {
-            console.log(`  Wrote templates/${filename}`);
-        }
-    }
-    // Step 4: next-steps
-    if (!dryRun) {
-        console.log(`
-Setup complete!
-
-Next steps:
-  - Create your first bug:     pm create --template bug
-  - Create a feature:          pm create --template feature
-  - Create a sprint epic:      pm create --template epic
-  - Create a task:             pm create --template task
-  - View your workspace:       pm ls
-  - Open the calendar:         pm calendar
-
-Tip: items created with this preset use the "${prefixOverride ?? SETTINGS.id_prefix}" id prefix.
-`);
-    }
-    else {
-        console.log(`
-[dry-run] The following would be written:
-  ${settingsPath}
-  ${path.join(templatesDir, "bug.json")}
-  ${path.join(templatesDir, "epic.json")}
-  ${path.join(templatesDir, "feature.json")}
-  ${path.join(templatesDir, "task.json")}
-
-Re-run without --dry-run to apply.
-`);
-    }
+export function runSoftwareSprintSetup(context) {
+    applyPreset(context, {
+        label: "Software sprint",
+        settings: SETTINGS,
+        templates: TEMPLATES,
+        nextSteps: [
+            'pm create --template epic --title "Plan sprint epic"',
+            'pm create --template feature --title "Build sprint feature"',
+            'pm create --template task --title "Complete sprint task"',
+            'pm create --template bug --title "Fix sprint bug"',
+            "pm list",
+        ],
+    });
 }
 //# sourceMappingURL=index.js.map

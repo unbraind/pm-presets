@@ -1,24 +1,29 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 export declare const SETTINGS: {
-    readonly id_prefix: "sprint-";
-    readonly governance: {
-        readonly preset: "default";
-        readonly ownership_enforcement: "warn";
-        readonly create_mode_default: "progressive";
-        readonly close_validation_default: "warn";
-        readonly metadata_profile: "core";
+    id_prefix: string;
+    governance: {
+        preset: "default";
+        ownership_enforcement: "warn";
+        create_mode_default: "progressive";
+        close_validation_default: "warn";
+        parent_reference: "warn";
+        metadata_profile: "core";
+        create_default_type: string;
     };
-    readonly search: {
-        readonly mode: "keyword";
+    validation: {
+        sprint_release_format: "warn";
+        parent_reference: "warn";
+        metadata_profile: "core";
     };
-    readonly calendar: {
-        readonly default_view: "week";
-        readonly first_day_of_week: 1;
-    };
-    readonly telemetry: {
-        readonly enabled: false;
+    testing: {
+        record_results_to_items: true;
     };
 };
-export declare const TEMPLATES: Record<string, object>;
-export declare function runSoftwareSprintSetup(context: CommandHandlerContext): Promise<void>;
+export declare const TEMPLATES: {
+    "bug.json": import("../shared.js").StoredCreateTemplateDocument;
+    "epic.json": import("../shared.js").StoredCreateTemplateDocument;
+    "feature.json": import("../shared.js").StoredCreateTemplateDocument;
+    "task.json": import("../shared.js").StoredCreateTemplateDocument;
+};
+export declare function runSoftwareSprintSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

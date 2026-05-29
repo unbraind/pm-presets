@@ -1,24 +1,26 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 export declare const SETTINGS: {
-    readonly id_prefix: "indie-";
-    readonly governance: {
-        readonly preset: "minimal";
-        readonly ownership_enforcement: "off";
-        readonly create_mode_default: "progressive";
-        readonly close_validation_default: "off";
-        readonly metadata_profile: "core";
+    id_prefix: string;
+    governance: {
+        preset: "minimal";
+        ownership_enforcement: "none";
+        create_mode_default: "progressive";
+        close_validation_default: "off";
+        metadata_profile: "core";
+        create_default_type: string;
     };
-    readonly validation: {
-        readonly sprint_release_format: "off";
-        readonly parent_reference: "off";
+    validation: {
+        sprint_release_format: "warn";
+        parent_reference: "warn";
+        metadata_profile: "core";
     };
-    readonly testing: {
-        readonly record_results_to_items: false;
-    };
-    readonly telemetry: {
-        readonly enabled: false;
+    testing: {
+        record_results_to_items: false;
     };
 };
-export declare const TEMPLATES: Record<string, object>;
-export declare function runIndieDevSetup(context: CommandHandlerContext): Promise<void>;
+export declare const TEMPLATES: {
+    "idea.json": import("../shared.js").StoredCreateTemplateDocument;
+    "task.json": import("../shared.js").StoredCreateTemplateDocument;
+};
+export declare function runIndieDevSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

@@ -20,8 +20,8 @@ export interface PresetDescriptor {
     command: string;
     /** Default id_prefix written to settings.json */
     idPrefix: string;
-    /** Governance level: minimal | default | strict */
-    governance: "minimal" | "default" | "strict";
+    /** Governance level: minimal | default | strict | custom */
+    governance: "minimal" | "default" | "strict" | "custom";
     /** Template names this preset installs (without .json extension) */
     templates: string[];
 }

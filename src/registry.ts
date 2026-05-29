@@ -22,8 +22,8 @@ export interface PresetDescriptor {
   command: string;
   /** Default id_prefix written to settings.json */
   idPrefix: string;
-  /** Governance level: minimal | default | strict */
-  governance: "minimal" | "default" | "strict";
+  /** Governance level: minimal | default | strict | custom */
+  governance: "minimal" | "default" | "strict" | "custom";
   /** Template names this preset installs (without .json extension) */
   templates: string[];
 }
@@ -35,7 +35,7 @@ export const PRESET_REGISTRY: PresetDescriptor[] = [
     description: "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
     command: "triage-setup",
     idPrefix: "bug-",
-    governance: "strict",
+    governance: "custom",
     templates: ["incident", "hotfix-task", "regression"],
   },
   {
@@ -71,7 +71,7 @@ export const PRESET_REGISTRY: PresetDescriptor[] = [
     description: "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
     command: "roadmap-setup",
     idPrefix: "road-",
-    governance: "default",
+    governance: "custom",
     templates: ["initiative", "feature", "milestone"],
   },
 ];
