@@ -13,6 +13,26 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+// pm's extension command runtime only treats a thrown error as a cleanly
+// handled non-zero exit when the error carries a numeric `exitCode` property
+// (see @unbrained/pm-cli runCommandHandler). A plain `Error` makes the runtime
+// fall through to its "unhandled" path, which RE-INVOKES the command handler a
+// second time and exits with a generic code. We mirror the SDK's EXIT_CODE
+// contract here rather than importing it: standalone-installed extensions load
+// only their own `dist/`, so `@unbrained/pm-cli` is not resolvable at runtime.
+export const EXIT_CODE = {
+    GENERIC_FAILURE: 1,
+    USAGE: 2,
+    NOT_FOUND: 3,
+};
+export class CommandError extends Error {
+    exitCode;
+    constructor(message, exitCode = EXIT_CODE.GENERIC_FAILURE) {
+        super(message);
+        this.name = "CommandError";
+        this.exitCode = exitCode;
+    }
+}
 const TEMPLATE_DIRECTORY_NAME = "templates";
 const TEMPLATE_FILE_EXTENSION = ".json";
 const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -83,7 +103,7 @@ export function readStringOption(options, ...keys) {
 export function normalizeTemplateName(rawName) {
     const name = rawName.trim();
     if (!TEMPLATE_NAME_PATTERN.test(name)) {
-        throw new Error(`Invalid template name "${rawName}". Expected 1-64 characters matching [A-Za-z0-9][A-Za-z0-9._-]*.`);
+        throw new CommandError(`Invalid template name "${rawName}". Expected 1-64 characters matching [A-Za-z0-9][A-Za-z0-9._-]*.`, EXIT_CODE.USAGE);
     }
     return name;
 }
@@ -105,8 +125,8 @@ export function applyPreset(context, input) {
     const force = readBooleanOption(options, "force");
     const prefixOverride = readStringOption(options, "prefix");
     if (!fs.existsSync(pmDir) || !fs.existsSync(settingsPath)) {
-        throw new Error(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
-            `Run "pm init" first to initialize a pm workspace in this project.`);
+        throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
+            `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
     const existingSettings = readJsonObject(settingsPath, "settings.json");
     const effectivePatch = {
@@ -132,7 +152,7 @@ export function applyPreset(context, input) {
         const normalizedName = normalizeTemplateName(template.name);
         const templatePath = path.join(templatesDir, `${normalizedName}${TEMPLATE_FILE_EXTENSION}`);
         if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
-            throw new Error(`Template map key "${filename}" must match document name "${normalizedName}".`);
+            throw new CommandError(`Template map key "${filename}" must match document name "${normalizedName}".`);
         }
         if (!dryRun && fs.existsSync(templatePath) && !force) {
             console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
@@ -176,7 +196,7 @@ export function runTemplatesShow(context) {
     ensureTrackerInitialized(pmDir);
     const rawTemplateName = context.args[0];
     if (typeof rawTemplateName !== "string" || rawTemplateName.trim().length === 0) {
-        throw new Error("templates show requires a template name argument.");
+        throw new CommandError("templates show requires a template name argument.", EXIT_CODE.USAGE);
     }
     const name = normalizeTemplateName(rawTemplateName);
     const templatePath = path.join(templatesDirectory(pmDir), `${name}${TEMPLATE_FILE_EXTENSION}`);
@@ -203,7 +223,7 @@ export function runTemplatesShow(context) {
             options: document.options,
         };
     }
-    throw new Error(`Template "${name}" not found.`);
+    throw new CommandError(`Template "${name}" not found.`, EXIT_CODE.NOT_FOUND);
 }
 function templatesDirectory(pmRoot) {
     return path.join(pmRoot, TEMPLATE_DIRECTORY_NAME);
@@ -211,7 +231,7 @@ function templatesDirectory(pmRoot) {
 function ensureTrackerInitialized(pmRoot) {
     const settingsPath = path.join(pmRoot, "settings.json");
     if (!fs.existsSync(settingsPath)) {
-        throw new Error(`Tracker is not initialized at ${pmRoot}. Run pm init first.`);
+        throw new CommandError(`Tracker is not initialized at ${pmRoot}. Run pm init first.`, EXIT_CODE.NOT_FOUND);
     }
 }
 function readUserTemplateNames(pmRoot) {
@@ -231,10 +251,10 @@ function parseStoredTemplateDocument(raw, normalizedName) {
         parsed = JSON.parse(raw);
     }
     catch {
-        throw new Error(`Template "${normalizedName}" contains invalid JSON.`);
+        throw new CommandError(`Template "${normalizedName}" contains invalid JSON.`);
     }
     if (!isJsonObject(parsed)) {
-        throw new Error(`Template "${normalizedName}" has invalid document shape.`);
+        throw new CommandError(`Template "${normalizedName}" has invalid document shape.`);
     }
     const options = parseStoredTemplateOptions(parsed.options, normalizedName);
     return {
@@ -252,13 +272,13 @@ function parseStoredTemplateDocument(raw, normalizedName) {
 }
 function parseStoredTemplateOptions(rawOptions, templateName) {
     if (!isJsonObject(rawOptions)) {
-        throw new Error(`Template "${templateName}" has invalid options payload.`);
+        throw new CommandError(`Template "${templateName}" has invalid options payload.`);
     }
     const normalized = {};
     for (const [key, value] of Object.entries(rawOptions)) {
         const normalizedKey = key.trim();
         if (normalizedKey.length === 0) {
-            throw new Error(`Template "${templateName}" contains an empty option key.`);
+            throw new CommandError(`Template "${templateName}" contains an empty option key.`);
         }
         if (typeof value === "string") {
             normalized[normalizedKey] = value;
@@ -268,7 +288,7 @@ function parseStoredTemplateOptions(rawOptions, templateName) {
             normalized[normalizedKey] = [...value];
             continue;
         }
-        throw new Error(`Template "${templateName}" contains invalid value for option "${normalizedKey}".`);
+        throw new CommandError(`Template "${templateName}" contains invalid value for option "${normalizedKey}".`);
     }
     return sortTemplateOptions(normalized);
 }
@@ -278,10 +298,10 @@ function readJsonObject(filePath, label) {
         parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
     }
     catch (error) {
-        throw new Error(`Failed to read ${label}: ${error.message}`);
+        throw new CommandError(`Failed to read ${label}: ${error.message}`);
     }
     if (!isJsonObject(parsed)) {
-        throw new Error(`${label} must contain a JSON object.`);
+        throw new CommandError(`${label} must contain a JSON object.`);
     }
     return parsed;
 }

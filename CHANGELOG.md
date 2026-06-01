@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preset handlers threw plain Error \(no exitCode\) → runtime double-invocation ([pm-xp9p](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xp9p.toon))
+
 ## 2026.5.28 - 2026-05-28
 
 ### Other

@@ -1,0 +1,12 @@
+id: pm-xp9p
+title: Preset handlers threw plain Error (no exitCode) → runtime double-invocation
+description: "shared.ts helpers (used by all setup + templates commands) threw plain Error without numeric exitCode; pm re-invokes the handler on the unhandled path. Added exported CommandError mirroring SDK EXIT_CODE; bad-name/no-arg=2, workspace/template-not-found=3, other=1; single invocation."
+type: Issue
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-01T10:23:09.046Z"
+updated_at: "2026-06-01T10:23:09.281Z"
+author: unknown
+close_reason: "Fixed: CommandError carries exitCode. Verified setup/templates commands + error paths exit 2/3 single invocation; 11 tests pass."
+body: ""

@@ -12,6 +12,15 @@
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+export declare const EXIT_CODE: {
+    readonly GENERIC_FAILURE: 1;
+    readonly USAGE: 2;
+    readonly NOT_FOUND: 3;
+};
+export declare class CommandError extends Error {
+    exitCode: number;
+    constructor(message: string, exitCode?: number);
+}
 export type TemplateOptionValue = string | string[];
 export type CreateTemplateOptions = Record<string, TemplateOptionValue>;
 export interface StoredCreateTemplateDocument {
