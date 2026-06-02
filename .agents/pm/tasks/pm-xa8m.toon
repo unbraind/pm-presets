@@ -1,0 +1,13 @@
+id: pm-xa8m
+title: "Implement presets diff <name> (workspace vs preset, --json)"
+description: ""
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:49.006Z"
+updated_at: "2026-06-02T22:27:41.236Z"
+author: unknown
+parent: pm-ruih
+close_reason: "Implemented src/diff.ts (pure computePresetDiff + readWorkspaceSnapshot) + presets diff command. Flattens settings to dotted leaves (add/change/match), present/missing templates, inSync flag. Verified on real ws: fresh shows changes/adds; after apply inSync:true. Unit tests tests/diff.test.ts."
+body: Compare current workspace settings.json + registered item types + installed templates against the named preset. Report added/changed/missing. --json structured. Pure diff computation helper exported for tests.

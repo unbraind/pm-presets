@@ -34,7 +34,7 @@
     "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck",
-    "test": "node --test --experimental-strip-types tests/registry.test.ts",
+    "test": "node --test --experimental-strip-types tests/registry.test.ts tests/catalog.test.ts tests/diff.test.ts tests/seeds.test.ts",
     "audit:prod": "npm audit --omit=dev",
     "pack:dry-run": "npm pack --dry-run",
     "changelog": "pm-changelog --pm-root .agents/pm --mode prepend --output CHANGELOG.md --release-version-from-package --since-previous-tag --until-release-tag --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm",

@@ -1,0 +1,13 @@
+id: pm-e2qb
+title: Implement presets validate (all bundled presets parse/load)
+description: ""
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:49.253Z"
+updated_at: "2026-06-02T22:27:41.893Z"
+author: unknown
+parent: pm-ruih
+close_reason: "Implemented validateAllPresets in src/catalog.ts + presets validate command. Checks governance enum, id_prefix, template name/option validity, registry<->export agreement across all 6 presets. Verified: ok:true checked:6. Failures throw exit 1 with detail. Unit tests tests/catalog.test.ts."
+body: "Iterate PRESET_REGISTRY; assert each has SETTINGS, TEMPLATES with valid names/options, governance enum valid, and registry/handler/manifest agree. Pure validateAllPresets helper exported for tests. --json."

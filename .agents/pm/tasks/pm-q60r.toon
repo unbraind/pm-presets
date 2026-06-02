@@ -1,0 +1,12 @@
+id: pm-q60r
+title: Unit tests + functional test against real workspace + release 2026.6.3
+description: ""
+type: Task
+status: open
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:49.830Z"
+updated_at: "2026-06-02T22:20:49.830Z"
+author: unknown
+parent: pm-ruih
+body: "node --test for new pure helpers. Functional: pm init scratch ws, install local build, exercise list/show/diff/apply --dry-run/apply --with-seeds/idempotency/unknown-name exit 3. release:check, changelog:full, conventional commits, push to unbraind/pm-presets, CI green, workflow_dispatch release."

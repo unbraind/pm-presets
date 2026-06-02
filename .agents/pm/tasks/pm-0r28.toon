@@ -1,0 +1,13 @@
+id: pm-0r28
+title: "Implement presets show <name> (full definition, --json, exit 3)"
+description: ""
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:48.670Z"
+updated_at: "2026-06-02T22:27:40.711Z"
+author: unknown
+parent: pm-ruih
+close_reason: "Implemented in src/catalog.ts (requirePresetDefinition) + presets show command in src/index.ts. Full definition incl. settings/templates/itemTypes; --json verified; unknown name -> CommandError exit 3 (verified: show unknown EXIT=3). Unit tests in tests/catalog.test.ts."
+body: "Print full preset definition: settings patch, templates (names+option keys), custom item types (kanban). --json emits structured object. Unknown name -> CommandError exit 3 (NOT_FOUND). Pure lookup helper exported for tests."

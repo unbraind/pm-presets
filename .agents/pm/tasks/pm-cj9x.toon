@@ -1,0 +1,13 @@
+id: pm-cj9x
+title: "DECISION: apply idempotency, --with-seeds, and capability array"
+description: ""
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:59.060Z"
+updated_at: "2026-06-02T22:27:51.382Z"
+author: unknown
+parent: pm-ruih
+close_reason: "DECISION recorded and honored: (1) apply idempotency preserved (deep-merge + skip-existing + --force + --dry-run). (2) --with-seeds opt-in flag; seeds set built-in fields only per #97; shells out to pm create; kanban Card seeded via registered type. (3) capabilities kept ['commands','schema'] unchanged - schema required by registerItemTypes; verified all commands activate (list/show/diff/validate/apply + legacy *-setup). (4) read-only cmds use CommandError exit 3 for unknown names, never plain Error."
+body: "DECISION LOG. (1) apply idempotency: settings.json deep-merged (preset patch over existing); templates skipped if file exists unless --force; --dry-run previews. This is already the existing behavior in shared.applyPreset and is preserved. (2) --with-seeds: add an opt-in flag that seeds a few starter items via the run-context. Per issue #97, registerItemFields scalar custom fields have NO pm create --<field> setter, so seed items set only built-in fields (title/type/priority/tags/body). Kanban Card type IS registered via registerItemTypes so 'type Card' works. (3) capabilities array: keep ['commands','schema'] unchanged. 'schema' is required because registerItemTypes (kanban) needs it; 'commands' for command activation. Will NOT add/remove tokens; verified activation in functional test. (4) presets show/diff/validate are read-only -> never throw plain Error, use CommandError with exit codes (3 for unknown name)."

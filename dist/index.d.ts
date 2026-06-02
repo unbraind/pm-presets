@@ -12,6 +12,13 @@
  *   pm oss-setup         # open-source preset
  *   pm sprint-setup      # software-sprint preset
  *   pm roadmap-setup     # startup-roadmap preset
+ *
+ * Plus a unified, read-only management surface:
+ *   pm presets list                 # enumerate presets + what each configures
+ *   pm presets show <id>            # full definition of one preset
+ *   pm presets diff <id>            # workspace vs preset differences
+ *   pm presets validate             # validate all bundled presets parse/load
+ *   pm presets apply <id>           # scaffold a preset into this workspace
  */
 declare const _default: {
     activate(api: import("@unbrained/pm-cli/sdk").ExtensionApi): void;

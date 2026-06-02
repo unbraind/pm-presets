@@ -1,0 +1,13 @@
+id: pm-g9oh
+title: Enrich presets list output + add --json; document apply idempotency
+description: ""
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-02T22:20:49.565Z"
+updated_at: "2026-06-02T22:27:50.914Z"
+author: unknown
+parent: pm-ruih
+close_reason: "presets list enriched in src/index.ts via buildListRows (src/catalog.ts): now includes governance, idPrefix, itemTypes (built-in), customItemTypes, templateCount. --json added. README documents apply idempotency (deep-merge settings, skip-existing-templates, --force, --dry-run) and #97 seeds-builtin-fields-only caveat. Backward compatible: existing keys id/name/command/templates/description retained."
+body: "Add types/statuses/fields/seed-template counts to presets list rows. Keep backward compatible keys. Document in README that apply is idempotent (skips existing templates, deep-merges settings, --force to clobber, --dry-run preview), and that registerItemFields scalar fields (#97) cannot be set via pm create so seeds use built-in fields only."

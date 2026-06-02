@@ -17,6 +17,9 @@ pm install github.com/unbraind/pm-presets --project
 | **open-source** | `pm oss-setup` | standard | OSS maintainers with community contributors |
 | **software-sprint** | `pm sprint-setup` | standard | Engineering teams running sprints |
 | **startup-roadmap** | `pm roadmap-setup` | custom | Startups with investor-facing roadmaps |
+| **kanban** | `pm kanban-setup` | minimal | Continuous-flow boards with a custom `Card` item type |
+
+Run `pm presets list` for the full, machine-readable catalog.
 
 ## Usage
 
@@ -36,7 +39,7 @@ pm install github.com/unbraind/pm-presets --project
    pm roadmap-setup       # startup roadmap
    ```
 
-All commands share the same flags:
+All setup commands share the same flags:
 
 | Flag | Short | Description |
 |---|---|---|
@@ -47,6 +50,56 @@ All commands share the same flags:
 Each setup command installs valid `pm create` templates and registers the
 `templates show` runtime handler required by the current pm CLI, so
 `pm create --template <name>` works after installing and applying this package.
+
+## Managing presets
+
+Beyond the per-preset `*-setup` aliases, pm-presets ships a unified, read-only
+management surface plus a generic `apply`:
+
+| Command | Description |
+|---|---|
+| `pm presets list` | Enumerate every bundled preset and what it configures (governance, built-in + custom item types, templates). |
+| `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
+| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. |
+| `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
+| `pm presets apply <id>` | Scaffold a preset into the current workspace (the generic form of the `*-setup` commands). |
+
+All of the read-only commands accept `--json` for machine-readable output, and
+all commands accept `--help`. An unknown preset id exits with code `3`
+(`NOT_FOUND`).
+
+```bash
+pm presets list
+pm presets show software-sprint --json
+pm presets diff software-sprint           # what would change if I applied it?
+pm presets validate
+pm presets apply software-sprint --dry-run
+```
+
+### `presets apply` flags
+
+`presets apply` accepts the shared `--force` / `--dry-run` / `--prefix` flags,
+plus:
+
+| Flag | Short | Description |
+|---|---|---|
+| `--with-seeds` | `-s` | Also create the preset's starter items after applying it. |
+
+**Idempotency & safety.** `apply` is safe to re-run:
+
+- `settings.json` is **deep-merged** — the preset's keys are layered over your
+  existing settings, so unrelated config (telemetry, locks, etc.) is preserved.
+- Templates are **skipped if a file with that name already exists**; pass
+  `--force` to overwrite them.
+- `--dry-run` previews every settings merge, template write, and seed item
+  without touching disk.
+
+**Seeds and custom fields (pm-cli #97).** Starter items created by
+`--with-seeds` set only **built-in** fields (`type`, `title`, `priority`,
+`tags`, `body`). Custom scalar fields registered via `registerItemFields` have
+no `pm create --<field>` setter today, so any preset-specific context lives in
+the seed item's body text rather than in custom options. The kanban `Card`
+type *is* a registered item type, so its seed is created as `--type Card`.
 
 ## Presets in Detail
 

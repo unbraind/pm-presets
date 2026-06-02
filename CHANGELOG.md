@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Enrich presets list output + add --json; document apply idempotency ([pm-g9oh](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-g9oh.toon))
+
+### Other
+
+- DECISION: apply idempotency, --with-seeds, and capability array ([pm-cj9x](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-cj9x.toon))
+- Implement presets validate \(all bundled presets parse/load\) ([pm-e2qb](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-e2qb.toon))
+- Implement presets diff <name\> \(workspace vs preset, --json\) ([pm-xa8m](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-xa8m.toon))
+- Implement presets show <name\> \(full definition, --json, exit 3\) ([pm-0r28](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-0r28.toon))
+
 ## 2026.06.01 - 2026-06-01
 
 ### Fixed
