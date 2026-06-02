@@ -4,10 +4,12 @@
 
 ### Added
 
+- Deepen presets toolset: add show, diff, validate, enrich list ([pm-ruih](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-ruih.toon))
 - Enrich presets list output + add --json; document apply idempotency ([pm-g9oh](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-g9oh.toon))
 
 ### Other
 
+- Unit tests + functional test against real workspace + release 2026.6.3 ([pm-q60r](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-q60r.toon))
 - DECISION: apply idempotency, --with-seeds, and capability array ([pm-cj9x](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-cj9x.toon))
 - Implement presets validate \(all bundled presets parse/load\) ([pm-e2qb](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-e2qb.toon))
 - Implement presets diff <name\> \(workspace vs preset, --json\) ([pm-xa8m](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-xa8m.toon))
