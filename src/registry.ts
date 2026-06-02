@@ -10,6 +10,7 @@ export { SETTINGS as indieDevSettings, TEMPLATES as indieDevTemplates, runIndieD
 export { SETTINGS as openSourceSettings, TEMPLATES as openSourceTemplates, runOpenSourceSetup } from "./presets/open-source/index.js";
 export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplates, runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
+export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.js";
 
 export interface PresetDescriptor {
   /** Stable identifier used in pm CLI commands (e.g. "bug-triage") */
@@ -73,5 +74,14 @@ export const PRESET_REGISTRY: PresetDescriptor[] = [
     idPrefix: "road-",
     governance: "custom",
     templates: ["initiative", "feature", "milestone"],
+  },
+  {
+    id: "kanban",
+    displayName: "Kanban",
+    description: "Continuous-flow board with backlog/ready/in-progress/review/done and WIP-friendly card templates.",
+    command: "kanban-setup",
+    idPrefix: "kb-",
+    governance: "minimal",
+    templates: ["card", "expedite", "blocked"],
   },
 ];

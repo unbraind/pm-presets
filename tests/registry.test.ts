@@ -18,8 +18,8 @@ test("PRESET_REGISTRY exports an array", () => {
   assert.ok(Array.isArray(PRESET_REGISTRY));
 });
 
-test("PRESET_REGISTRY contains exactly 5 presets", () => {
-  assert.strictEqual(PRESET_REGISTRY.length, 5);
+test("PRESET_REGISTRY contains exactly 6 presets", () => {
+  assert.strictEqual(PRESET_REGISTRY.length, 6);
 });
 
 const EXPECTED_IDS = [
@@ -28,9 +28,10 @@ const EXPECTED_IDS = [
   "open-source",
   "software-sprint",
   "startup-roadmap",
+  "kanban",
 ];
 
-test("all 5 expected preset IDs are present", () => {
+test("all expected preset IDs are present", () => {
   const ids = PRESET_REGISTRY.map((p) => p.id);
   for (const expected of EXPECTED_IDS) {
     assert.ok(ids.includes(expected), `Missing preset id: ${expected}`);
