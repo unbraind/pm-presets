@@ -24,13 +24,18 @@ import { runBugTriageSetup } from "./presets/bug-triage/index.js";
 import { runIndieDevSetup } from "./presets/indie-dev/index.js";
 import { runKanbanSetup, ITEM_TYPES as kanbanItemTypes } from "./presets/kanban/index.js";
 import { runOpenSourceSetup } from "./presets/open-source/index.js";
-import { resolvePmDir, readBooleanOption, runTemplatesList, runTemplatesShow } from "./presets/shared.js";
+import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, runTemplatesShow } from "./presets/shared.js";
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 import { PRESET_REGISTRY } from "./registry.js";
 import { buildListRows, requirePresetDefinition, validateAllPresets, } from "./catalog.js";
 import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
+import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
 import { planSeeds, seedPresetItems, seedsForPreset } from "./seeds.js";
+import * as fs from "node:fs";
+// Drift exit code for `presets diff --strict`. Distinct from GENERIC(1)/
+// USAGE(2)/NOT_FOUND(3) so CI can tell "drifted" from "command failed".
+const EXIT_CODE_DRIFT = 4;
 const defineExtension = ((extension) => extension);
 // A thrown error only yields a clean non-zero exit (no double-invocation) when
 // it carries a numeric `exitCode`. Standalone-installed extensions can't import
@@ -78,7 +83,16 @@ const COMMON_FLAGS = [
         description: "Override the id_prefix written to settings.json.",
     },
 ];
-// `presets apply` additionally accepts --with-seeds to create starter items.
+// `presets list`/`show`/`diff`/`validate`/`export` are JSON-friendly.
+const JSON_FLAG = [
+    {
+        long: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON instead of the human summary.",
+    },
+];
+// `presets apply` additionally accepts --with-seeds to create starter items
+// and --replace to full-replace (rather than deep-merge) the owned settings trees.
 const APPLY_FLAGS = [
     ...COMMON_FLAGS,
     {
@@ -87,13 +101,36 @@ const APPLY_FLAGS = [
         type: "boolean",
         description: "Also create the preset's starter items (built-in fields only; see #97).",
     },
-];
-// `presets list`/`show`/`diff`/`validate` are read-only and JSON-friendly.
-const JSON_FLAG = [
     {
-        long: "--json",
+        long: "--replace",
         type: "boolean",
-        description: "Emit machine-readable JSON instead of the human summary.",
+        description: "Full-replace the governance/validation/testing settings trees with the preset's (clean reset) instead of deep-merging. Other settings are still preserved.",
+    },
+];
+// `presets diff` additionally accepts --strict for CI drift detection.
+const DIFF_FLAGS = [
+    ...JSON_FLAG,
+    {
+        long: "--strict",
+        type: "boolean",
+        description: "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
+    },
+];
+// `presets export` writes to a file or stdout and can carry a display name.
+const EXPORT_FLAGS = [
+    ...JSON_FLAG,
+    {
+        long: "--output",
+        short: "-o",
+        value_name: "<file>",
+        type: "string",
+        description: "Write the exported preset definition to a file instead of stdout.",
+    },
+    {
+        long: "--display-name",
+        value_name: "<name>",
+        type: "string",
+        description: "Human-readable display name for the exported preset (defaults to the id).",
     },
 ];
 export default defineExtension({
@@ -171,15 +208,83 @@ export default defineExtension({
             name: "presets diff",
             action: "presets-diff",
             description: "Compare the current pm workspace (settings + installed templates) against a preset and report differences.",
-            examples: ["pm presets diff software-sprint", "pm presets diff bug-triage --json"],
+            examples: [
+                "pm presets diff software-sprint",
+                "pm presets diff bug-triage --json",
+                "pm presets diff bug-triage --strict",
+            ],
             arguments: [
                 { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
             ],
-            flags: JSON_FLAG,
+            flags: DIFF_FLAGS,
             run: (ctx) => {
                 const definition = requirePresetDefinition(ctx.args?.[0]);
                 const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-                return computePresetDiff(definition, snapshot);
+                const result = computePresetDiff(definition, snapshot);
+                const strict = readBooleanOption(ctx.options, "strict");
+                if (strict && !result.inSync) {
+                    // Drift detected. Print the diff (respecting --json) so CI logs show
+                    // WHAT drifted, then exit non-zero with a dedicated drift code (4).
+                    const json = readBooleanOption(ctx.options, "json");
+                    if (json) {
+                        console.log(JSON.stringify(result, null, 2));
+                    }
+                    else {
+                        const { settingsToAdd, settingsToChange, templatesMissing } = result.summary;
+                        console.error(`Workspace is NOT in sync with preset '${definition.id}': ` +
+                            `${settingsToAdd} setting(s) to add, ${settingsToChange} to change, ` +
+                            `${templatesMissing} template(s) missing.`);
+                    }
+                    throw new PresetError(`Workspace drifted from preset '${definition.id}'.`, EXIT_CODE_DRIFT);
+                }
+                return result;
+            },
+        });
+        api.registerCommand({
+            name: "presets export",
+            action: "presets-export",
+            description: "Snapshot the CURRENT workspace's settings + templates as a reusable preset definition (JSON) to stdout or a file.",
+            examples: [
+                "pm presets export our-config",
+                "pm presets export our-config --output our-config.preset.json",
+                'pm presets export our-config --display-name "Our Team Config"',
+            ],
+            arguments: [
+                {
+                    name: "name",
+                    required: true,
+                    description: "Id for the exported preset definition.",
+                },
+            ],
+            flags: EXPORT_FLAGS,
+            run: (ctx) => {
+                const name = ctx.args?.[0];
+                if (typeof name !== "string" || name.trim().length === 0) {
+                    throw new PresetError("presets export requires a preset name argument.", 2);
+                }
+                const pmDir = resolvePmDir(ctx);
+                const settings = readWorkspaceSettings(pmDir);
+                if (!settings) {
+                    throw new PresetError(`No readable settings.json in ${pmDir}. Run \`pm init\` (and apply a preset) first.`, 3);
+                }
+                const templates = readWorkspaceTemplates(pmDir);
+                const exported = buildExportedPreset({
+                    name: name.trim(),
+                    displayName: readStringOption(ctx.options, "displayName", "display-name"),
+                    settings,
+                    templates,
+                });
+                const output = readStringOption(ctx.options, "output");
+                if (output) {
+                    const serialized = `${JSON.stringify(exported, null, 2)}\n`;
+                    fs.writeFileSync(output, serialized, "utf8");
+                    console.log(`Exported preset '${exported.id}' (${exported.templates.length} template(s)) to ${output}`);
+                    return undefined;
+                }
+                // No --output: return the definition so pm renders it as the command
+                // result. With `--json` pm emits clean, pipeable JSON (no trailing
+                // result block); use `--output` for a verbatim file on disk.
+                return exported;
             },
         });
         api.registerCommand({

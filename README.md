@@ -60,9 +60,10 @@ management surface plus a generic `apply`:
 |---|---|
 | `pm presets list` | Enumerate every bundled preset and what it configures (governance, built-in + custom item types, templates). |
 | `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
-| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. |
+| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. Add `--strict` to exit non-zero on drift (CI/compliance). |
 | `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
-| `pm presets apply <id>` | Scaffold a preset into the current workspace (the generic form of the `*-setup` commands). |
+| `pm presets apply <id>` | Scaffold a preset into the current workspace (the generic form of the `*-setup` commands). Add `--replace` for a clean reset of the owned settings trees. |
+| `pm presets export <name>` | Snapshot the **current** workspace's settings + templates as a reusable preset definition (JSON), to stdout or a file. |
 
 All of the read-only commands accept `--json` for machine-readable output, and
 all commands accept `--help`. An unknown preset id exits with code `3`
@@ -72,8 +73,11 @@ all commands accept `--help`. An unknown preset id exits with code `3`
 pm presets list
 pm presets show software-sprint --json
 pm presets diff software-sprint           # what would change if I applied it?
+pm presets diff software-sprint --strict  # exit 4 if the workspace has drifted
 pm presets validate
 pm presets apply software-sprint --dry-run
+pm presets apply software-sprint --replace  # clean reset of governance/validation/testing
+pm presets export our-config --output our-config.preset.json
 ```
 
 ### `presets apply` flags
@@ -84,15 +88,53 @@ plus:
 | Flag | Short | Description |
 |---|---|---|
 | `--with-seeds` | `-s` | Also create the preset's starter items after applying it. |
+| `--replace` | | Full-replace the `governance` / `validation` / `testing` trees with the preset's instead of deep-merging them. |
 
 **Idempotency & safety.** `apply` is safe to re-run:
 
-- `settings.json` is **deep-merged** — the preset's keys are layered over your
-  existing settings, so unrelated config (telemetry, locks, etc.) is preserved.
+- `settings.json` is **deep-merged** by default — the preset's keys are layered
+  over your existing settings, so unrelated config (telemetry, locks, etc.) is
+  preserved.
+- `--replace` instead **swaps the `governance` / `validation` / `testing` trees
+  wholesale** with the preset's exact trees — dropping any keys the preset no
+  longer sets, for a clean reset. Unrelated top-level settings (`id_prefix`,
+  `telemetry`, `locks`, …) are still preserved in both modes.
 - Templates are **skipped if a file with that name already exists**; pass
   `--force` to overwrite them.
-- `--dry-run` previews every settings merge, template write, and seed item
-  without touching disk.
+- `--dry-run` previews every settings merge/replace, template write, and seed
+  item without touching disk.
+
+### Drift detection: `presets diff --strict`
+
+`presets diff <id> --strict` reuses the diff logic but **exits non-zero (code
+`4`)** when the workspace is not in sync with the named preset — settings to
+add/change or templates missing. It prints what drifted (human summary, or the
+full diff with `--json`) before exiting, so CI logs explain the failure. When
+the workspace already matches the preset it exits `0`. Plain `presets diff`
+(without `--strict`) always exits `0` and just reports.
+
+```bash
+# Fail a compliance/CI job if the workspace drifts from the locked preset:
+pm presets diff bug-triage --strict || echo "workspace drifted!"
+```
+
+### Exporting your own config: `presets export`
+
+After you `apply` a preset and customize it, `presets export <name>` captures
+the **live** workspace as a reusable preset definition (`settings.json` plus
+every installed template). Write it to stdout (use `--json` for clean,
+pipeable output) or to a file with `--output`:
+
+```bash
+pm presets apply bug-triage          # start from a bundled preset
+# ...customize settings.json and templates by hand...
+pm presets export our-config --output our-config.preset.json --display-name "Our Team Config"
+```
+
+The exported document is `$schema: "pm-presets/exported-preset@1"` and records
+`settings` + `templates`. **Custom item-field _values_ are not captured**:
+custom scalar fields have no `pm create --<field>` setter today (pm-cli #97),
+so the snapshot reconstructs the preset from settings + templates only.
 
 **Seeds and custom fields (pm-cli #97).** Starter items created by
 `--with-seeds` set only **built-in** fields (`type`, `title`, `priority`,

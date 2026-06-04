@@ -1,6 +1,12 @@
 # Changelog
 
-## 2026.6.3-1 - 2026-06-03
+## 2026.6.4 - 2026-06-04
+
+### Added
+
+- Add presets apply --replace, diff --strict, and presets export ([pm-ehaf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-ehaf.toon))
+
+## 2026.06.03-1 - 2026-06-03
 
 ### Added
 

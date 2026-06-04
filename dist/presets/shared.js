@@ -116,6 +116,38 @@ export function storedTemplate(rawName, options) {
         options: sortTemplateOptions(options),
     };
 }
+/**
+ * The settings-patch trees that `--replace` swaps out wholesale instead of
+ * deep-merging. These are the governance / validation / testing config trees a
+ * preset owns; replacing them gives a clean reset (drops keys the preset no
+ * longer sets) while merge layers the preset over whatever is already there.
+ * `id_prefix` and any unrelated top-level keys are always merge-preserved.
+ */
+const REPLACE_SETTINGS_TREES = ["governance", "validation", "testing"];
+/**
+ * Merge a preset settings patch, optionally full-replacing the governance /
+ * validation / testing trees rather than deep-merging them.
+ *
+ * Pure and unit-tested. Other top-level keys (e.g. `id_prefix`, unrelated user
+ * config) are always deep-merged so unrelated settings are never dropped.
+ */
+export function mergePresetSettings(existing, patch, replace) {
+    if (!replace) {
+        return deepMergeJson(existing, patch);
+    }
+    // Deep-merge everything first, then overwrite the owned trees with the
+    // preset's exact tree (or remove them if the preset doesn't set them).
+    const merged = deepMergeJson(existing, patch);
+    for (const tree of REPLACE_SETTINGS_TREES) {
+        if (Object.prototype.hasOwnProperty.call(patch, tree)) {
+            merged[tree] = patch[tree];
+        }
+        else {
+            delete merged[tree];
+        }
+    }
+    return merged;
+}
 export function applyPreset(context, input) {
     const { options } = context;
     const pmDir = resolvePmDir(context);
@@ -123,6 +155,7 @@ export function applyPreset(context, input) {
     const templatesDir = templatesDirectory(pmDir);
     const dryRun = readBooleanOption(options, "dryRun", "dry-run");
     const force = readBooleanOption(options, "force");
+    const replace = readBooleanOption(options, "replace");
     const prefixOverride = readStringOption(options, "prefix");
     if (!fs.existsSync(pmDir) || !fs.existsSync(settingsPath)) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
@@ -133,14 +166,15 @@ export function applyPreset(context, input) {
         ...input.settings,
         id_prefix: prefixOverride ?? input.settings.id_prefix,
     };
-    const mergedSettings = deepMergeJson(existingSettings, effectivePatch);
+    const mergedSettings = mergePresetSettings(existingSettings, effectivePatch, replace);
+    const verb = replace ? "replace" : "merge";
     if (dryRun) {
-        console.log(`[dry-run] Would merge ${input.label} settings into ${settingsPath}:`);
+        console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
         console.log(JSON.stringify(mergedSettings, null, 2));
     }
     else {
         fs.writeFileSync(settingsPath, `${JSON.stringify(mergedSettings, null, 2)}\n`, "utf8");
-        console.log(`Updated settings.json at ${settingsPath}`);
+        console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
     }
     if (dryRun) {
         console.log(`[dry-run] Would create directory: ${templatesDir}`);

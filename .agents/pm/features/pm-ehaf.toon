@@ -1,0 +1,14 @@
+id: pm-ehaf
+title: "Add presets apply --replace, diff --strict, and presets export"
+description: ""
+type: Feature
+status: closed
+priority: 2
+tags: []
+created_at: "2026-06-04T05:28:22.055Z"
+updated_at: "2026-06-04T05:29:14.083Z"
+author: unknown
+comments[1]{created_at,author,text}:
+  "2026-06-04T05:28:39.078Z",unknown,"Implemented and tested. mergePresetSettings (shared.ts) gates replace-vs-merge on governance/validation/testing trees. presets diff --strict throws PresetError(exitCode 4) on drift. presets export reads live settings+templates via export.ts buildExportedPreset. 37 unit tests pass (added settings.test.ts + export.test.ts). Functional matrix on /tmp/ptest verified apply merge/replace, diff --strict exit 4 vs 0, export to stdout/file."
+close_reason: "Delivered presets apply --replace (full-replace governance/validation/testing trees, default merge unchanged), presets diff --strict (exit 4 on drift, 0 in-sync), and presets export <name> (live workspace settings+templates -> exported-preset@1 JSON; #97 noted). All existing commands/flags/presets preserved; ['commands','schema'] capabilities unchanged. 37 unit tests pass; functionally tested on real /tmp/ptest workspace. Releasing as 2026.6.4."
+body: "Extend the presets management surface with three additive, backward-compatible capabilities: (1) 'presets apply <id> --replace' full-replaces the governance/validation/testing settings trees with the preset's exact trees (clean reset) instead of deep-merging, while preserving unrelated top-level settings; default behavior unchanged. (2) 'presets diff <id> --strict' exits non-zero (code 4) when the workspace has drifted from the named preset (CI/compliance drift detection), reusing existing diff logic; plain diff still exits 0. (3) 'presets export <name>' snapshots the current workspace settings + installed templates as a reusable preset definition JSON (schema pm-presets/exported-preset@1) to stdout (--json for pipeable) or a file (--output); custom item-field values are out of scope per pm-cli #97. All existing commands/flags/presets and the ['commands','schema'] capabilities preserved. New unit tests for replace-vs-merge, export shape, plus functional tests against a real workspace."

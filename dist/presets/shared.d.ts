@@ -21,6 +21,7 @@ export declare class CommandError extends Error {
     exitCode: number;
     constructor(message: string, exitCode?: number);
 }
+type JsonObject = Record<string, unknown>;
 export type TemplateOptionValue = string | string[];
 export type CreateTemplateOptions = Record<string, TemplateOptionValue>;
 export interface StoredCreateTemplateDocument {
@@ -74,6 +75,14 @@ export declare function readBooleanOption(options: Record<string, unknown>, ...k
 export declare function readStringOption(options: Record<string, unknown>, ...keys: string[]): string | undefined;
 export declare function normalizeTemplateName(rawName: string): string;
 export declare function storedTemplate(rawName: string, options: CreateTemplateOptions): StoredCreateTemplateDocument;
+/**
+ * Merge a preset settings patch, optionally full-replacing the governance /
+ * validation / testing trees rather than deep-merging them.
+ *
+ * Pure and unit-tested. Other top-level keys (e.g. `id_prefix`, unrelated user
+ * config) are always deep-merged so unrelated settings are never dropped.
+ */
+export declare function mergePresetSettings(existing: JsonObject, patch: JsonObject, replace: boolean): JsonObject;
 export declare function applyPreset(context: CommandHandlerContext, input: {
     label: string;
     settings: PresetSettingsPatch;
@@ -83,4 +92,5 @@ export declare function applyPreset(context: CommandHandlerContext, input: {
 }): void;
 export declare function runTemplatesList(context: CommandHandlerContext): TemplatesListResult;
 export declare function runTemplatesShow(context: CommandHandlerContext): TemplatesShowResult;
+export {};
 //# sourceMappingURL=shared.d.ts.map
