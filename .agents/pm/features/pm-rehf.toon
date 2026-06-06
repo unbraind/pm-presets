@@ -1,0 +1,23 @@
+id: pm-rehf
+title: Synchronize preset registry metadata with bundled kanban preset
+description: ""
+type: Feature
+status: closed
+priority: 1
+tags[2]: context-management,enhancement
+created_at: "2026-06-06T19:32:03.707Z"
+updated_at: "2026-06-06T19:32:04.669Z"
+author: codex
+files[6]{path,scope,note}:
+  dist/index.js,project,implementation
+  dist/registry.js,project,implementation
+  manifest.json,project,implementation
+  src/index.ts,project,implementation
+  src/registry.ts,project,implementation
+  tests/registry.test.ts,project,implementation
+tests[1]{command,path,scope,timeout_seconds,pm_context_mode,env_set,env_clear,shared_host_safe,assert_stdout_contains,assert_stdout_regex,assert_stderr_contains,assert_stderr_regex,assert_stdout_min_lines,assert_json_field_equals,assert_json_field_gte,note}:
+  PM_PATH=.agents/pm PM_GLOBAL_PATH=.agents/pm Preset registry metadata now matches the bundled six-preset catalog with tests.,null,project,240,null,null,null,null,null,null,null,null,null,null,null,package verification
+docs[1]{path,scope,note}:
+  README.md,project,Preset docs list all six official presets and kanban setup
+close_reason: npm test
+body: "Fix registry, manifest, and docs drift so all six official presets, including kanban, are listed consistently and kanban idPrefix matches bundled settings."

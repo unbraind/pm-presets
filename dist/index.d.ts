@@ -1,5 +1,5 @@
 /**
- * pm-presets — all 5 official pm-cli workspace presets in one package.
+ * pm-presets — all 6 official pm-cli workspace presets in one package.
  *
  * Each preset registers a setup command with the pm CLI extension API.
  * Install this package once and get all presets:
@@ -12,6 +12,7 @@
  *   pm oss-setup         # open-source preset
  *   pm sprint-setup      # software-sprint preset
  *   pm roadmap-setup     # startup-roadmap preset
+ *   pm kanban-setup      # kanban preset
  *
  * Plus a unified, read-only management surface:
  *   pm presets list                 # enumerate presets + what each configures

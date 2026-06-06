@@ -1,6 +1,6 @@
 # pm-presets
 
-All 5 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
+All 6 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
 
 Install once, get all preset setup commands:
 
@@ -37,6 +37,7 @@ Run `pm presets list` for the full, machine-readable catalog.
    pm oss-setup           # open-source project
    pm sprint-setup        # software sprint
    pm roadmap-setup       # startup roadmap
+   pm kanban-setup        # continuous-flow kanban
    ```
 
 All setup commands share the same flags:
@@ -230,18 +231,31 @@ pm create --template feature
 pm create --template milestone
 ```
 
-## Migration from pm-preset-* packages
+### kanban
 
-If you previously installed individual `pm-preset-*` packages, uninstall them
-and install `pm-presets` instead:
+**Governance:** minimal — continuous flow with light ownership warnings.
+
+**Templates:** `card`, `expedite`, `blocked`
+
+**Default id_prefix:** `kan-`
+
+Best for teams that pull work through backlog, ready, in-progress, review, and done columns.
 
 ```bash
-pm package uninstall pm-preset-bug-triage --project
-pm package uninstall pm-preset-indie-dev --project
-pm package uninstall pm-preset-open-source --project
-pm package uninstall pm-preset-software-sprint --project
-pm package uninstall pm-preset-startup-roadmap --project
+pm kanban-setup
+pm create --template card
+pm create --template expedite
+pm create --template blocked
+```
 
+## Migration from legacy individual preset packages
+
+If you previously installed individual preset packages, uninstall those legacy
+entries shown by `pm package list --project` and install `pm-presets` instead:
+
+```bash
+pm package list --project
+pm package uninstall <legacy-preset-package> --project
 pm install github.com/unbraind/pm-presets --project
 ```
 

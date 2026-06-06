@@ -1,6 +1,16 @@
 # Changelog
 
-## 2026.6.4 - 2026-06-04
+## Unreleased
+
+### Added
+
+- Synchronize preset registry metadata with bundled kanban preset ([pm-rehf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-rehf.toon))
+
+### Other
+
+- Align package dependencies to pm CLI/SDK 2026.6.6 ([pm-oaud](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-oaud.toon))
+
+## 2026.06.04 - 2026-06-04
 
 ### Added
 
