@@ -8,6 +8,7 @@
 
 ### Other
 
+- Harden release readiness checks ([pm-7rjp](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-7rjp.toon))
 - Align package dependencies to pm CLI/SDK 2026.6.6 ([pm-oaud](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-oaud.toon))
 
 ## 2026.06.04 - 2026-06-04
