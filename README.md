@@ -230,18 +230,14 @@ pm create --template feature
 pm create --template milestone
 ```
 
-## Migration from pm-preset-* packages
+## Migration from legacy individual preset packages
 
-If you previously installed individual `pm-preset-*` packages, uninstall them
-and install `pm-presets` instead:
+If you previously installed individual preset packages, uninstall those legacy
+entries shown by `pm package list --project` and install `pm-presets` instead:
 
 ```bash
-pm package uninstall pm-preset-bug-triage --project
-pm package uninstall pm-preset-indie-dev --project
-pm package uninstall pm-preset-open-source --project
-pm package uninstall pm-preset-software-sprint --project
-pm package uninstall pm-preset-startup-roadmap --project
-
+pm package list --project
+pm package uninstall <legacy-preset-package> --project
 pm install github.com/unbraind/pm-presets --project
 ```
 
