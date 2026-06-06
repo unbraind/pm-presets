@@ -1,5 +1,5 @@
 /**
- * registry.ts — exposes all 5 presets to the pm CLI extension system.
+ * registry.ts — exposes all 6 presets to the pm CLI extension system.
  *
  * Each entry describes the preset's command name, flags, settings, and
  * templates so callers can enumerate them without running the command.

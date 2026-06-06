@@ -76,6 +76,30 @@ test("startup-roadmap uses custom governance", () => {
   assert.strictEqual(preset.governance, "custom");
 });
 
+test("kanban registry metadata matches the bundled settings", () => {
+  const preset = PRESET_REGISTRY.find((p) => p.id === "kanban");
+  assert.ok(preset, "kanban not found");
+  assert.strictEqual(preset.idPrefix, registryMod.kanbanSettings.id_prefix);
+  assert.deepStrictEqual(preset.templates, ["card", "expedite", "blocked"]);
+});
+
+test("manifest preset metadata stays in sync with the registry", async () => {
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf-8")) as {
+    description?: string;
+    presets?: Array<{ id: string; command: string; idPrefix: string; templates: string[] }>;
+  };
+  assert.match(manifest.description ?? "", /All 6 official/);
+  assert.strictEqual(manifest.presets?.length, PRESET_REGISTRY.length);
+  for (const preset of PRESET_REGISTRY) {
+    const manifestPreset = manifest.presets?.find((entry) => entry.id === preset.id);
+    assert.ok(manifestPreset, `manifest missing preset ${preset.id}`);
+    assert.strictEqual(manifestPreset.command, preset.command);
+    assert.strictEqual(manifestPreset.idPrefix, preset.idPrefix);
+    assert.deepStrictEqual(manifestPreset.templates, preset.templates);
+  }
+});
+
 test("default export is an extension object with activate function", () => {
   const ext = mod.default;
   assert.ok(ext !== null && typeof ext === "object", "default export is not an object");

@@ -1,6 +1,6 @@
 # pm-presets
 
-All 5 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
+All 6 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
 
 Install once, get all preset setup commands:
 
@@ -37,6 +37,7 @@ Run `pm presets list` for the full, machine-readable catalog.
    pm oss-setup           # open-source project
    pm sprint-setup        # software sprint
    pm roadmap-setup       # startup roadmap
+   pm kanban-setup        # continuous-flow kanban
    ```
 
 All setup commands share the same flags:
@@ -228,6 +229,23 @@ pm roadmap-setup
 pm create --template initiative
 pm create --template feature
 pm create --template milestone
+```
+
+### kanban
+
+**Governance:** minimal — continuous flow with light ownership warnings.
+
+**Templates:** `card`, `expedite`, `blocked`
+
+**Default id_prefix:** `kan-`
+
+Best for teams that pull work through backlog, ready, in-progress, review, and done columns.
+
+```bash
+pm kanban-setup
+pm create --template card
+pm create --template expedite
+pm create --template blocked
 ```
 
 ## Migration from legacy individual preset packages

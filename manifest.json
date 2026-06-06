@@ -1,7 +1,7 @@
 {
   "name": "pm-presets",
   "version": "2026.6.4",
-  "description": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
+  "description": "All 6 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban",
   "author": "@unbraind",
   "entry": "./dist/index.js",
   "priority": 50,
@@ -76,6 +76,19 @@
         "initiative",
         "feature",
         "milestone"
+      ]
+    },
+    {
+      "id": "kanban",
+      "command": "kanban-setup",
+      "displayName": "Kanban",
+      "description": "Continuous-flow board with backlog/ready/in-progress/review/done and WIP-friendly card templates.",
+      "idPrefix": "kan-",
+      "governance": "minimal",
+      "templates": [
+        "card",
+        "expedite",
+        "blocked"
       ]
     }
   ]
