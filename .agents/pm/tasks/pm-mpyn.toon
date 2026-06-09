@@ -6,14 +6,15 @@ status: in_progress
 priority: 1
 tags[4]: deps-2026-6-7,full-cycle-hardening,hardening-pass,wave-full-cycle-2026-06-07
 created_at: "2026-06-07T07:41:46.585Z"
-updated_at: "2026-06-09T19:43:48.311Z"
+updated_at: "2026-06-09T20:06:47.283Z"
 assignee: codex-5.3-full-cycle
 author: codex-5.3-full-cycle
-notes[4]{created_at,author,text}:
+notes[5]{created_at,author,text}:
   "2026-06-07T07:41:48.128Z",codex-5.3-full-cycle,"Hardening pass complete: release:check succeeded after dependency bump and changelog regeneration."
   "2026-06-07T08:00:43.625Z",codex-5.3-full-cycle,"Security gate: high-confidence token/key regex scan over tracked files and git history found no actionable secrets. Binary-history false positives were traced to embedded wasm base64 blobs, not credentials."
   "2026-06-09T19:30:56.898Z",unknown,"2026-06-09 continuation: auditing all pm package repos for TypeScript-only implementation, current pm CLI/SDK and pm-changelog usage, release workflow readiness, GitHub alerts/PRs/issues, secret/history hygiene, and real-data functional checks. Constraints: do not modify pm-cli repo except GitHub issues; do not modify telemetry/observability setup; avoid duplicate pm items; use existing hardening wave item as coordination record."
   "2026-06-09T19:43:48.311Z",unknown,"2026-06-09 verification update: active /pm-packages release:check sweep passed for pm-beads, pm-changelog, pm-csv, pm-gantt-chart, pm-github, pm-jira, pm-linear, pm-presets, pm-slack, pm-slack-standup, pm-starter, pm-todos, and pm-ts-starter after toolchain alignment to @unbrained/pm-cli ^2026.6.9 / pm-changelog ^2026.6.8, explicit publishConfig.access=public, and prepublishOnly=release:check. pm-jira CHANGELOG.md regenerated for padded calendar heading drift. Sibling checks also passed for pm-brief, pm-context, pm-graph, and pm-web. Secret/history regex scan across active package repos returned 0 tracked matches and 0 history commits. Dedicated gitleaks/trufflehog/detect-secrets binaries were not installed."
+  "2026-06-09T20:06:47.283Z",unknown,"Closeout: merged package release-hardening PRs across active pm packages and sibling packages; merged pm-web hotfix PR #10 after CodeRabbit success; Gemini was quota-limited, Codex connector unavailable, and Sourcery unavailable for private pm-web. Verified npm run release:check for pm-web after Express 5 fallback fix, rebuilt pm-cli-pm-web image, restarted pm-web with --no-deps, and confirmed local pm-web /healthz plus public https://pm-cli.unbrained.dev/healthz are healthy at version 2026.6.9. Telemetry containers remained healthy after the earlier compose dependency restart; no telemetry/observability config was changed."
 files[4]{path,scope,note}:
   .github/workflows/release.yml,project,Daily release workflow pattern audited across pm packages
   CHANGELOG.md,project,Regenerated changelog to satisfy release gate
