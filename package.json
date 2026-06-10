@@ -1,6 +1,6 @@
 {
   "name": "pm-presets",
-  "version": "2026.6.9",
+  "version": "2026.6.10",
   "description": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
   "repository": {
     "type": "git",
