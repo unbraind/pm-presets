@@ -6,7 +6,7 @@
 
 - Daily Release publish step runs prepublishOnly post-tag: align npm publish with --ignore-scripts ([pm-is8q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-is8q.toon))
 
-## 2026.06.07 - 2026-06-07
+## 2026.6.7 - 2026-06-07
 
 ### Added
 
@@ -17,13 +17,13 @@
 - Harden release readiness checks ([pm-7rjp](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-7rjp.toon))
 - Align package dependencies to pm CLI/SDK 2026.6.6 ([pm-oaud](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-oaud.toon))
 
-## 2026.06.04 - 2026-06-04
+## 2026.6.4 - 2026-06-04
 
 ### Added
 
 - Add presets apply --replace, diff --strict, and presets export ([pm-ehaf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-ehaf.toon))
 
-## 2026.06.03-1 - 2026-06-03
+## 2026.6.3-1 - 2026-06-03
 
 ### Added
 
@@ -33,7 +33,7 @@
 
 - Unit tests + functional test against real workspace + release 2026.6.3 ([pm-q60r](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-q60r.toon))
 
-## 2026.06.03 - 2026-06-02
+## 2026.6.3 - 2026-06-02
 
 ### Added
 
@@ -46,7 +46,7 @@
 - Implement presets diff <name\> \(workspace vs preset, --json\) ([pm-xa8m](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-xa8m.toon))
 - Implement presets show <name\> \(full definition, --json, exit 3\) ([pm-0r28](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-0r28.toon))
 
-## 2026.06.01 - 2026-06-01
+## 2026.6.1 - 2026-06-01
 
 ### Fixed
 
