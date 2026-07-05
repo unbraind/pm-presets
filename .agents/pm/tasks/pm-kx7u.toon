@@ -1,0 +1,12 @@
+id: pm-kx7u
+title: Fix release CI ordering (publish-before-tag)
+description: ""
+type: Task
+status: in_progress
+priority: 1
+tags[2]: ci,release
+created_at: "2026-07-05T21:56:44.927Z"
+updated_at: "2026-07-05T21:57:21.471Z"
+assignee: unknown
+author: unknown
+body: ""
