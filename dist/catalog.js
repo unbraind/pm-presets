@@ -11,7 +11,7 @@
  * keeps it unit-testable with `node --test` and side-effect free.
  */
 import { CommandError, EXIT_CODE } from "./presets/shared.js";
-import { bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, } from "./registry.js";
+import { bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
 import { PRESET_REGISTRY } from "./registry.js";
 /** Raw exports keyed by preset id. */
 const RAW_PRESETS = {
@@ -21,6 +21,7 @@ const RAW_PRESETS = {
     "software-sprint": { settings: softwareSprintSettings, templates: softwareSprintTemplates },
     "startup-roadmap": { settings: startupRoadmapSettings, templates: startupRoadmapTemplates },
     "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
+    "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
 function templateView(document) {
     const options = document.options;

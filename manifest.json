@@ -1,7 +1,7 @@
 {
   "name": "pm-presets",
-  "version": "2026.7.6",
-  "description": "All 6 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban",
+  "version": "2026.6.10",
+  "description": "All 7 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban, agent-workflow",
   "author": "@unbraind",
   "entry": "./dist/index.js",
   "priority": 50,
@@ -89,6 +89,19 @@
         "card",
         "expedite",
         "blocked"
+      ]
+    },
+    {
+      "id": "agent-workflow",
+      "command": "agent-setup",
+      "displayName": "Agent Workflow",
+      "description": "AI agent project management: delegated agent runs, prompt experiments, and eval suites with a custom AgentRun item type.",
+      "idPrefix": "agent-",
+      "governance": "default",
+      "templates": [
+        "agent-task",
+        "prompt-experiment",
+        "eval-run"
       ]
     }
   ]

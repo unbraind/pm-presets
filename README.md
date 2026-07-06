@@ -1,6 +1,6 @@
 # pm-presets
 
-All 6 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
+All 7 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
 
 Install once, get all preset setup commands:
 
@@ -18,6 +18,7 @@ pm install github.com/unbraind/pm-presets --project
 | **software-sprint** | `pm sprint-setup` | standard | Engineering teams running sprints |
 | **startup-roadmap** | `pm roadmap-setup` | custom | Startups with investor-facing roadmaps |
 | **kanban** | `pm kanban-setup` | minimal | Continuous-flow boards with a custom `Card` item type |
+| **agent-workflow** | `pm agent-setup` | default | AI agent project management with a custom `AgentRun` item type |
 
 Run `pm presets list` for the full, machine-readable catalog.
 
@@ -38,6 +39,7 @@ Run `pm presets list` for the full, machine-readable catalog.
    pm sprint-setup        # software sprint
    pm roadmap-setup       # startup roadmap
    pm kanban-setup        # continuous-flow kanban
+   pm agent-setup        # AI agent project management
    ```
 
 All setup commands share the same flags:
@@ -80,6 +82,26 @@ pm presets apply software-sprint --dry-run
 pm presets apply software-sprint --replace  # clean reset of governance/validation/testing
 pm presets export our-config --output our-config.preset.json
 ```
+
+### Unified `presets` flags
+
+The bare `pm presets` command offers a single entry point for the read-only
+surfaces via flags (the dedicated subcommands above remain available with
+identical behavior):
+
+| Flag | Description |
+|---|---|
+| `--list` | List all bundled workspace presets (same output as `pm presets list`). |
+| `--diff <id>` | Compare the current workspace against the named preset (same as `pm presets diff <id>`); accepts `--strict` and `--json`. |
+| `--custom <name>` | Export the current workspace config as a new preset definition (same as `pm presets export <name>`); accepts `--output`, `--display-name`, and `--json`. |
+
+```bash
+pm presets --list
+pm presets --diff software-sprint --strict
+pm presets --custom our-config --output our-config.preset.json
+```
+
+Specify exactly one of `--list`, `--diff`, or `--custom` per invocation.
 
 ### `presets apply` flags
 

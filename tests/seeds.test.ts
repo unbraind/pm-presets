@@ -10,7 +10,7 @@ const seeds = await import("../dist/seeds.js");
 const { PRESET_SEEDS, seedsForPreset, buildSeedCreateArgs, planSeeds } = seeds;
 
 test("every preset id has a seed definition", () => {
-  const ids = ["bug-triage", "indie-dev", "open-source", "software-sprint", "startup-roadmap", "kanban"];
+  const ids = ["bug-triage", "indie-dev", "open-source", "software-sprint", "startup-roadmap", "kanban", "agent-workflow"];
   for (const id of ids) {
     assert.ok(Array.isArray(PRESET_SEEDS[id]) && PRESET_SEEDS[id].length > 0, `no seeds for ${id}`);
   }
@@ -72,4 +72,15 @@ test("planSeeds is pure and reflects the preset's seed list", () => {
 test("unknown preset id yields no seeds", () => {
   assert.deepStrictEqual(seedsForPreset("nope"), []);
   assert.deepStrictEqual(planSeeds("/ws", "nope"), []);
+});
+
+test("agent-workflow has a starter AgentRun seed", () => {
+  const list = seedsForPreset("agent-workflow");
+  assert.ok(Array.isArray(list) && list.length > 0);
+  assert.strictEqual(list[0].type, "AgentRun");
+  const plan = planSeeds("/ws", "agent-workflow");
+  assert.ok(plan.length === list.length);
+  for (const entry of plan) {
+    assert.ok(entry.command.startsWith("pm --path /ws create --type AgentRun"));
+  }
 });
