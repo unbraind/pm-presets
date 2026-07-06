@@ -8,6 +8,7 @@
 
 ### Other
 
+- Align Node engine with pm CLI runtime ([pm-wf6l](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-wf6l.toon))
 - Regenerate CHANGELOG after pm close item ([pm-65i9](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-65i9.toon))
 
 ## 2026.6.13 - 2026-06-13
