@@ -75,6 +75,15 @@ export const PRESET_SEEDS = {
             body: "Starter card seeded by pm-presets.",
         },
     ],
+    "agent-workflow": [
+        {
+            type: "AgentRun",
+            title: "First delegated agent task",
+            priority: "2",
+            tags: "agent,task",
+            body: "Starter agent run seeded by pm-presets. Replace with a real delegated task.",
+        },
+    ],
 };
 export function seedsForPreset(presetId) {
     return PRESET_SEEDS[presetId] ?? [];

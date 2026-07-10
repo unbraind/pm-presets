@@ -15,9 +15,9 @@ const {
   validateAllPresets,
 } = catalog;
 
-test("listPresetDefinitions returns all 6 presets with structured fields", () => {
+test("listPresetDefinitions returns all 7 presets with structured fields", () => {
   const defs = listPresetDefinitions();
-  assert.strictEqual(defs.length, 6);
+  assert.strictEqual(defs.length, 7);
   for (const def of defs) {
     assert.ok(def.id.length > 0);
     assert.ok(def.settings && typeof def.settings === "object");
@@ -55,14 +55,14 @@ test("kanban definition exposes its custom item type", () => {
   assert.ok(card?.options.some((o) => o.key === "column"));
 });
 
-test("non-kanban presets register no custom item types", () => {
+test("software-sprint registers no custom item types", () => {
   const sprint = requirePresetDefinition("software-sprint");
   assert.strictEqual(sprint.itemTypes.length, 0);
 });
 
 test("buildListRows enriches each row with item types and template counts", () => {
   const rows = buildListRows();
-  assert.strictEqual(rows.length, 6);
+  assert.strictEqual(rows.length, 7);
   const sprint = rows.find((r) => r.id === "software-sprint");
   assert.ok(sprint);
   assert.strictEqual(sprint.templateCount, 4);
@@ -74,7 +74,27 @@ test("buildListRows enriches each row with item types and template counts", () =
 
 test("validateAllPresets reports all bundled presets as valid", () => {
   const result = validateAllPresets();
-  assert.strictEqual(result.checked, 6);
+  assert.strictEqual(result.checked, 7);
   assert.strictEqual(result.ok, true, JSON.stringify(result.issues));
   assert.strictEqual(result.issues.length, 0);
+});
+
+test("agent-workflow definition exposes its custom AgentRun item type", () => {
+  const def = requirePresetDefinition("agent-workflow");
+  assert.ok(def.itemTypes.some((t) => t.name === "AgentRun"));
+  const run = def.itemTypes.find((t) => t.name === "AgentRun");
+  assert.ok(run?.options.some((o) => o.key === "agentStatus"));
+  assert.ok(run?.options.some((o) => o.key === "mode"));
+  assert.ok(run?.options.some((o) => o.key === "model"));
+});
+
+test("agent-workflow list row reports the AgentRun custom item type and 3 templates", () => {
+  const rows = buildListRows();
+  const agent = rows.find((r) => r.id === "agent-workflow");
+  assert.ok(agent);
+  assert.strictEqual(agent.templateCount, 3);
+  assert.deepStrictEqual(agent.customItemTypes, ["AgentRun"]);
+  assert.ok(agent.templates.includes("agent-task"));
+  assert.ok(agent.templates.includes("prompt-experiment"));
+  assert.ok(agent.templates.includes("eval-run"));
 });

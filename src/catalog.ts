@@ -32,6 +32,9 @@ import {
   kanbanSettings,
   kanbanTemplates,
   kanbanItemTypes,
+  agentWorkflowSettings,
+  agentWorkflowTemplates,
+  agentWorkflowItemTypes,
 } from "./registry.js";
 import { PRESET_REGISTRY, type PresetDescriptor } from "./registry.js";
 
@@ -81,6 +84,7 @@ const RAW_PRESETS: Record<string, RawPreset> = {
   "software-sprint": { settings: softwareSprintSettings, templates: softwareSprintTemplates },
   "startup-roadmap": { settings: startupRoadmapSettings, templates: startupRoadmapTemplates },
   "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
+  "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
 
 function templateView(document: StoredCreateTemplateDocument): PresetTemplateView {

@@ -18,8 +18,8 @@ test("PRESET_REGISTRY exports an array", () => {
   assert.ok(Array.isArray(PRESET_REGISTRY));
 });
 
-test("PRESET_REGISTRY contains exactly 6 presets", () => {
-  assert.strictEqual(PRESET_REGISTRY.length, 6);
+test("PRESET_REGISTRY contains exactly 7 presets", () => {
+  assert.strictEqual(PRESET_REGISTRY.length, 7);
 });
 
 const EXPECTED_IDS = [
@@ -29,6 +29,7 @@ const EXPECTED_IDS = [
   "software-sprint",
   "startup-roadmap",
   "kanban",
+  "agent-workflow",
 ];
 
 test("all expected preset IDs are present", () => {
@@ -89,7 +90,7 @@ test("manifest preset metadata stays in sync with the registry", async () => {
     description?: string;
     presets?: Array<{ id: string; command: string; idPrefix: string; templates: string[] }>;
   };
-  assert.match(manifest.description ?? "", /All 6 official/);
+  assert.match(manifest.description ?? "", /All 7 official/);
   assert.strictEqual(manifest.presets?.length, PRESET_REGISTRY.length);
   for (const preset of PRESET_REGISTRY) {
     const manifestPreset = manifest.presets?.find((entry) => entry.id === preset.id);
@@ -127,6 +128,7 @@ test("preset templates use current pm create template document shape", () => {
     registryMod.openSourceTemplates,
     registryMod.softwareSprintTemplates,
     registryMod.startupRoadmapTemplates,
+    registryMod.agentWorkflowTemplates,
   ];
 
   for (const templates of templateMaps) {
@@ -154,4 +156,35 @@ test("preset templates use current pm create template document shape", () => {
       }
     }
   }
+});
+
+test("agent-workflow registry metadata matches the bundled settings", () => {
+  const preset = PRESET_REGISTRY.find((p) => p.id === "agent-workflow");
+  assert.ok(preset, "agent-workflow not found");
+  assert.strictEqual(preset.idPrefix, registryMod.agentWorkflowSettings.id_prefix);
+  assert.strictEqual(preset.governance, "default");
+  assert.deepStrictEqual(preset.templates, ["agent-task", "prompt-experiment", "eval-run"]);
+  assert.strictEqual(preset.command, "agent-setup");
+});
+
+test("extension registers the agent-setup command and the unified presets command", () => {
+  const ext = mod.default;
+  const commands: Array<{ name: string; action?: string; flags?: unknown[] }> = [];
+  ext.activate({
+    registerCommand(command: { name: string; action?: string; flags?: unknown[] }) {
+      commands.push(command);
+    },
+    registerItemTypes(_types: unknown) {
+      // no-op recorder
+    },
+  });
+  const commandNames = commands.map((command) => command.name);
+  assert.ok(commandNames.includes("agent-setup"));
+  assert.ok(commandNames.includes("presets"));
+  const presets = commands.find((command) => command.name === "presets");
+  assert.ok(presets);
+  const flagLongs = ((presets as { flags?: Array<{ long: string }> }).flags ?? []).map((f) => f.long);
+  assert.ok(flagLongs.includes("--list"));
+  assert.ok(flagLongs.includes("--diff"));
+  assert.ok(flagLongs.includes("--custom"));
 });

@@ -1,5 +1,5 @@
 /**
- * registry.ts — exposes all 6 presets to the pm CLI extension system.
+ * registry.ts — exposes all 7 presets to the pm CLI extension system.
  *
  * Each entry describes the preset's command name, flags, settings, and
  * templates so callers can enumerate them without running the command.
@@ -10,6 +10,7 @@ export { SETTINGS as openSourceSettings, TEMPLATES as openSourceTemplates, runOp
 export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplates, runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.js";
+export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates, ITEM_TYPES as agentWorkflowItemTypes, runAgentWorkflowSetup } from "./presets/agent-workflow/index.js";
 export interface PresetDescriptor {
     /** Stable identifier used in pm CLI commands (e.g. "bug-triage") */
     id: string;

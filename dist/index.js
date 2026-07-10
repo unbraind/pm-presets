@@ -1,5 +1,5 @@
 /**
- * pm-presets — all 6 official pm-cli workspace presets in one package.
+ * pm-presets — all 7 official pm-cli workspace presets in one package.
  *
  * Each preset registers a setup command with the pm CLI extension API.
  * Install this package once and get all presets:
@@ -13,6 +13,7 @@
  *   pm sprint-setup      # software-sprint preset
  *   pm roadmap-setup     # startup-roadmap preset
  *   pm kanban-setup      # kanban preset
+ *   pm agent-setup       # agent-workflow preset
  *
  * Plus a unified, read-only management surface:
  *   pm presets list                 # enumerate presets + what each configures
@@ -24,6 +25,7 @@
 import { runBugTriageSetup } from "./presets/bug-triage/index.js";
 import { runIndieDevSetup } from "./presets/indie-dev/index.js";
 import { runKanbanSetup, ITEM_TYPES as kanbanItemTypes } from "./presets/kanban/index.js";
+import { runAgentWorkflowSetup, ITEM_TYPES as agentWorkflowItemTypes } from "./presets/agent-workflow/index.js";
 import { runOpenSourceSetup } from "./presets/open-source/index.js";
 import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, runTemplatesShow } from "./presets/shared.js";
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
@@ -37,6 +39,10 @@ import * as fs from "node:fs";
 // Drift exit code for `presets diff --strict`. Distinct from GENERIC(1)/
 // USAGE(2)/NOT_FOUND(3) so CI can tell "drifted" from "command failed".
 const EXIT_CODE_DRIFT = 4;
+// Mirror the SDK EXIT_CODE contract (see ./presets/shared.ts) so the unified
+// `presets` command can throw clean, typed non-zero exits without importing it.
+const EXIT_CODE_USAGE = 2;
+const EXIT_CODE_NOT_FOUND = 3;
 const defineExtension = ((extension) => extension);
 // A thrown error only yields a clean non-zero exit (no double-invocation) when
 // it carries a numeric `exitCode`. Standalone-installed extensions can't import
@@ -58,6 +64,7 @@ const PRESET_HANDLERS = {
     "software-sprint": runSoftwareSprintSetup,
     "startup-roadmap": runStartupRoadmapSetup,
     "kanban": runKanbanSetup,
+    "agent-workflow": runAgentWorkflowSetup,
 };
 // pm-cli's loose-option matcher (extension-command-options.ts) only recognizes
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
@@ -134,6 +141,48 @@ const EXPORT_FLAGS = [
         description: "Human-readable display name for the exported preset (defaults to the id).",
     },
 ];
+// The bare `presets` command unifies the read-only surfaces behind flags so
+// users can run `pm presets --list`, `pm presets --diff <id>`, or `pm presets
+// --custom <name>` from a single entry point. The subcommands (`presets list`,
+// `presets diff`, `presets export`) remain available with identical behavior.
+const PRESETS_FLAGS = [
+    {
+        long: "--list",
+        type: "boolean",
+        description: "List all bundled workspace presets with what each configures.",
+    },
+    {
+        long: "--diff",
+        value_name: "<preset>",
+        type: "string",
+        description: "Compare the current pm workspace against the named preset and report differences.",
+    },
+    {
+        long: "--custom",
+        value_name: "<name>",
+        type: "string",
+        description: "Export the current workspace config (settings + templates) as a new preset definition.",
+    },
+    ...JSON_FLAG,
+    {
+        long: "--strict",
+        type: "boolean",
+        description: "With --diff: exit non-zero (4) when the workspace is NOT in sync with the preset.",
+    },
+    {
+        long: "--output",
+        short: "-o",
+        value_name: "<file>",
+        type: "string",
+        description: "With --custom: write the exported preset definition to a file instead of stdout.",
+    },
+    {
+        long: "--display-name",
+        value_name: "<name>",
+        type: "string",
+        description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
+    },
+];
 export default defineExtension({
     activate(api) {
         // ── bug-triage ──────────────────────────────────────────────────────────
@@ -178,10 +227,100 @@ export default defineExtension({
             flags: COMMON_FLAGS,
             run: runKanbanSetup,
         });
+        // ── agent-workflow ────────────────────────────────────────────────────
+        api.registerCommand({
+            name: "agent-setup",
+            description: "Apply the agent-workflow preset: AI agent project management with delegated agent runs, prompt experiments, and eval suites.",
+            flags: COMMON_FLAGS,
+            run: runAgentWorkflowSetup,
+        });
         // Register the kanban board columns as custom item types via the schema API.
         if (typeof api.registerItemTypes === "function") {
             api.registerItemTypes(kanbanItemTypes);
+            api.registerItemTypes(agentWorkflowItemTypes);
         }
+        // ── unified presets entry point: --list / --diff / --custom ────────────
+        // A single command that dispatches to the read-only surfaces via flags,
+        // complementing the dedicated `presets list|show|diff|export` subcommands.
+        api.registerCommand({
+            name: "presets",
+            action: "presets",
+            description: "Unified presets surface: --list shows presets, --diff <id> compares the workspace, --custom <name> exports the current workspace as a preset.",
+            examples: [
+                "pm presets --list",
+                "pm presets --diff software-sprint",
+                "pm presets --custom our-config",
+                "pm presets --custom our-config --output our-config.preset.json",
+            ],
+            flags: PRESETS_FLAGS,
+            run: (ctx) => {
+                const options = ctx.options ?? {};
+                const list = readBooleanOption(options, "list");
+                const diffId = readStringOption(options, "diff");
+                const customName = readStringOption(options, "custom");
+                if (!list && !diffId && !customName) {
+                    throw new PresetError("`presets` requires one of --list, --diff <preset>, or --custom <name>.", EXIT_CODE_USAGE);
+                }
+                // Disallow mixing dispatch flags: the surfaces have different outputs.
+                const chosen = [list, Boolean(diffId), Boolean(customName)].filter(Boolean).length;
+                if (chosen > 1) {
+                    throw new PresetError("Specify only one of --list, --diff, or --custom at a time.", EXIT_CODE_USAGE);
+                }
+                if (list) {
+                    return {
+                        presets: buildListRows(),
+                        count: PRESET_REGISTRY.length,
+                    };
+                }
+                if (diffId) {
+                    const definition = requirePresetDefinition(diffId);
+                    const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
+                    const result = computePresetDiff(definition, snapshot);
+                    const strict = readBooleanOption(options, "strict");
+                    if (strict && !result.inSync) {
+                        const json = readBooleanOption(options, "json");
+                        if (json) {
+                            console.log(JSON.stringify(result, null, 2));
+                        }
+                        else {
+                            const { settingsToAdd, settingsToChange, templatesMissing } = result.summary;
+                            console.error("Workspace is NOT in sync with preset '" + definition.id + "': " +
+                                settingsToAdd + " setting(s) to add, " + settingsToChange + " to change, " +
+                                templatesMissing + " template(s) missing.");
+                        }
+                        throw new PresetError("Workspace drifted from preset '" + definition.id + "'.", EXIT_CODE_DRIFT);
+                    }
+                    return result;
+                }
+                // --custom <name>: export the current workspace as a preset definition.
+                // Mirror the `presets export` guard: a whitespace-only name would trim to
+                // "" and produce a preset definition with an empty id.
+                const name = customName;
+                if (name.trim().length === 0) {
+                    throw new PresetError("`presets --custom` requires a non-empty preset name.", EXIT_CODE_USAGE);
+                }
+                const pmDir = resolvePmDir(ctx);
+                const settings = readWorkspaceSettings(pmDir);
+                if (!settings) {
+                    throw new PresetError("No readable settings.json in " + pmDir + ". Run 'pm init' (and apply a preset) first.", EXIT_CODE_NOT_FOUND);
+                }
+                const templates = readWorkspaceTemplates(pmDir);
+                const exported = buildExportedPreset({
+                    name: name.trim(),
+                    displayName: readStringOption(options, "displayName", "display-name"),
+                    settings,
+                    templates,
+                });
+                const output = readStringOption(options, "output");
+                if (output) {
+                    const serialized = JSON.stringify(exported, null, 2) + "\n";
+                    fs.writeFileSync(output, serialized, "utf8");
+                    console.log("Exported preset '" + exported.id + "' (" + exported.templates.length + " template(s)) to " + output);
+                    return undefined;
+                }
+                return exported;
+            },
+        });
         // ── unified presets list / show / diff / validate / apply ────────────────
         api.registerCommand({
             name: "presets list",
