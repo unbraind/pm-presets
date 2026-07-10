@@ -145,7 +145,6 @@ test("preset templates use current pm create template document shape", () => {
       assert.strictEqual(typeof document.created_at, "string");
       assert.strictEqual(typeof document.updated_at, "string");
       assert.ok(document.options && typeof document.options === "object");
-      assert.ok(!Object.hasOwn(document.options, "typeOption"));
       for (const [key, value] of Object.entries(document.options)) {
         assert.ok(key.trim().length > 0);
         assert.ok(
@@ -187,4 +186,34 @@ test("extension registers the agent-setup command and the unified presets comman
   assert.ok(flagLongs.includes("--list"));
   assert.ok(flagLongs.includes("--diff"));
   assert.ok(flagLongs.includes("--custom"));
+});
+
+test("unified presets command rejects a whitespace-only custom name", () => {
+  const ext = mod.default;
+  let presetsCommand: { run?: (ctx: { options: Record<string, unknown>; pm_root: string }) => unknown } | undefined;
+  ext.activate({
+    registerCommand(command: { name: string; run?: (ctx: { options: Record<string, unknown>; pm_root: string }) => unknown }) {
+      if (command.name === "presets") presetsCommand = command;
+    },
+    registerItemTypes() {},
+  });
+  assert.ok(presetsCommand?.run);
+  assert.throws(
+    () => presetsCommand!.run!({ options: { custom: "   " }, pm_root: "/missing" }),
+    /--custom requires a non-empty preset name/,
+  );
+});
+
+test("agent-workflow templates store lifecycle data as type options", () => {
+  for (const template of Object.values(registryMod.agentWorkflowTemplates)) {
+    const options = (template as { options: Record<string, unknown> }).options;
+    assert.ok(!Object.hasOwn(options, "status"), "core status must not carry agent lifecycle values");
+    assert.ok(!Object.hasOwn(options, "mode"), "custom mode must be stored through typeOption");
+    assert.ok(!Object.hasOwn(options, "model"), "custom model must be stored through typeOption");
+    const typeOptions = options.typeOption;
+    assert.ok(Array.isArray(typeOptions));
+    assert.ok(typeOptions.some((entry) => typeof entry === "string" && entry.startsWith("phase=")));
+    assert.ok(typeOptions.some((entry) => typeof entry === "string" && entry.startsWith("mode=")));
+    assert.ok(typeOptions.some((entry) => typeof entry === "string" && entry.startsWith("model=")));
+  }
 });

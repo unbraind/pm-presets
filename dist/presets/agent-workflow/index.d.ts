@@ -5,8 +5,7 @@ import type { CommandHandlerContext, SchemaItemTypeDefinition } from "@unbrained
  * The workspace centers on agent runs (delegated, observable units of work),
  * prompt experiments (iterating on instructions/tooling), and eval runs
  * (measuring agent quality). A custom `AgentRun` item type carries the
- * agent lifecycle status (`agentStatus`, kept distinct from pm's built-in
- * `status` field), autonomy mode, and target model so the board reads
+ * agent lifecycle phase, autonomy mode, and target model so the board reads
  * like a CI dashboard for autonomous work.
  */
 export declare const SETTINGS: {

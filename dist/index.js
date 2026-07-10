@@ -257,6 +257,10 @@ export default defineExtension({
                 const options = ctx.options ?? {};
                 const list = readBooleanOption(options, "list");
                 const diffId = readStringOption(options, "diff");
+                const customRaw = options["custom"];
+                if (typeof customRaw === "string" && customRaw.trim().length === 0) {
+                    throw new PresetError("presets --custom requires a non-empty preset name.", EXIT_CODE_USAGE);
+                }
                 const customName = readStringOption(options, "custom");
                 if (!list && !diffId && !customName) {
                     throw new PresetError("`presets` requires one of --list, --diff <preset>, or --custom <name>.", EXIT_CODE_USAGE);
