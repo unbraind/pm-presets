@@ -55,7 +55,7 @@ test("kanban definition exposes its custom item type", () => {
   assert.ok(card?.options.some((o) => o.key === "column"));
 });
 
-test("non-kanban presets register no custom item types", () => {
+test("software-sprint registers no custom item types", () => {
   const sprint = requirePresetDefinition("software-sprint");
   assert.strictEqual(sprint.itemTypes.length, 0);
 });
@@ -83,7 +83,7 @@ test("agent-workflow definition exposes its custom AgentRun item type", () => {
   const def = requirePresetDefinition("agent-workflow");
   assert.ok(def.itemTypes.some((t) => t.name === "AgentRun"));
   const run = def.itemTypes.find((t) => t.name === "AgentRun");
-  assert.ok(run?.options.some((o) => o.key === "status"));
+  assert.ok(run?.options.some((o) => o.key === "agentStatus"));
   assert.ok(run?.options.some((o) => o.key === "mode"));
   assert.ok(run?.options.some((o) => o.key === "model"));
 });

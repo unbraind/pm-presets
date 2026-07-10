@@ -1,6 +1,6 @@
 {
   "name": "pm-presets",
-  "version": "2026.6.10",
+  "version": "2026.7.7",
   "description": "All 7 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban, agent-workflow",
   "repository": {
     "type": "git",
@@ -91,7 +91,7 @@
     "catalog": {
       "display_name": "pm Presets",
       "category": "preset",
-      "summary": "All 5 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap",
+      "summary": "All 7 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban, agent-workflow",
       "tags": [
         "preset",
         "official",
@@ -99,7 +99,10 @@
         "indie-dev",
         "open-source",
         "software-sprint",
-        "startup-roadmap"
+        "startup-roadmap",
+        "kanban",
+        "agent-workflow",
+        "agent-setup"
       ],
       "links": {
         "docs": "https://github.com/unbraind/pm-presets#readme",

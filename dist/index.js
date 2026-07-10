@@ -293,7 +293,12 @@ export default defineExtension({
                     return result;
                 }
                 // --custom <name>: export the current workspace as a preset definition.
+                // Mirror the `presets export` guard: a whitespace-only name would trim to
+                // "" and produce a preset definition with an empty id.
                 const name = customName;
+                if (name.trim().length === 0) {
+                    throw new PresetError("`presets --custom` requires a non-empty preset name.", EXIT_CODE_USAGE);
+                }
                 const pmDir = resolvePmDir(ctx);
                 const settings = readWorkspaceSettings(pmDir);
                 if (!settings) {
