@@ -1,0 +1,25 @@
+id: pm-0y8x
+title: Production hardening and consolidated-preset governance pass 2026-07-09
+description: Deep-test all consolidated pm presets and custom preset paths; align current pm CLI/SDK and pm-changelog; verify archived legacy-preset migration guidance and production release readiness.
+type: Task
+status: in_progress
+priority: 1
+tags[5]: agent-audit,context-management,presets,release-readiness,typescript
+created_at: "2026-07-09T21:35:58.172Z"
+updated_at: "2026-07-09T21:36:08.277Z"
+assignee: codex-foundation
+author: codex-foundation
+estimated_minutes: 180
+acceptance_criteria: Bundled and custom presets validate and are applied/diffed/exported in real workspaces; SDK/activation paths and agent-oriented output are verified; tests/build/typecheck/audit/pack/install/release dry-run pass; archived legacy preset repos are confirmed; privacy/history audit is clean; release automation uses current toolchain and pm-changelog.
+definition_of_ready: "Existing feature PR, repo state, gh authentication, pm CLI 2026.7.9, npm metadata, and canonical checkout are available."
+reviewer: codex-root
+risk: high
+confidence: high
+release: next
+comments[2]{created_at,author,text}:
+  "2026-07-09T21:35:58.172Z",codex-foundation,Specialized agent started scoped production audit on 2026-07-09; pm-cli source and telemetry/observability configuration are out of scope.
+  "2026-07-09T21:36:07.924Z",codex-foundation,"2026-07-09 scope checkpoint: inventorying GitHub reports, current PR branch, dependency versions, release automation, package activation, real-workspace behavior, and full-history privacy posture before implementation."
+notes[2]{created_at,author,text}:
+  "2026-07-09T21:35:58.172Z",codex-foundation,"Evidence will include exact commands, linked files/docs/tests, GitHub review disposition, package tarball verification, real workspace fixtures, and path-only sensitive-data scan summaries."
+  "2026-07-09T21:36:08.275Z",codex-foundation,Toolchain baseline is global pm CLI 2026.7.9. Required package target is @unbrained/pm-cli 2026.7.9 and pm-changelog 2026.7.8 after registry verification. No telemetry/observability changes are authorized.
+body: "Audit GitHub issues, PRs, checks, dependency/security reports, full history, package contents, and real preset apply/diff/export/validate workflows. Preserve unrelated work. Keep all presets consolidated in pm-presets with simple branding. Generate CHANGELOG.md and release notes with pm-changelog. Verify daily change-gated GitHub/npm/Bun release automation. Run Greptile before push, then bot review loops to green."

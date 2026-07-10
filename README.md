@@ -159,12 +159,14 @@ The exported document is `$schema: "pm-presets/exported-preset@1"` and records
 custom scalar fields have no `pm create --<field>` setter today (pm-cli #97),
 so the snapshot reconstructs the preset from settings + templates only.
 
-**Seeds and custom fields (pm-cli #97).** Starter items created by
-`--with-seeds` set only **built-in** fields (`type`, `title`, `priority`,
-`tags`, `body`). Custom scalar fields registered via `registerItemFields` have
-no `pm create --<field>` setter today, so any preset-specific context lives in
-the seed item's body text rather than in custom options. The kanban `Card`
-type *is* a registered item type, so its seed is created as `--type Card`.
+**Seeds and custom fields.** Starter items created by `--with-seeds` set only
+**built-in** fields (`type`, `title`, `priority`, `tags`, `body`). Custom scalar
+fields registered via `registerItemFields` still have no direct
+`pm create --<field>` setter, so seed-only context lives in the item body.
+Registered item-type options are supported through `--type-option`: the
+agent-workflow templates persist `phase`, `mode`, and `model` this way while
+leaving the core pm `status` field untouched. The kanban `Card` and
+agent-workflow `AgentRun` seeds are created with their registered item types.
 
 ## Presets in Detail
 

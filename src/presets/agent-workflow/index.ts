@@ -13,8 +13,7 @@ import {
  * The workspace centers on agent runs (delegated, observable units of work),
  * prompt experiments (iterating on instructions/tooling), and eval runs
  * (measuring agent quality). A custom `AgentRun` item type carries the
- * agent lifecycle status (`agentStatus`, kept distinct from pm's built-in
- * `status` field), autonomy mode, and target model so the board reads
+ * agent lifecycle phase, autonomy mode, and target model so the board reads
  * like a CI dashboard for autonomous work.
  */
 export const SETTINGS = {
@@ -46,7 +45,7 @@ export const ITEM_TYPES: SchemaItemTypeDefinition[] = [
     aliases: ["agent", "agent-run"],
     options: [
       {
-        key: "agentStatus",
+        key: "phase",
         values: ["queued", "planning", "running", "review", "completed", "failed"],
       },
       {
@@ -66,9 +65,7 @@ export const TEMPLATES = {
     type: "AgentRun",
     priority: "2",
     tags: "agent,task",
-    agentStatus: "queued",
-    mode: "supervised",
-    model: "auto",
+    typeOption: ["phase=queued", "mode=supervised", "model=auto"],
     assignee: "TBD",
     acceptanceCriteria:
       "Agent run completes its objective with a recorded result and artifacts.",
@@ -78,9 +75,7 @@ export const TEMPLATES = {
     type: "AgentRun",
     priority: "3",
     tags: "agent,prompt,experiment",
-    agentStatus: "planning",
-    mode: "interactive",
-    model: "auto",
+    typeOption: ["phase=planning", "mode=interactive", "model=auto"],
     assignee: "TBD",
     acceptanceCriteria:
       "Prompt change is evaluated against the eval set and the delta is recorded.",
@@ -90,9 +85,7 @@ export const TEMPLATES = {
     type: "AgentRun",
     priority: "2",
     tags: "agent,eval",
-    agentStatus: "queued",
-    mode: "autonomous",
-    model: "auto",
+    typeOption: ["phase=queued", "mode=autonomous", "model=auto"],
     assignee: "TBD",
     acceptanceCriteria:
       "Eval run produces a scorecard comparing the candidate against the baseline.",
