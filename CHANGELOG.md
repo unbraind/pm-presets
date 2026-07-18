@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Readiness/package-governance audit 2026-05-29 ([pm-e1a3](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-e1a3.toon))
+- Finish PR \#15: agent-workflow preset + unified presets flags (merge-conflict resolve, bot-review fixes, functional verify) ([pm-mnug](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-mnug.toon))
+- Harden release bun-verify so registry-mirror lag cannot block the GitHub release ([pm-0f48](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-0f48.toon))
+
 ## 2026.7.10-1 - 2026-07-10
 
 ### Other
