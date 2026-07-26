@@ -144,8 +144,9 @@ test("extension registers preset and template commands", async () => {
   const { registrations } = await activatePresets();
   const commandNames = registrations.commands.map((entry) => entry.command);
   assert.ok(commandNames.includes("triage-setup"));
-  assert.ok(commandNames.includes("templates show"));
-  assert.ok(registrations.commands.some((entry) => entry.action === "templates-show"));
+  const templatesShow = registrations.commands.find((entry) => entry.command === "templates show");
+  assert.ok(templatesShow, "templates show command should be registered");
+  assert.equal(templatesShow.action, "templates-show");
 });
 
 test("preset templates use current pm create template document shape", () => {
