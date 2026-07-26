@@ -43,7 +43,6 @@ const EXIT_CODE_DRIFT = 4;
 // `presets` command can throw clean, typed non-zero exits without importing it.
 const EXIT_CODE_USAGE = 2;
 const EXIT_CODE_NOT_FOUND = 3;
-const defineExtension = ((extension) => extension);
 // A thrown error only yields a clean non-zero exit (no double-invocation) when
 // it carries a numeric `exitCode`. Standalone-installed extensions can't import
 // the SDK's EXIT_CODE at runtime, so mirror the contract locally.
@@ -183,6 +182,15 @@ const PRESETS_FLAGS = [
         description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
     },
 ];
+/**
+ * Local stand-in for the SDK's `defineExtension` identity helper.
+ *
+ * Declared here rather than imported so this package keeps a type-only
+ * dependency on `@unbrained/pm-cli` and adds no runtime module edge. The
+ * generic constraint is the SDK's own, so the extension object is contract-
+ * checked against {@link ExtensionModule} exactly as the imported helper would.
+ */
+const defineExtension = (module) => module;
 export default defineExtension({
     activate(api) {
         // ── bug-triage ──────────────────────────────────────────────────────────

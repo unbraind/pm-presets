@@ -22,8 +22,9 @@
  *   pm presets validate             # validate all bundled presets parse/load
  *   pm presets apply <id>           # scaffold a preset into this workspace
  */
+import type { ExtensionApi } from "@unbrained/pm-cli/sdk/authoring";
 declare const _default: {
-    activate(api: import("@unbrained/pm-cli/sdk").ExtensionApi): void;
+    activate(api: ExtensionApi): void;
 };
 export default _default;
 export { PRESET_REGISTRY } from "./registry.js";
