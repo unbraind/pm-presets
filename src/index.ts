@@ -23,7 +23,7 @@
  *   pm presets apply <id>           # scaffold a preset into this workspace
  */
 
-import type { ExtensionApi, ExtensionModule } from "@unbrained/pm-cli/sdk/authoring";
+import type { ExtensionApi, ExtensionModule, FlagDefinition } from "@unbrained/pm-cli/sdk/authoring";
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
 import { runBugTriageSetup } from "./presets/bug-triage/index.js";
@@ -72,7 +72,7 @@ class PresetError extends Error {
 
 // Dispatch table: preset id -> its setup handler. Powers `presets apply <id>`
 // and keeps the individual *-setup commands as thin aliases.
-const PRESET_HANDLERS: Record<string, (ctx: any) => unknown> = {
+const PRESET_HANDLERS: Record<string, (ctx: CommandHandlerContext) => unknown> = {
   "bug-triage": runBugTriageSetup,
   "indie-dev": runIndieDevSetup,
   "open-source": runOpenSourceSetup,
@@ -86,80 +86,80 @@ const PRESET_HANDLERS: Record<string, (ctx: any) => unknown> = {
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
 // `long: "dry-run"` (no `--`) makes the flag invisible to `--help` AND rejected
 // at parse time as "Unknown option". Always include the prefixes.
-const COMMON_FLAGS = [
+const COMMON_FLAGS: FlagDefinition[] = [
   {
     long: "--force",
     short: "-f",
-    type: "boolean" as const,
+    value_type: "boolean",
     description: "Overwrite existing settings.json and template files without prompting.",
   },
   {
     long: "--dry-run",
     short: "-n",
-    type: "boolean" as const,
+    value_type: "boolean",
     description: "Preview what would be written without making any changes.",
   },
   {
     long: "--prefix",
     short: "-p",
     value_name: "<prefix>",
-    type: "string" as const,
+    value_type: "string",
     description: "Override the id_prefix written to settings.json.",
   },
 ];
 
 // `presets list`/`show`/`diff`/`validate`/`export` are JSON-friendly.
-const JSON_FLAG = [
+const JSON_FLAG: FlagDefinition[] = [
   {
     long: "--json",
-    type: "boolean" as const,
+    value_type: "boolean",
     description: "Emit machine-readable JSON instead of the human summary.",
   },
 ];
 
 // `presets apply` additionally accepts --with-seeds to create starter items
 // and --replace to full-replace (rather than deep-merge) the owned settings trees.
-const APPLY_FLAGS = [
+const APPLY_FLAGS: FlagDefinition[] = [
   ...COMMON_FLAGS,
   {
     long: "--with-seeds",
     short: "-s",
-    type: "boolean" as const,
+    value_type: "boolean",
     description: "Also create the preset's starter items (built-in fields only; see #97).",
   },
   {
     long: "--replace",
-    type: "boolean" as const,
+    value_type: "boolean",
     description:
       "Full-replace the governance/validation/testing settings trees with the preset's (clean reset) instead of deep-merging. Other settings are still preserved.",
   },
 ];
 
 // `presets diff` additionally accepts --strict for CI drift detection.
-const DIFF_FLAGS = [
+const DIFF_FLAGS: FlagDefinition[] = [
   ...JSON_FLAG,
   {
     long: "--strict",
-    type: "boolean" as const,
+    value_type: "boolean",
     description:
       "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
   },
 ];
 
 // `presets export` writes to a file or stdout and can carry a display name.
-const EXPORT_FLAGS = [
+const EXPORT_FLAGS: FlagDefinition[] = [
   ...JSON_FLAG,
   {
     long: "--output",
     short: "-o",
     value_name: "<file>",
-    type: "string" as const,
+    value_type: "string",
     description: "Write the exported preset definition to a file instead of stdout.",
   },
   {
     long: "--display-name",
     value_name: "<name>",
-    type: "string" as const,
+    value_type: "string",
     description: "Human-readable display name for the exported preset (defaults to the id).",
   },
 ];
@@ -168,28 +168,28 @@ const EXPORT_FLAGS = [
 // users can run `pm presets --list`, `pm presets --diff <id>`, or `pm presets
 // --custom <name>` from a single entry point. The subcommands (`presets list`,
 // `presets diff`, `presets export`) remain available with identical behavior.
-const PRESETS_FLAGS = [
+const PRESETS_FLAGS: FlagDefinition[] = [
   {
     long: "--list",
-    type: "boolean" as const,
+    value_type: "boolean",
     description: "List all bundled workspace presets with what each configures.",
   },
   {
     long: "--diff",
     value_name: "<preset>",
-    type: "string" as const,
+    value_type: "string",
     description: "Compare the current pm workspace against the named preset and report differences.",
   },
   {
     long: "--custom",
     value_name: "<name>",
-    type: "string" as const,
+    value_type: "string",
     description: "Export the current workspace config (settings + templates) as a new preset definition.",
   },
   ...JSON_FLAG,
   {
     long: "--strict",
-    type: "boolean" as const,
+    value_type: "boolean",
     description:
       "With --diff: exit non-zero (4) when the workspace is NOT in sync with the preset.",
   },
@@ -197,13 +197,13 @@ const PRESETS_FLAGS = [
     long: "--output",
     short: "-o",
     value_name: "<file>",
-    type: "string" as const,
+    value_type: "string",
     description: "With --custom: write the exported preset definition to a file instead of stdout.",
   },
   {
     long: "--display-name",
     value_name: "<name>",
-    type: "string" as const,
+    value_type: "string",
     description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
   },
 ];
