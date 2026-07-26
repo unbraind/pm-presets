@@ -5,6 +5,39 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { activateExtensionForTest, runRegisteredCommandForTest } from "@unbrained/pm-cli/sdk/testing";
+import type { ExtensionActivationResult, ExtensionCapability } from "@unbrained/pm-cli/sdk/authoring";
+
+/**
+ * Capabilities the on-disk `manifest.json` declares.
+ *
+ * Read from the manifest so activation runs under the exact grant the published
+ * package ships with: a surface registered without a matching capability fails
+ * here the same way it would in the CLI, instead of passing against a stub.
+ */
+const MANIFEST_CAPABILITIES: readonly ExtensionCapability[] = (
+  JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "manifest.json"), "utf8"),
+  ) as { capabilities: ExtensionCapability[] }
+).capabilities;
+
+let cachedActivation: Promise<ExtensionActivationResult> | undefined;
+
+/** Activate pm-presets through pm's real extension loader, once per test process. */
+function activatePresets(): Promise<ExtensionActivationResult> {
+  cachedActivation ??= (async () => {
+    const activation = await activateExtensionForTest(mod.default, {
+      name: "pm-presets",
+      capabilities: MANIFEST_CAPABILITIES,
+    });
+    assert.deepEqual(activation.failed, [], "extension activation must not fail");
+    return activation;
+  })();
+  return cachedActivation;
+}
 
 // We import from dist since tsc compiles to dist/
 // When run via `npm test` after `npm run build`, dist/ exists.
@@ -107,18 +140,13 @@ test("default export is an extension object with activate function", () => {
   assert.ok(typeof (ext as any).activate === "function", "default export.activate is not a function");
 });
 
-test("extension registers preset and template commands", () => {
-  const ext = mod.default;
-  const commands: Array<{ name: string; action?: string }> = [];
-  ext.activate({
-    registerCommand(command: { name: string; action?: string }) {
-      commands.push(command);
-    },
-  });
-  const commandNames = commands.map((command) => command.name);
+test("extension registers preset and template commands", async () => {
+  const { registrations } = await activatePresets();
+  const commandNames = registrations.commands.map((entry) => entry.command);
   assert.ok(commandNames.includes("triage-setup"));
-  assert.ok(commandNames.includes("templates show"));
-  assert.ok(commands.some((command) => command.action === "templates-show"));
+  const templatesShow = registrations.commands.find((entry) => entry.command === "templates show");
+  assert.ok(templatesShow, "templates show command should be registered");
+  assert.equal(templatesShow.action, "templates-show");
 });
 
 test("preset templates use current pm create template document shape", () => {
@@ -166,40 +194,27 @@ test("agent-workflow registry metadata matches the bundled settings", () => {
   assert.strictEqual(preset.command, "agent-setup");
 });
 
-test("extension registers the agent-setup command and the unified presets command", () => {
-  const ext = mod.default;
-  const commands: Array<{ name: string; action?: string; flags?: unknown[] }> = [];
-  ext.activate({
-    registerCommand(command: { name: string; action?: string; flags?: unknown[] }) {
-      commands.push(command);
-    },
-    registerItemTypes(_types: unknown) {
-      // no-op recorder
-    },
-  });
-  const commandNames = commands.map((command) => command.name);
+test("extension registers the agent-setup command and the unified presets command", async () => {
+  const { registrations } = await activatePresets();
+  const commandNames = registrations.commands.map((entry) => entry.command);
   assert.ok(commandNames.includes("agent-setup"));
   assert.ok(commandNames.includes("presets"));
-  const presets = commands.find((command) => command.name === "presets");
-  assert.ok(presets);
-  const flagLongs = ((presets as { flags?: Array<{ long: string }> }).flags ?? []).map((f) => f.long);
+  const presetsFlags = registrations.flags.find((entry) => entry.target_command === "presets");
+  assert.ok(presetsFlags, "presets command should register flags");
+  const flagLongs = presetsFlags.flags.map((flag) => flag.long);
   assert.ok(flagLongs.includes("--list"));
   assert.ok(flagLongs.includes("--diff"));
   assert.ok(flagLongs.includes("--custom"));
 });
 
-test("unified presets command rejects a whitespace-only custom name", () => {
-  const ext = mod.default;
-  let presetsCommand: { run?: (ctx: { options: Record<string, unknown>; pm_root: string }) => unknown } | undefined;
-  ext.activate({
-    registerCommand(command: { name: string; run?: (ctx: { options: Record<string, unknown>; pm_root: string }) => unknown }) {
-      if (command.name === "presets") presetsCommand = command;
-    },
-    registerItemTypes() {},
-  });
-  assert.ok(presetsCommand?.run);
-  assert.throws(
-    () => presetsCommand!.run!({ options: { custom: "   " }, pm_root: "/missing" }),
+test("unified presets command rejects a whitespace-only custom name", async () => {
+  const { commands } = await activatePresets();
+  await assert.rejects(
+    () => runRegisteredCommandForTest(commands, {
+      command: "presets",
+      options: { custom: "   " },
+      pmRoot: "/missing",
+    }),
     /--custom requires a non-empty preset name/,
   );
 });

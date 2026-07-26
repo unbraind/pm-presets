@@ -23,7 +23,8 @@
  *   pm presets apply <id>           # scaffold a preset into this workspace
  */
 
-import type { CommandHandlerContext, defineExtension as defineExtensionType } from "@unbrained/pm-cli/sdk";
+import type { ExtensionApi, ExtensionModule } from "@unbrained/pm-cli/sdk/authoring";
+import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
 import { runBugTriageSetup } from "./presets/bug-triage/index.js";
 import { runIndieDevSetup } from "./presets/indie-dev/index.js";
@@ -56,7 +57,6 @@ const EXIT_CODE_DRIFT = 4;
 const EXIT_CODE_USAGE = 2;
 const EXIT_CODE_NOT_FOUND = 3;
 
-const defineExtension: typeof defineExtensionType = ((extension: any) => extension) as any;
 
 // A thrown error only yields a clean non-zero exit (no double-invocation) when
 // it carries a numeric `exitCode`. Standalone-installed extensions can't import
@@ -208,8 +208,18 @@ const PRESETS_FLAGS = [
   },
 ];
 
+/**
+ * Local stand-in for the SDK's `defineExtension` identity helper.
+ *
+ * Declared here rather than imported so this package keeps a type-only
+ * dependency on `@unbrained/pm-cli` and adds no runtime module edge. The
+ * generic constraint is the SDK's own, so the extension object is contract-
+ * checked against {@link ExtensionModule} exactly as the imported helper would.
+ */
+const defineExtension = <TModule extends ExtensionModule>(module: TModule): TModule => module;
+
 export default defineExtension({
-  activate(api) {
+  activate(api: ExtensionApi) {
     // ── bug-triage ──────────────────────────────────────────────────────────
     api.registerCommand({
       name: "triage-setup",

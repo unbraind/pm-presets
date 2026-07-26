@@ -1,0 +1,17 @@
+id: pm-ggei
+title: Adopt pm-cli 2026.7.26 typed authoring contracts and move registry tests onto the real activation harness
+description: "Remove the forced-any defineExtension shim in favour of a locally declared identity helper constrained by the SDK ExtensionModule contract, type activate with the real ExtensionApi, and migrate the three hand-built api doubles in tests/registry.test.ts to activateExtensionForTest and runRegisteredCommandForTest with the capability grant read from manifest.json."
+type: Task
+status: closed
+priority: 2
+tags: []
+created_at: "2026-07-26T06:36:15.145Z"
+updated_at: "2026-07-26T06:36:15.505Z"
+closed_at: "2026-07-26T06:36:15.505Z"
+author: "harness:claude-code"
+acceptance_criteria: "No any casts remain in the extension definition path; No hand-built api doubles remain in tests; Dependency on @unbrained/pm-cli stays type-only at runtime; typecheck clean, full suite passes, and pm presets --list works in a real installed workspace"
+resolution: "Replaced the any-cast defineExtension shim with a locally declared identity helper constrained by ExtensionModule, typed activate with the real ExtensionApi, and migrated the three registry test doubles onto activateExtensionForTest/runRegisteredCommandForTest."
+expected_result: "No any in the definition path, tests exercising the real activation contract under manifest capability governance, and no new runtime module edge."
+actual_result: typecheck clean; 46/46 tests pass; functional install into a throwaway workspace confirmed pm presets --list renders the preset catalog.
+close_reason: Implemented and verified
+body: ""

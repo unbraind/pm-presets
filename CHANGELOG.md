@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Adopt pm-cli 2026.7.26 typed authoring contracts and move registry tests onto the real activation harness ([pm-ggei](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-ggei.toon))
+
 ## 2026.7.26 - 2026-07-26
 
 ### Other
