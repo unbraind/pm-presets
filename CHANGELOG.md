@@ -4,6 +4,7 @@
 
 ### Other
 
+- Type the flag tables and preset dispatch against real SDK contracts ([pm-y7s6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-y7s6.toon))
 - Adopt pm-cli 2026.7.26 typed authoring contracts and move registry tests onto the real activation harness ([pm-ggei](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-ggei.toon))
 
 ## 2026.7.26 - 2026-07-26

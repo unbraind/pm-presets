@@ -31,7 +31,7 @@ export interface PresetTemplateView {
 }
 /** The full, structured definition of one preset. */
 export interface PresetDefinition {
-    id: string;
+    id: PresetDescriptor["id"];
     displayName: string;
     description: string;
     command: string;

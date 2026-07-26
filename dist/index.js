@@ -56,6 +56,12 @@ class PresetError extends Error {
 }
 // Dispatch table: preset id -> its setup handler. Powers `presets apply <id>`
 // and keeps the individual *-setup commands as thin aliases.
+//
+// Keyed on the closed `PresetId` union rather than `string`, so a preset added
+// to the registry without a handler here — or a handler for an id that does not
+// exist — fails the build instead of surfacing as a runtime "unknown preset".
+// The handlers apply settings and templates for their side effects and return
+// nothing, so the value type is `void`, not `unknown`.
 const PRESET_HANDLERS = {
     "bug-triage": runBugTriageSetup,
     "indie-dev": runIndieDevSetup,
@@ -73,20 +79,20 @@ const COMMON_FLAGS = [
     {
         long: "--force",
         short: "-f",
-        type: "boolean",
+        value_type: "boolean",
         description: "Overwrite existing settings.json and template files without prompting.",
     },
     {
         long: "--dry-run",
         short: "-n",
-        type: "boolean",
+        value_type: "boolean",
         description: "Preview what would be written without making any changes.",
     },
     {
         long: "--prefix",
         short: "-p",
         value_name: "<prefix>",
-        type: "string",
+        value_type: "string",
         description: "Override the id_prefix written to settings.json.",
     },
 ];
@@ -94,7 +100,7 @@ const COMMON_FLAGS = [
 const JSON_FLAG = [
     {
         long: "--json",
-        type: "boolean",
+        value_type: "boolean",
         description: "Emit machine-readable JSON instead of the human summary.",
     },
 ];
@@ -105,12 +111,12 @@ const APPLY_FLAGS = [
     {
         long: "--with-seeds",
         short: "-s",
-        type: "boolean",
+        value_type: "boolean",
         description: "Also create the preset's starter items (built-in fields only; see #97).",
     },
     {
         long: "--replace",
-        type: "boolean",
+        value_type: "boolean",
         description: "Full-replace the governance/validation/testing settings trees with the preset's (clean reset) instead of deep-merging. Other settings are still preserved.",
     },
 ];
@@ -119,7 +125,7 @@ const DIFF_FLAGS = [
     ...JSON_FLAG,
     {
         long: "--strict",
-        type: "boolean",
+        value_type: "boolean",
         description: "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
     },
 ];
@@ -130,13 +136,13 @@ const EXPORT_FLAGS = [
         long: "--output",
         short: "-o",
         value_name: "<file>",
-        type: "string",
+        value_type: "string",
         description: "Write the exported preset definition to a file instead of stdout.",
     },
     {
         long: "--display-name",
         value_name: "<name>",
-        type: "string",
+        value_type: "string",
         description: "Human-readable display name for the exported preset (defaults to the id).",
     },
 ];
@@ -147,38 +153,38 @@ const EXPORT_FLAGS = [
 const PRESETS_FLAGS = [
     {
         long: "--list",
-        type: "boolean",
+        value_type: "boolean",
         description: "List all bundled workspace presets with what each configures.",
     },
     {
         long: "--diff",
         value_name: "<preset>",
-        type: "string",
+        value_type: "string",
         description: "Compare the current pm workspace against the named preset and report differences.",
     },
     {
         long: "--custom",
         value_name: "<name>",
-        type: "string",
+        value_type: "string",
         description: "Export the current workspace config (settings + templates) as a new preset definition.",
     },
     ...JSON_FLAG,
     {
         long: "--strict",
-        type: "boolean",
+        value_type: "boolean",
         description: "With --diff: exit non-zero (4) when the workspace is NOT in sync with the preset.",
     },
     {
         long: "--output",
         short: "-o",
         value_name: "<file>",
-        type: "string",
+        value_type: "string",
         description: "With --custom: write the exported preset definition to a file instead of stdout.",
     },
     {
         long: "--display-name",
         value_name: "<name>",
-        type: "string",
+        value_type: "string",
         description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
     },
 ];
