@@ -11,9 +11,18 @@ export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplate
 export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.js";
 export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates, ITEM_TYPES as agentWorkflowItemTypes, runAgentWorkflowSetup } from "./presets/agent-workflow/index.js";
+/**
+ * The bundled preset ids, as a closed union.
+ *
+ * Declaring these as literals rather than `string` is what lets the dispatch
+ * table in `index.ts` be keyed exhaustively: adding a preset here without
+ * wiring its setup handler (or wiring a handler for an id that does not exist)
+ * becomes a compile error instead of a runtime "unknown preset".
+ */
+export type PresetId = "bug-triage" | "indie-dev" | "open-source" | "software-sprint" | "startup-roadmap" | "kanban" | "agent-workflow";
 export interface PresetDescriptor {
     /** Stable identifier used in pm CLI commands (e.g. "bug-triage") */
-    id: string;
+    id: PresetId;
     /** Human-readable display name */
     displayName: string;
     /** Short description for `pm preset list` */

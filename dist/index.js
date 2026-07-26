@@ -56,6 +56,12 @@ class PresetError extends Error {
 }
 // Dispatch table: preset id -> its setup handler. Powers `presets apply <id>`
 // and keeps the individual *-setup commands as thin aliases.
+//
+// Keyed on the closed `PresetId` union rather than `string`, so a preset added
+// to the registry without a handler here — or a handler for an id that does not
+// exist — fails the build instead of surfacing as a runtime "unknown preset".
+// The handlers apply settings and templates for their side effects and return
+// nothing, so the value type is `void`, not `unknown`.
 const PRESET_HANDLERS = {
     "bug-triage": runBugTriageSetup,
     "indie-dev": runIndieDevSetup,
