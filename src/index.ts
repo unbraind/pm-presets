@@ -114,15 +114,6 @@ const COMMON_FLAGS: FlagDefinition[] = [
   },
 ];
 
-// `presets list`/`show`/`diff`/`validate`/`export` are JSON-friendly.
-const JSON_FLAG: FlagDefinition[] = [
-  {
-    long: "--json",
-    value_type: "boolean",
-    description: "Emit machine-readable JSON instead of the human summary.",
-  },
-];
-
 // `presets apply` additionally accepts --with-seeds to create starter items
 // and --replace to full-replace (rather than deep-merge) the owned settings trees.
 const APPLY_FLAGS: FlagDefinition[] = [
@@ -143,7 +134,6 @@ const APPLY_FLAGS: FlagDefinition[] = [
 
 // `presets diff` additionally accepts --strict for CI drift detection.
 const DIFF_FLAGS: FlagDefinition[] = [
-  ...JSON_FLAG,
   {
     long: "--strict",
     value_type: "boolean",
@@ -154,7 +144,6 @@ const DIFF_FLAGS: FlagDefinition[] = [
 
 // `presets export` writes to a file or stdout and can carry a display name.
 const EXPORT_FLAGS: FlagDefinition[] = [
-  ...JSON_FLAG,
   {
     long: "--output",
     short: "-o",
@@ -192,7 +181,6 @@ const PRESETS_FLAGS: FlagDefinition[] = [
     value_type: "string",
     description: "Export the current workspace config (settings + templates) as a new preset definition.",
   },
-  ...JSON_FLAG,
   {
     long: "--strict",
     value_type: "boolean",
@@ -351,7 +339,8 @@ export default defineExtension({
           const result = computePresetDiff(definition, snapshot);
           const strict = readBooleanOption(options, "strict");
           if (strict && !result.inSync) {
-            const json = readBooleanOption(options, "json");
+            // `--json` is host-owned; read it from ctx.global.
+            const json = ctx.global?.json === true;
             if (json) {
               console.log(JSON.stringify(result, null, 2));
             } else {
@@ -415,7 +404,6 @@ export default defineExtension({
       description:
         "List all bundled workspace presets with what each configures (governance, item types, templates).",
       examples: ["pm presets list", "pm presets list --json"],
-      flags: JSON_FLAG,
       run: () => ({
         presets: buildListRows(),
         count: PRESET_REGISTRY.length,
@@ -431,7 +419,6 @@ export default defineExtension({
       arguments: [
         { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
       ],
-      flags: JSON_FLAG,
       run: (ctx: CommandHandlerContext) => requirePresetDefinition(ctx.args?.[0]),
     });
 
@@ -457,7 +444,8 @@ export default defineExtension({
         if (strict && !result.inSync) {
           // Drift detected. Print the diff (respecting --json) so CI logs show
           // WHAT drifted, then exit non-zero with a dedicated drift code (4).
-          const json = readBooleanOption(ctx.options, "json");
+          // `--json` is host-owned; read it from ctx.global.
+          const json = ctx.global?.json === true;
           if (json) {
             console.log(JSON.stringify(result, null, 2));
           } else {
@@ -537,7 +525,6 @@ export default defineExtension({
       action: "presets-validate",
       description: "Validate that all bundled presets parse and load correctly.",
       examples: ["pm presets validate", "pm presets validate --json"],
-      flags: JSON_FLAG,
       run: () => {
         const result = validateAllPresets();
         if (!result.ok) {
