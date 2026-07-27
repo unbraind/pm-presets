@@ -6,15 +6,15 @@ status: closed
 priority: 1
 tags: []
 created_at: "2026-07-27T05:03:56.699Z"
-updated_at: "2026-07-27T23:09:37.576Z"
-closed_at: "2026-07-27T23:08:30.724Z"
+updated_at: "2026-07-27T23:24:21.171Z"
+closed_at: "2026-07-27T23:24:21.171Z"
 author: pi-agent
 release: 2026.7.27
-resolution: "Presets commands re-register under pm-cli 2026.7.27 after dropping the shadowing --json declaration. Left unattributed on purpose: the release is pending, not cut, so --release-version-from-package places it correctly on its own."
-expected_result: "Presets commands register successfully on pm-cli 2026.7.27, with the entry under the pending 2026.7.27 heading."
-actual_result: "Before the fix, redeclaring the host-owned --json global aborted registration at that command and dropped every later sibling, while --help still exited 0 with a misleading arity error (upstream pm-cli#772)."
+resolution: "Presets commands re-register under pm-cli 2026.7.27 after dropping the shadowing --json declaration. Attributed to release 2026.7.27, verified by containment: git merge-base --is-ancestor dcca13e v2026.07.27 succeeds, and the tag in fact points directly at that fix commit. An earlier revision of this record claimed the release was still pending and left the item deliberately unattributed; that was based on a stale local tag set and is superseded."
+expected_result: "Presets commands register successfully on pm-cli 2026.7.27, with the changelog entry under the 2026.7.27 heading that actually carried the fix."
+actual_result: "Before the fix, redeclaring the host-owned --json global aborted registration at that command and dropped every later sibling, while --help still exited 0 with a misleading arity error (upstream pm-cli#772). A first closeout attempt then left the item unattributed, which incorrectly produced an Unreleased section for work that had in fact shipped."
 notes[2]{created_at,author,text}:
   "2026-07-27T05:04:04.241Z",pi-agent,"Verified: activation probe prints failed=[] against the real pm host engine. npm test: 47/47 pass including the new suite-wide guard test asserting no command redeclares any host-owned global. release:check green end to end (typecheck, build, test, audit:prod, pack:dry-run, changelog:check). The --json flag is read from ctx.global.json in the presets diff and presets --diff handlers. All usage examples mentioning --json remain valid since --json still works as a host-owned global."
   "2026-07-27T23:09:37.575Z",claude-code,"Correction: this item was briefly closed with no release attribution on the belief that no v2026.07.27 tag existed. That reading came from STALE LOCAL TAGS. After git fetch --tags --force the tag is present and git merge-base --is-ancestor confirms the fix commit dcca13e is contained in v2026.07.27 -- the tag in fact points directly at it. Attributed to 2026.7.27 accordingly, so the entry sits with its siblings from the same release window instead of in Unreleased."
-close_reason: "Retired as shipped: the fix stopping presets commands from redeclaring the host-owned --json global merged as PR #32. Deliberately closed with NO release attribution because pm-presets has no v2026.07.27 tag yet -- 2026.7.27 is the PENDING release derived from package.json, so the entry lands there naturally without asserting it was in an already-cut release."
+close_reason: "Retired as shipped: the fix stopping presets commands from redeclaring the host-owned --json global merged as PR #32 and shipped in release 2026.7.27, whose tag points directly at that commit."
 body: ""
