@@ -2,6 +2,10 @@
 
 ## 2026.7.27 - 2026-07-27
 
+### Fixed
+
+- presets commands redeclared host-owned --json global, failing registration on pm-cli 2026.7.27 ([pm-i03k](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-i03k.toon))
+
 ### Other
 
 - Type the flag tables and preset dispatch against real SDK contracts ([pm-y7s6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-y7s6.toon))
@@ -11,6 +15,7 @@
 
 ### Other
 
+- Adopt --respect-item-release in changelog scripts and bump pm-changelog to 2026.7.24 ([pm-yg8d](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-yg8d.toon))
 - Enable governance duplicate-detection advisory mode and adopt pm-cli 2026.7.25 ([pm-ra66](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-ra66.toon))
 
 ## 2026.7.23 - 2026-07-23
@@ -35,6 +40,7 @@
 
 ### Other
 
+- Production hardening and consolidated-preset governance pass 2026-07-09 ([pm-0y8x](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-0y8x.toon))
 - SDK 2026.7.10 alignment and production readiness pass ([pm-fw94](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-fw94.toon))
 
 ## 2026.7.6 - 2026-07-06
@@ -52,6 +58,7 @@
 
 ### Other
 
+- Full-cycle hardening wave: pm-presets ([pm-mpyn](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-mpyn.toon))
 - Daily Release publish step runs prepublishOnly post-tag: align npm publish with --ignore-scripts ([pm-is8q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-is8q.toon))
 
 ## 2026.6.7 - 2026-06-07
@@ -85,6 +92,7 @@
 
 ### Added
 
+- Add unified presets list/apply + kanban preset + registerItemTypes ([pm-14it](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-14it.toon))
 - Enrich presets list output + add --json; document apply idempotency ([pm-g9oh](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-g9oh.toon))
 
 ### Other
