@@ -115,13 +115,11 @@ const COMMON_FLAGS: FlagDefinition[] = [
 ];
 
 // `presets list`/`show`/`diff`/`validate`/`export` are JSON-friendly.
-const JSON_FLAG: FlagDefinition[] = [
-  {
-    long: "--json",
-    value_type: "boolean",
-    description: "Emit machine-readable JSON instead of the human summary.",
-  },
-];
+// `--json` is a host-owned global flag: extensions must not redeclare it (the
+// host rejects the registration) and must read it from ctx.global instead.
+// These commands return structured data that pm renders as JSON when the
+// user passes --json; the flag itself is accepted by the host, not declared here.
+const JSON_FLAG: FlagDefinition[] = [];
 
 // `presets apply` additionally accepts --with-seeds to create starter items
 // and --replace to full-replace (rather than deep-merge) the owned settings trees.
@@ -351,7 +349,8 @@ export default defineExtension({
           const result = computePresetDiff(definition, snapshot);
           const strict = readBooleanOption(options, "strict");
           if (strict && !result.inSync) {
-            const json = readBooleanOption(options, "json");
+            // `--json` is host-owned; read it from ctx.global.
+            const json = ctx.global?.json === true;
             if (json) {
               console.log(JSON.stringify(result, null, 2));
             } else {
@@ -457,7 +456,8 @@ export default defineExtension({
         if (strict && !result.inSync) {
           // Drift detected. Print the diff (respecting --json) so CI logs show
           // WHAT drifted, then exit non-zero with a dedicated drift code (4).
-          const json = readBooleanOption(ctx.options, "json");
+          // `--json` is host-owned; read it from ctx.global.
+          const json = ctx.global?.json === true;
           if (json) {
             console.log(JSON.stringify(result, null, 2));
           } else {

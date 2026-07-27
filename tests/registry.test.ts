@@ -135,9 +135,9 @@ test("manifest preset metadata stays in sync with the registry", async () => {
 });
 
 test("default export is an extension object with activate function", () => {
-  const ext = mod.default;
+  const ext = mod.default as { activate?: unknown };
   assert.ok(ext !== null && typeof ext === "object", "default export is not an object");
-  assert.ok(typeof (ext as any).activate === "function", "default export.activate is not a function");
+  assert.ok(typeof ext.activate === "function", "default export.activate is not a function");
 });
 
 test("extension registers preset and template commands", async () => {
@@ -147,6 +147,32 @@ test("extension registers preset and template commands", async () => {
   const templatesShow = registrations.commands.find((entry) => entry.command === "templates show");
   assert.ok(templatesShow, "templates show command should be registered");
   assert.equal(templatesShow.action, "templates-show");
+});
+
+test("no command redeclares a host-owned global flag", async () => {
+  // Guards the whole surface, not just the one command that regressed:
+  // registering any of these makes the host reject the command outright, and
+  // the value must be read from ctx.global instead.
+  const hostOwned = new Set([
+    "--json",
+    "--quiet",
+    "--path",
+    "--lean",
+    "--id-only",
+    "--author",
+    "--no-changed-fields",
+    "--full-changed-fields",
+    "--pm-path",
+  ]);
+  const { registrations } = await activatePresets();
+  for (const registration of registrations.flags) {
+    for (const flag of registration.flags) {
+      assert.ok(
+        flag.long === undefined || !hostOwned.has(flag.long),
+        `${registration.target_command} must not redeclare host-owned global flag ${flag.long}`,
+      );
+    }
+  }
 });
 
 test("preset templates use current pm create template document shape", () => {
