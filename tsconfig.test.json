@@ -7,6 +7,12 @@
     "noEmit": true,
     "rootDir": "."
   },
-  "include": ["tests/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
