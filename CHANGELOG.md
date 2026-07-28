@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.7.28 - 2026-07-28
+
+### Other
+
+- Adopt pm-cli 2026.7.28 and migrate activation tests to the real SDK harness ([pm-tfz5](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-tfz5.toon))
+
 ## 2026.7.27 - 2026-07-27
 
 ### Fixed
