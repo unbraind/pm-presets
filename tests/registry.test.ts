@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { activateExtensionForTest, runRegisteredCommandForTest } from "@unbrained/pm-cli/sdk/testing";
-import type { ExtensionActivationResult, ExtensionCapability } from "@unbrained/pm-cli/sdk/authoring";
+import { createExtensionTestHarness, type ExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
+import type { ExtensionCapability } from "@unbrained/pm-cli/sdk/authoring";
 
 /**
  * Capabilities the on-disk `manifest.json` declares.
@@ -24,19 +24,19 @@ const MANIFEST_CAPABILITIES: readonly ExtensionCapability[] = (
   ) as { capabilities: ExtensionCapability[] }
 ).capabilities;
 
-let cachedActivation: Promise<ExtensionActivationResult> | undefined;
+let cachedHarness: Promise<ExtensionTestHarness> | undefined;
 
 /** Activate pm-presets through pm's real extension loader, once per test process. */
-function activatePresets(): Promise<ExtensionActivationResult> {
-  cachedActivation ??= (async () => {
-    const activation = await activateExtensionForTest(mod.default, {
+function activatePresets(): Promise<ExtensionTestHarness> {
+  cachedHarness ??= (async () => {
+    const harness = await createExtensionTestHarness(mod.default, {
       name: "pm-presets",
       capabilities: MANIFEST_CAPABILITIES,
     });
-    assert.deepEqual(activation.failed, [], "extension activation must not fail");
-    return activation;
+    assert.deepEqual(harness.activation.failed, [], "extension activation must not fail");
+    return harness;
   })();
-  return cachedActivation;
+  return cachedHarness;
 }
 
 // We import from dist since tsc compiles to dist/
@@ -141,7 +141,8 @@ test("default export is an extension object with activate function", () => {
 });
 
 test("extension registers preset and template commands", async () => {
-  const { registrations } = await activatePresets();
+  const h = await activatePresets();
+  const { registrations } = h.activation;
   const commandNames = registrations.commands.map((entry) => entry.command);
   assert.ok(commandNames.includes("triage-setup"));
   const templatesShow = registrations.commands.find((entry) => entry.command === "templates show");
@@ -164,7 +165,8 @@ test("no command redeclares a host-owned global flag", async () => {
     "--full-changed-fields",
     "--pm-path",
   ]);
-  const { registrations } = await activatePresets();
+  const h = await activatePresets();
+  const { registrations } = h.activation;
   for (const registration of registrations.flags) {
     for (const flag of registration.flags) {
       assert.ok(
@@ -221,7 +223,8 @@ test("agent-workflow registry metadata matches the bundled settings", () => {
 });
 
 test("extension registers the agent-setup command and the unified presets command", async () => {
-  const { registrations } = await activatePresets();
+  const h = await activatePresets();
+  const { registrations } = h.activation;
   const commandNames = registrations.commands.map((entry) => entry.command);
   assert.ok(commandNames.includes("agent-setup"));
   assert.ok(commandNames.includes("presets"));
@@ -234,9 +237,9 @@ test("extension registers the agent-setup command and the unified presets comman
 });
 
 test("unified presets command rejects a whitespace-only custom name", async () => {
-  const { commands } = await activatePresets();
+  const h = await activatePresets();
   await assert.rejects(
-    () => runRegisteredCommandForTest(commands, {
+    () => h.runCommand({
       command: "presets",
       options: { custom: "   " },
       pmRoot: "/missing",
