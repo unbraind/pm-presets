@@ -17,9 +17,9 @@ export declare const SETTINGS: {
     };
 };
 export declare const TEMPLATES: {
-    "bug-report.json": import("../shared.js").StoredCreateTemplateDocument;
-    "feature-request.json": import("../shared.js").StoredCreateTemplateDocument;
-    "good-first-issue.json": import("../shared.js").StoredCreateTemplateDocument;
+    "bug-report.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "feature-request.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "good-first-issue.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runOpenSourceSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

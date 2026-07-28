@@ -30,9 +30,9 @@ export declare const SETTINGS: {
 };
 export declare const ITEM_TYPES: SchemaItemTypeDefinition[];
 export declare const TEMPLATES: {
-    "agent-task.json": import("../shared.js").StoredCreateTemplateDocument;
-    "prompt-experiment.json": import("../shared.js").StoredCreateTemplateDocument;
-    "eval-run.json": import("../shared.js").StoredCreateTemplateDocument;
+    "agent-task.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "prompt-experiment.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "eval-run.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runAgentWorkflowSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

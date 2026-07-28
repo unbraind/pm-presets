@@ -1,0 +1,19 @@
+id: pm-h67l
+title: Run the test suite against TypeScript sources behind an uncheatable coverage gate
+description: ""
+type: Feature
+status: closed
+priority: 2
+tags: []
+created_at: "2026-07-28T23:28:25.705Z"
+updated_at: "2026-07-28T23:29:08.827Z"
+closed_at: "2026-07-28T23:29:08.824Z"
+author: pi-agent
+resolution: "Implemented coverage gate per fleet recipe. Baseline measured at 75.56/83.22/64.29 (line/branch/function) across 14 source files. Thresholds pinned at floor: 75/83/64."
+actual_result: "Local gates pass (check, coverage, audit, pack:dry-run, changelog:check). CI legs on Node 22 and 26 are unobserved until the PR runs."
+comments[1]{created_at,author,text}:
+  "2026-07-28T23:28:56.668Z",pi-agent,"Negative control: created src/__probe.ts exporting one unused function, ran node scripts/coverage-gate.ts — exit code 1, and the gate named src/__probe.ts as never loaded. Deleted the probe and re-ran the gate — exit code 0. The source-presence reconciliation is confirmed not vacuous."
+learnings[1]{created_at,author,text}:
+  "2026-07-28T23:29:00.583Z",pi-agent,"Node omits files that never load from its coverage report entirely, rather than reporting them at zero. A bare --test-coverage-lines flag is therefore satisfiable by narrowing what the suite imports. The coverage-gate.ts script reconciles the reported file list against a walk of the source tree to turn that silent omission into a failure naming the missing files."
+close_reason: "Coverage gate rolled out: tests now import TypeScript sources directly, scripts/coverage-gate.ts enforces per-dimension thresholds plus source-presence reconciliation. All 47 tests pass, negative control confirmed exit 1 with probe and exit 0 without. Gates (npm run check, npm run release:check) pass locally."
+body: "Coverage was unmeasured here. Tests imported the compiled output from dist/, so the only numbers obtainable pointed at generated JavaScript offsets rather than lines an author edits, and no threshold was wired into any gate.\n\nTests now import the TypeScript sources directly. Node strips types without a flag since 22.18.0, which is the floor this package already declares in engines, so this needs no new tooling. Enabling rewriteRelativeImportExtensions lets a source file import its siblings as ./x.ts while tsc still emits ./x.js into dist, leaving the published artifact's module graph unchanged.\n\nThe gate (scripts/coverage-gate.ts) enforces per-dimension thresholds AND reconciles the reported file list against a walk of the source tree. That second check is the reason it is a script rather than a bare flag: Node omits files that never load from its coverage report entirely instead of reporting them at zero, so a threshold alone is satisfiable by narrowing what the suite imports.\n\nBaseline across 14 source files (line % / branch % / function %):\n- catalog.ts: 91.61 / 72.22 / 96.00\n- diff.ts: 85.88 / 100.00 / 80.00\n- export.ts: 67.41 / 87.50 / 40.00\n- index.ts: 69.22 / 60.00 / 45.45\n- presets/agent-workflow/index.ts: 88.89 / 100.00 / 0.00\n- presets/bug-triage/index.ts: 86.32 / 100.00 / 0.00\n- presets/indie-dev/index.ts: 83.33 / 100.00 / 0.00\n- presets/kanban/index.ts: 88.04 / 100.00 / 0.00\n- presets/open-source/index.ts: 85.00 / 100.00 / 0.00\n- presets/shared.ts: 50.50 / 82.76 / 52.38\n- presets/software-sprint/index.ts: 86.87 / 100.00 / 0.00\n- presets/startup-roadmap/index.ts: 86.21 / 100.00 / 0.00\n- registry.ts: 100.00 / 100.00 / 100.00\n- seeds.ts: 85.71 / 100.00 / 80.00\n\nAggregate: 75.56 line / 83.22 branch / 64.29 function.\nThresholds pinned at floor: 75 / 83 / 64."

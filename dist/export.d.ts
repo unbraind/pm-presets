@@ -18,7 +18,7 @@
  * — the exported definition records only the settings tree and template
  * documents, which fully reconstruct an applied preset.
  */
-import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.js";
+import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
 export interface ExportedTemplate {
     name: string;
     options: CreateTemplateOptions;

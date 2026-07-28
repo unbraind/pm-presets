@@ -27,6 +27,6 @@ declare const _default: {
     activate(api: ExtensionApi): void;
 };
 export default _default;
-export { PRESET_REGISTRY } from "./registry.js";
-export type { PresetDescriptor } from "./registry.js";
+export { PRESET_REGISTRY } from "./registry.ts";
+export type { PresetDescriptor } from "./registry.ts";
 //# sourceMappingURL=index.d.ts.map

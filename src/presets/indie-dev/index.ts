@@ -5,7 +5,7 @@ import {
   storedTemplate,
   type PresetSettingsPatch,
   type PresetTemplateMap,
-} from "../shared.js";
+} from "../shared.ts";
 
 export const SETTINGS = {
   id_prefix: "indie-",

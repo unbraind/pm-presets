@@ -20,7 +20,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import type { PresetDefinition } from "./catalog.js";
+import type { PresetDefinition } from "./catalog.ts";
 
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;

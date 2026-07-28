@@ -1,19 +1,19 @@
 /**
  * Tests for the read-only catalog views: list rows, show lookup, validation.
- * Run after `npm run build` (imports from dist/).
+ * Imports the TypeScript sources directly so coverage is measured on the
+ * lines an author edits.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const catalog = await import("../dist/catalog.js");
-const {
+import {
   listPresetDefinitions,
   findPresetDefinition,
   requirePresetDefinition,
   buildListRows,
   validateAllPresets,
-} = catalog;
+} from "../src/catalog.ts";
 
 test("listPresetDefinitions returns all 7 presets with structured fields", () => {
   const defs = listPresetDefinitions();

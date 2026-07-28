@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Run the test suite against TypeScript sources behind an uncheatable coverage gate ([pm-h67l](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-h67l.toon))
+
 ## 2026.7.28 - 2026-07-28
 
 ### Other

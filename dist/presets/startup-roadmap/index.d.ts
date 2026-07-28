@@ -21,9 +21,9 @@ export declare const SETTINGS: {
     };
 };
 export declare const TEMPLATES: {
-    "initiative.json": import("../shared.js").StoredCreateTemplateDocument;
-    "feature.json": import("../shared.js").StoredCreateTemplateDocument;
-    "milestone.json": import("../shared.js").StoredCreateTemplateDocument;
+    "initiative.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "feature.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "milestone.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runStartupRoadmapSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

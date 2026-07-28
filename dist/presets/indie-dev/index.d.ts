@@ -19,8 +19,8 @@ export declare const SETTINGS: {
     };
 };
 export declare const TEMPLATES: {
-    "idea.json": import("../shared.js").StoredCreateTemplateDocument;
-    "task.json": import("../shared.js").StoredCreateTemplateDocument;
+    "idea.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "task.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runIndieDevSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

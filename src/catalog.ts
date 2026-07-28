@@ -16,8 +16,8 @@ import type {
   PresetSettingsPatch,
   PresetTemplateMap,
   StoredCreateTemplateDocument,
-} from "./presets/shared.js";
-import { CommandError, EXIT_CODE } from "./presets/shared.js";
+} from "./presets/shared.ts";
+import { CommandError, EXIT_CODE } from "./presets/shared.ts";
 import {
   bugTriageSettings,
   bugTriageTemplates,
@@ -35,8 +35,8 @@ import {
   agentWorkflowSettings,
   agentWorkflowTemplates,
   agentWorkflowItemTypes,
-} from "./registry.js";
-import { PRESET_REGISTRY, type PresetDescriptor } from "./registry.js";
+} from "./registry.ts";
+import { PRESET_REGISTRY, type PresetDescriptor } from "./registry.ts";
 
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {

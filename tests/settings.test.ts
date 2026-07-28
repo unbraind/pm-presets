@@ -1,13 +1,13 @@
 /**
  * Tests for mergePresetSettings: deep-merge (default) vs --replace behavior
- * on the governance/validation/testing trees. Run after `npm run build`.
+ * on the governance/validation/testing trees. Imports the TypeScript sources
+ * directly so coverage is measured on the lines an author edits.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const shared = await import("../dist/presets/shared.js");
-const { mergePresetSettings } = shared;
+import { mergePresetSettings } from "../src/presets/shared.ts";
 
 const existing = {
   id_prefix: "old-",
