@@ -1,6 +1,7 @@
 /**
  * Tests for pm-presets registry and preset descriptors.
- * Uses Node.js built-in test runner (no extra deps).
+ * Uses Node.js built-in test runner (no extra deps). Imports the TypeScript
+ * sources directly so coverage is measured on the lines an author edits.
  */
 
 import { test } from "node:test";
@@ -10,6 +11,10 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createExtensionTestHarness, type ExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
 import type { ExtensionCapability } from "@unbrained/pm-cli/sdk/authoring";
+
+import mod, { PRESET_REGISTRY } from "../src/index.ts";
+import * as registryMod from "../src/registry.ts";
+import type { PresetId } from "../src/registry.ts";
 
 /**
  * Capabilities the on-disk `manifest.json` declares.
@@ -29,7 +34,7 @@ let cachedHarness: Promise<ExtensionTestHarness> | undefined;
 /** Activate pm-presets through pm's real extension loader, once per test process. */
 function activatePresets(): Promise<ExtensionTestHarness> {
   cachedHarness ??= (async () => {
-    const harness = await createExtensionTestHarness(mod.default, {
+    const harness = await createExtensionTestHarness(mod, {
       name: "pm-presets",
       capabilities: MANIFEST_CAPABILITIES,
     });
@@ -39,14 +44,6 @@ function activatePresets(): Promise<ExtensionTestHarness> {
   return cachedHarness;
 }
 
-// We import from dist since tsc compiles to dist/
-// When run via `npm test` after `npm run build`, dist/ exists.
-// Use dynamic import to avoid static analysis issues with .js extensions.
-
-const mod = await import("../dist/index.js");
-const { PRESET_REGISTRY } = mod;
-const registryMod = await import("../dist/registry.js");
-
 test("PRESET_REGISTRY exports an array", () => {
   assert.ok(Array.isArray(PRESET_REGISTRY));
 });
@@ -55,7 +52,7 @@ test("PRESET_REGISTRY contains exactly 7 presets", () => {
   assert.strictEqual(PRESET_REGISTRY.length, 7);
 });
 
-const EXPECTED_IDS = [
+const EXPECTED_IDS: PresetId[] = [
   "bug-triage",
   "indie-dev",
   "open-source",
@@ -126,7 +123,9 @@ test("manifest preset metadata stays in sync with the registry", async () => {
   assert.match(manifest.description ?? "", /All 7 official/);
   assert.strictEqual(manifest.presets?.length, PRESET_REGISTRY.length);
   for (const preset of PRESET_REGISTRY) {
-    const manifestPreset = manifest.presets?.find((entry) => entry.id === preset.id);
+    const manifestPreset = manifest.presets?.find((entry) => entry.id === preset.id) as
+      | { id: string; command: string; idPrefix: string; templates: string[] }
+      | undefined;
     assert.ok(manifestPreset, `manifest missing preset ${preset.id}`);
     assert.strictEqual(manifestPreset.command, preset.command);
     assert.strictEqual(manifestPreset.idPrefix, preset.idPrefix);
@@ -135,7 +134,7 @@ test("manifest preset metadata stays in sync with the registry", async () => {
 });
 
 test("default export is an extension object with activate function", () => {
-  const ext = mod.default as { activate?: unknown };
+  const ext = mod as { activate?: unknown };
   assert.ok(ext !== null && typeof ext === "object", "default export is not an object");
   assert.ok(typeof ext.activate === "function", "default export.activate is not a function");
 });

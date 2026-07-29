@@ -10,8 +10,8 @@
  * Everything here is pure: no filesystem, no process exit, no SDK runtime. That
  * keeps it unit-testable with `node --test` and side-effect free.
  */
-import type { PresetSettingsPatch } from "./presets/shared.js";
-import { type PresetDescriptor } from "./registry.js";
+import type { PresetSettingsPatch } from "./presets/shared.ts";
+import { type PresetDescriptor } from "./registry.ts";
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
     name: string;

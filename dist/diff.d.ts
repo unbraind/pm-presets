@@ -16,7 +16,7 @@
  *   - item types: the custom item types the preset registers (informational —
  *     they are registered in-memory at activation, not written to disk).
  */
-import type { PresetDefinition } from "./catalog.js";
+import type { PresetDefinition } from "./catalog.ts";
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
 export interface WorkspaceSnapshot {

@@ -22,7 +22,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.js";
+import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
 
 export interface ExportedTemplate {
   name: string;

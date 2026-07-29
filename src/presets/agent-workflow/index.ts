@@ -5,7 +5,7 @@ import {
   storedTemplate,
   type PresetSettingsPatch,
   type PresetTemplateMap,
-} from "../shared.js";
+} from "../shared.ts";
 
 /**
  * agent-workflow — project management for teams orchestrating AI agents.

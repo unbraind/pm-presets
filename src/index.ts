@@ -26,27 +26,27 @@
 import type { ExtensionApi, ExtensionModule, FlagDefinition } from "@unbrained/pm-cli/sdk/authoring";
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
-import { runBugTriageSetup } from "./presets/bug-triage/index.js";
-import { runIndieDevSetup } from "./presets/indie-dev/index.js";
-import { runKanbanSetup, ITEM_TYPES as kanbanItemTypes } from "./presets/kanban/index.js";
-import { runAgentWorkflowSetup, ITEM_TYPES as agentWorkflowItemTypes } from "./presets/agent-workflow/index.js";
-import { runOpenSourceSetup } from "./presets/open-source/index.js";
-import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, runTemplatesShow } from "./presets/shared.js";
-import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
-import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
-import { PRESET_REGISTRY, type PresetId } from "./registry.js";
+import { runBugTriageSetup } from "./presets/bug-triage/index.ts";
+import { runIndieDevSetup } from "./presets/indie-dev/index.ts";
+import { runKanbanSetup, ITEM_TYPES as kanbanItemTypes } from "./presets/kanban/index.ts";
+import { runAgentWorkflowSetup, ITEM_TYPES as agentWorkflowItemTypes } from "./presets/agent-workflow/index.ts";
+import { runOpenSourceSetup } from "./presets/open-source/index.ts";
+import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, runTemplatesShow } from "./presets/shared.ts";
+import { runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
+import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
+import { PRESET_REGISTRY, type PresetId } from "./registry.ts";
 import {
   buildListRows,
   requirePresetDefinition,
   validateAllPresets,
-} from "./catalog.js";
-import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
+} from "./catalog.ts";
+import { computePresetDiff, readWorkspaceSnapshot } from "./diff.ts";
 import {
   buildExportedPreset,
   readWorkspaceSettings,
   readWorkspaceTemplates,
-} from "./export.js";
-import { planSeeds, seedPresetItems, seedsForPreset } from "./seeds.js";
+} from "./export.ts";
+import { planSeeds, seedPresetItems, seedsForPreset } from "./seeds.ts";
 import * as fs from "node:fs";
 
 // Drift exit code for `presets diff --strict`. Distinct from GENERIC(1)/
@@ -636,5 +636,5 @@ export default defineExtension({
 });
 
 // Re-export public API
-export { PRESET_REGISTRY } from "./registry.js";
-export type { PresetDescriptor } from "./registry.js";
+export { PRESET_REGISTRY } from "./registry.ts";
+export type { PresetDescriptor } from "./registry.ts";

@@ -21,9 +21,9 @@ export declare const SETTINGS: {
     };
 };
 export declare const TEMPLATES: {
-    "incident.json": import("../shared.js").StoredCreateTemplateDocument;
-    "hotfix-task.json": import("../shared.js").StoredCreateTemplateDocument;
-    "regression.json": import("../shared.js").StoredCreateTemplateDocument;
+    "incident.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "hotfix-task.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "regression.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runBugTriageSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

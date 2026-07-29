@@ -20,10 +20,10 @@ export declare const SETTINGS: {
     };
 };
 export declare const TEMPLATES: {
-    "bug.json": import("../shared.js").StoredCreateTemplateDocument;
-    "epic.json": import("../shared.js").StoredCreateTemplateDocument;
-    "feature.json": import("../shared.js").StoredCreateTemplateDocument;
-    "task.json": import("../shared.js").StoredCreateTemplateDocument;
+    "bug.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "epic.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "feature.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "task.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runSoftwareSprintSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

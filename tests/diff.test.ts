@@ -1,14 +1,13 @@
 /**
- * Tests for the pure diff computation. Run after `npm run build`.
+ * Tests for the pure diff computation. Imports the TypeScript sources directly
+ * so coverage is measured on the lines an author edits.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const catalog = await import("../dist/catalog.js");
-const diff = await import("../dist/diff.js");
-const { requirePresetDefinition } = catalog;
-const { computePresetDiff } = diff;
+import { requirePresetDefinition } from "../src/catalog.ts";
+import { computePresetDiff } from "../src/diff.ts";
 
 test("empty workspace -> everything is an add / missing, not in sync", () => {
   const def = requirePresetDefinition("indie-dev");

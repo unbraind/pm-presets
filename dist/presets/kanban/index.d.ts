@@ -21,9 +21,9 @@ export declare const SETTINGS: {
 };
 export declare const ITEM_TYPES: SchemaItemTypeDefinition[];
 export declare const TEMPLATES: {
-    "card.json": import("../shared.js").StoredCreateTemplateDocument;
-    "expedite.json": import("../shared.js").StoredCreateTemplateDocument;
-    "blocked.json": import("../shared.js").StoredCreateTemplateDocument;
+    "card.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "expedite.json": import("../shared.ts").StoredCreateTemplateDocument;
+    "blocked.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
 export declare function runKanbanSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

@@ -1,12 +1,12 @@
 /**
- * Tests for the pure preset-export builder. Run after `npm run build`.
+ * Tests for the pure preset-export builder. Imports the TypeScript sources
+ * directly so coverage is measured on the lines an author edits.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const exportMod = await import("../dist/export.js");
-const { buildExportedPreset } = exportMod;
+import { buildExportedPreset } from "../src/export.ts";
 
 const NOW = new Date("2026-06-04T00:00:00.000Z");
 

@@ -1,13 +1,13 @@
 /**
  * Tests for seed definitions and the pure dry-run plan / argv builder.
- * Run after `npm run build`.
+ * Imports the TypeScript sources directly so coverage is measured on the
+ * lines an author edits.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const seeds = await import("../dist/seeds.js");
-const { PRESET_SEEDS, seedsForPreset, buildSeedCreateArgs, planSeeds } = seeds;
+import { PRESET_SEEDS, seedsForPreset, buildSeedCreateArgs, planSeeds } from "../src/seeds.ts";
 
 test("every preset id has a seed definition", () => {
   const ids = ["bug-triage", "indie-dev", "open-source", "software-sprint", "startup-roadmap", "kanban", "agent-workflow"];

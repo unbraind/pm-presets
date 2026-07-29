@@ -4,13 +4,13 @@
  * Each entry describes the preset's command name, flags, settings, and
  * templates so callers can enumerate them without running the command.
  */
-export { SETTINGS as bugTriageSettings, TEMPLATES as bugTriageTemplates, runBugTriageSetup } from "./presets/bug-triage/index.js";
-export { SETTINGS as indieDevSettings, TEMPLATES as indieDevTemplates, runIndieDevSetup } from "./presets/indie-dev/index.js";
-export { SETTINGS as openSourceSettings, TEMPLATES as openSourceTemplates, runOpenSourceSetup } from "./presets/open-source/index.js";
-export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplates, runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
-export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
-export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.js";
-export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates, ITEM_TYPES as agentWorkflowItemTypes, runAgentWorkflowSetup } from "./presets/agent-workflow/index.js";
+export { SETTINGS as bugTriageSettings, TEMPLATES as bugTriageTemplates, runBugTriageSetup } from "./presets/bug-triage/index.ts";
+export { SETTINGS as indieDevSettings, TEMPLATES as indieDevTemplates, runIndieDevSetup } from "./presets/indie-dev/index.ts";
+export { SETTINGS as openSourceSettings, TEMPLATES as openSourceTemplates, runOpenSourceSetup } from "./presets/open-source/index.ts";
+export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplates, runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
+export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
+export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.ts";
+export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates, ITEM_TYPES as agentWorkflowItemTypes, runAgentWorkflowSetup } from "./presets/agent-workflow/index.ts";
 /**
  * The bundled preset ids, as a closed union.
  *
