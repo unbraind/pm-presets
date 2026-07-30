@@ -119,7 +119,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           paths=(package.json package-lock.json manifest.json dist CHANGELOG.md)
           [[ -d src ]] && paths+=(src)
-          git ls-files --error-unmatch dist > /dev/null 2>&1 && paths+=(dist)
           git add "${paths[@]}"
           if git diff --cached --quiet; then
             echo "Release files are already current; tagging existing commit."
