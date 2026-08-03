@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Resolve pm-changelog to the release that derives release dates in UTC ([pm-z2ip](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-z2ip.toon))
+
 ## 2026.7.31 - 2026-07-31
 
 ### Fixed
