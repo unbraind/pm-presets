@@ -48,8 +48,9 @@ jobs:
           # This is not a lossless-merge attestation. Merge receipts are clone-local and
           # absent from a fresh CI checkout. Some unreconciled loss shapes surface as
           # history drift, but reconciliation or history repair can remove that signal.
-          # Keep receipt review as a local pre-push step; pm-cli#921 and pm-cli#922 track
-          # the missing durable proof.
+          # Keep receipt review as a local pre-push step; see
+          # https://github.com/unbraind/pm-cli/issues/921 and
+          # https://github.com/unbraind/pm-cli/issues/922 for the missing durable proof.
           #
           # `--strict-exit` is load-bearing: non-strict health may report findings while
           # still exiting successfully.
