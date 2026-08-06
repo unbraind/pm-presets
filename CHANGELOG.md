@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Gate durable PM project health in CI on pm CLI 2026.8.6 ([pm-ruq3](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-ruq3.toon))
+
 ### Other
 
 - Clear author-attribution health warning for \_workspace history events ([pm-un5v](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-un5v.toon))
