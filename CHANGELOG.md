@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Clear author-attribution health warning for \_workspace history events ([pm-un5v](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-un5v.toon))
+
 ## 2026.8.4 - 2026-08-04
 
 ### Other
