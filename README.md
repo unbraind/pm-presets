@@ -303,11 +303,13 @@ MIT
 
 This repo tracks its project management in `.agents/pm/` and ships a committed `.gitattributes`
 that maps those tracker artifacts to pm-cli's field-aware Git merge drivers, so concurrent-branch
-tracker edits merge cleanly instead of hard-conflicting. The driver **definitions** live in
-per-clone Git config; `npm install` / `npm ci` wires them automatically via the `prepare` script (a portable Node guard, `scripts/prepare-merge-driver.mjs`: it runs
-`pm merge install` only when the `pm` CLI is on `PATH`, and no-ops cleanly otherwise so
-production / `--omit=dev` installs are not broken; being Node-based it behaves identically
-on POSIX shells and Windows `cmd.exe`). To (re)run manually: `npm run merge:install`.
+tracker edits merge cleanly instead of hard-conflicting. Generated extension assets are excluded
+from semantic merging, while their managed manifest retains key-level JSON merging. The driver
+**definitions** live in per-clone Git config; `npm install` / `npm ci` wires them automatically via
+the erasable TypeScript `scripts/prepare-merge-driver.ts` lifecycle. It runs `pm merge install` only
+when an executable `pm` CLI resolves on `PATH`, no-ops cleanly when development dependencies are
+omitted, and surfaces failures from a present CLI. The lifecycle is exercised through POSIX tests
+and a real Windows `cmd.exe` CI job. To (re)run manually: `npm run merge:install`.
 
 After merging a branch that touched `.agents/pm/`, reconcile any residual history-hash drift with
 **`pm merge reconcile`** (pm-cli ≥ 2026.7.22): preview with `pm merge reconcile --dry-run`, apply with

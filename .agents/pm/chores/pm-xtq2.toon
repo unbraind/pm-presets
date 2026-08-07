@@ -1,0 +1,35 @@
+id: pm-xtq2
+title: Align pm-presets with pm 2026.8.7 and harden merge-driver lifecycle
+description: "Adopt the current pm CLI/SDK and pm-changelog, install the canonical generated-extension merge fence, replace the authored JavaScript lifecycle helper with erasable TypeScript, and prove POSIX and real Windows command resolution without conflating this bounded compatibility tranche with full release readiness."
+type: Chore
+status: in_progress
+priority: 0
+tags[6]: merge-safety,multi-agent,pm-cli-2026.8.7,release-gate,typescript,windows
+created_at: "2026-08-07T19:45:48.641Z"
+updated_at: "2026-08-07T19:53:45.712Z"
+author: "harness:codex"
+estimated_minutes: 240
+acceptance_criteria: The lockfile resolves @unbrained/pm-cli and pm-changelog 2026.8.7 and the peer floor is 2026.8.7; pm merge install emits extensions/** -merge and scopes pm-json to .managed-extensions.json; lifecycle source is erasable TypeScript with no dynamic imports and resolves target-platform PATH/PATHEXT safely; npm ci runs the real prepare hook on windows-latest with a real cmd shim under a spaced and percent-delimited path; lifecycle tests reach exact 100/100/100; npm and Bun package gates plus fresh packed-artifact installed-pm acceptance pass; privacy/history and full-source quality limits are tracked independently; exact-head bot review is dispositioned before merge
+definition_of_ready: "Canonical main is clean and unique, no open package item or PR duplicates this tranche, installed and registry pm are 2026.8.7, and the baseline release gate is measured honestly."
+value: Concurrent agents get deterministic PM extension-asset merge semantics from installs on supported platforms.
+impact: Prevents generated extension assets from entering semantic field merges and makes lifecycle failures observable on Windows.
+risk: high
+confidence: high
+actual_result: "The package now resolves pm CLI/SDK and pm-changelog 2026.8.7, protects generated extension assets with the canonical fence, runs an erasable TypeScript lifecycle with target-platform PATH/PATHEXT semantics, and adds a real windows-latest cmd.exe integration gate. npm and Bun release checks each pass 59 tests with zero skips; the lifecycle source is exact 100/100/100; a fresh packed artifact installs into pm 2026.8.7, exposes all seven presets, applies agent-workflow, creates a real AgentRun item, and validates. Independent pm-915f and pm-vsn5 preserve the all-source quality and history-privacy blockers, so no publication is authorized."
+dependencies[2]{id,kind,created_at,author,source_kind,author_source}:
+  pm-915f,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
+  pm-vsn5,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
+notes[2]{created_at,author,text}:
+  "2026-08-07T19:53:45.693Z","harness:codex","Release-readiness boundary: aggregate authored-source coverage is only 77.01/87.31/67.74 after adding the exact-covered lifecycle,not the required 100/100/100. Reachable history contains six identity pairs and host-path matches in 66 of 136 commits,while the current changed-file scan and bounded full-history credential scan found zero credential-pattern matches. pm-915f and pm-vsn5 remain open; no npm publication is authorized."
+  "2026-08-07T19:53:45.693Z","harness:codex","text=Local verification before review: npm ci executed the production prepare hook; npm run release:check passed typecheck,59 tests,configured all-source coverage,production audit with zero vulnerabilities,pack dry-run,and deterministic changelog; bun run release:check passed the same gate. scripts/prepare-merge-driver.ts measured exact 100/100/100. Fresh packed-artifact acceptance against installed pm 2026.8.7 listed seven presets,showed/diffed/validated agent-workflow,applied it,created a real AgentRun item,and passed pm validate."
+files[3]{path,scope,note}:
+  package.json,project,toolchain and lifecycle gates
+  scripts/prepare-merge-driver.ts,project,erasable cross-platform prepare lifecycle
+  .gitattributes,project,canonical pm merge fence
+tests[3]{command,scope,timeout_seconds,pm_context_mode}:
+  "bun run release:check",project,900,tracker
+  "npm run release:check",project,900,tracker
+  pm health --full --check-only --strict-exit --require-merge-drivers,project,120,tracker
+docs[1]{path,scope,note}:
+  "https://github.com/unbraind/pm-cli-companion/blob/main/.agents/pm/issues/pm-cli-website-19ju.toon",global,companion fleet coordination item
+body: ""

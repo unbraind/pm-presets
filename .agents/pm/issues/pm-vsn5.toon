@@ -1,0 +1,18 @@
+id: pm-vsn5
+title: Rewrite reachable history before public release approval
+description: "The current tree has no host-specific path match, but reachable history contains personal identities and host-specific absolute paths. This must be resolved and independently reviewed before any npm/public-release claim; the bounded pm 2026.8.7 merge-fence tranche must not rewrite history or publish."
+type: Issue
+status: open
+priority: 0
+tags[5]: git-history,identity,privacy,publication,release-blocker
+created_at: "2026-08-07T19:46:08.634Z"
+updated_at: "2026-08-07T19:46:08.634Z"
+author: "harness:codex"
+acceptance_criteria: A planned recoverable history rewrite removes or approvedly maps all personal identities and host-specific paths across every reachable ref; full-history secret/privacy scanners pass; raw and PM history are independently reviewed; downstream coordination is documented; maintainer explicitly approves publication
+severity: critical
+environment: All 136 commits reachable from local refs on pm-presets main at 853dd8e
+repro_steps: "Enumerate unique git author identities and scan every reachable commit for absolute /home, /Users, and Windows user paths."
+expected_result: "All reachable history contains only approved public identities and no private host paths, personal data, secrets, or keys; independent review and maintainer approval explicitly clear publication."
+actual_result: "Six unique name/email identity pairs include personal identities, and 66 of 136 reachable commits contain a host-specific absolute path pattern; current tracked content has zero host-path matches."
+customer_impact: Publishing or presenting the repository as privacy-cleared could expose personal or host-specific historical metadata.
+body: ""
