@@ -6,7 +6,7 @@ status: closed
 priority: 0
 tags[6]: merge-safety,multi-agent,pm-cli-2026.8.7,release-gate,typescript,windows
 created_at: "2026-08-07T19:45:48.641Z"
-updated_at: "2026-08-07T20:06:26.426Z"
+updated_at: "2026-08-07T20:09:18.045Z"
 closed_at: "2026-08-07T20:06:26.386Z"
 completed_at: "2026-08-07T20:06:26.386Z"
 author: "harness:codex"
@@ -23,7 +23,7 @@ actual_result: "The package now resolves pm CLI/SDK and pm-changelog 2026.8.7, p
 dependencies[2]{id,kind,created_at,author,source_kind,author_source}:
   pm-915f,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
   pm-vsn5,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
-notes[3]:
+notes[4]:
   - created_at: "2026-08-07T19:53:45.693Z"
     author: "harness:codex"
     text: "Local verification before review: npm ci executed the production prepare hook; npm run release:check passed typecheck,59 tests,configured all-source coverage,production audit with zero vulnerabilities,pack dry-run,and deterministic changelog; bun run release:check passed the same gate. scripts/prepare-merge-driver.ts measured exact 100/100/100. Fresh packed-artifact acceptance against installed pm 2026.8.7 listed seven presets,showed/diffed/validated agent-workflow,applied it,created a real AgentRun item,and passed pm validate."
@@ -34,6 +34,9 @@ notes[3]:
   - created_at: "2026-08-07T20:06:07.443Z"
     author: "harness:codex"
     text: "Exact-head review round on e24f77c: CodeRabbit identified three valid findings and Greptile independently identified the mutable-action finding. All were fixed through audited PM mutations and immutable Windows action pins, individually upvoted/replied/resolved, and revalidated. Greptile reran at 5/5 with no blocking failure; Node 22,Node 26,and real Windows CI passed. CodeRabbit exact-head full rerun was rate-limited,Sourcery and Cubic were quota-limited,and Gemini was silent; those are limitations rather than approval."
+  - created_at: "2026-08-07T20:09:18.045Z"
+    author: "harness:codex"
+    text: "Final-head base reconciliation: while PR #46 was open,the daily release advanced main to v2026.08.07. GitHub correctly caught that the branch-local 2026.8.4 changelog placement differed from the merge ref. Merged origin/main without conflicts,retained the 2026.8.7 toolchain and lifecycle changes,and regenerated CHANGELOG.md so pm-xtq2 remains Unreleased rather than being attributed to the already-created tag."
 files[3]{path,scope,note}:
   package.json,project,toolchain and lifecycle gates
   scripts/prepare-merge-driver.ts,project,erasable cross-platform prepare lifecycle
