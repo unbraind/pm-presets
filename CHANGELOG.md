@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Align pm-presets with pm 2026.8.7 and harden merge-driver lifecycle ([pm-xtq2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-xtq2.toon))
+
 ## 2026.8.7 - 2026-08-07
 
 ### Fixed

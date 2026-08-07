@@ -91,3 +91,25 @@ jobs:
 
       - name: Verify Bun can install the package graph
         run: bun install --no-save
+
+  windows-prepare-lifecycle:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci runs the production prepare lifecycle through cmd.exe before the
+      # adversarial fixture below exercises spaces and percent-delimited paths.
+      - name: Install dependencies and merge drivers
+        run: npm ci
+
+      - name: Exercise the real Windows command parser
+        run: node --test tests/windows-prepare.integration.ts
