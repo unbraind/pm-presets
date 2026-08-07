@@ -6,7 +6,7 @@ status: in_progress
 priority: 0
 tags[6]: merge-safety,multi-agent,pm-cli-2026.8.7,release-gate,typescript,windows
 created_at: "2026-08-07T19:45:48.641Z"
-updated_at: "2026-08-07T19:53:45.712Z"
+updated_at: "2026-08-07T19:59:14.922Z"
 author: "harness:codex"
 estimated_minutes: 240
 acceptance_criteria: The lockfile resolves @unbrained/pm-cli and pm-changelog 2026.8.7 and the peer floor is 2026.8.7; pm merge install emits extensions/** -merge and scopes pm-json to .managed-extensions.json; lifecycle source is erasable TypeScript with no dynamic imports and resolves target-platform PATH/PATHEXT safely; npm ci runs the real prepare hook on windows-latest with a real cmd shim under a spaced and percent-delimited path; lifecycle tests reach exact 100/100/100; npm and Bun package gates plus fresh packed-artifact installed-pm acceptance pass; privacy/history and full-source quality limits are tracked independently; exact-head bot review is dispositioned before merge
@@ -19,9 +19,14 @@ actual_result: "The package now resolves pm CLI/SDK and pm-changelog 2026.8.7, p
 dependencies[2]{id,kind,created_at,author,source_kind,author_source}:
   pm-915f,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
   pm-vsn5,related,"2026-08-07T19:46:31.417Z","harness:codex","cli:update:dep",detected
-notes[2]{created_at,author,text}:
-  "2026-08-07T19:53:45.693Z","harness:codex","Release-readiness boundary: aggregate authored-source coverage is only 77.01/87.31/67.74 after adding the exact-covered lifecycle,not the required 100/100/100. Reachable history contains six identity pairs and host-path matches in 66 of 136 commits,while the current changed-file scan and bounded full-history credential scan found zero credential-pattern matches. pm-915f and pm-vsn5 remain open; no npm publication is authorized."
-  "2026-08-07T19:53:45.693Z","harness:codex","text=Local verification before review: npm ci executed the production prepare hook; npm run release:check passed typecheck,59 tests,configured all-source coverage,production audit with zero vulnerabilities,pack dry-run,and deterministic changelog; bun run release:check passed the same gate. scripts/prepare-merge-driver.ts measured exact 100/100/100. Fresh packed-artifact acceptance against installed pm 2026.8.7 listed seven presets,showed/diffed/validated agent-workflow,applied it,created a real AgentRun item,and passed pm validate."
+notes[2]:
+  - created_at: "2026-08-07T19:53:45.693Z"
+    author: "harness:codex"
+    text: "Local verification before review: npm ci executed the production prepare hook; npm run release:check passed typecheck,59 tests,configured all-source coverage,production audit with zero vulnerabilities,pack dry-run,and deterministic changelog; bun run release:check passed the same gate. scripts/prepare-merge-driver.ts measured exact 100/100/100. Fresh packed-artifact acceptance against installed pm 2026.8.7 listed seven presets,showed/diffed/validated agent-workflow,applied it,created a real AgentRun item,and passed pm validate."
+    edited_at: "2026-08-07T19:59:14.922Z"
+  - created_at: "2026-08-07T19:53:45.693Z"
+    author: "harness:codex"
+    text: "Release-readiness boundary: aggregate authored-source coverage is only 77.01/87.31/67.74 after adding the exact-covered lifecycle,not the required 100/100/100. Reachable history contains six identity pairs and host-path matches in 66 of 136 commits,while the current changed-file scan and bounded full-history credential scan found zero credential-pattern matches. pm-915f and pm-vsn5 remain open; no npm publication is authorized."
 files[3]{path,scope,note}:
   package.json,project,toolchain and lifecycle gates
   scripts/prepare-merge-driver.ts,project,erasable cross-platform prepare lifecycle
