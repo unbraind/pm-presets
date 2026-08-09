@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Adopt the mandatory docstring gate ([pm-l7yq](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-l7yq.toon))
+
 ## 2026.8.8 - 2026-08-08
 
 ### Other

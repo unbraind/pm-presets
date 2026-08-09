@@ -20,6 +20,14 @@ export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates,
  * becomes a compile error instead of a runtime "unknown preset".
  */
 export type PresetId = "bug-triage" | "indie-dev" | "open-source" | "software-sprint" | "startup-roadmap" | "kanban" | "agent-workflow";
+/**
+ * The static catalog entry for one preset, surfaced by `pm preset list`.
+ *
+ * Pure metadata (no behaviour): the id drives CLI commands, `command` is the
+ * pm subcommand that applies the preset, and `templates` lists the template
+ * names installed (without extension) so the catalog can be shown without
+ * loading the full definitions.
+ */
 export interface PresetDescriptor {
     /** Stable identifier used in pm CLI commands (e.g. "bug-triage") */
     id: PresetId;

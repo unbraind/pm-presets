@@ -30,6 +30,14 @@ export type PresetId =
   | "kanban"
   | "agent-workflow";
 
+/**
+ * The static catalog entry for one preset, surfaced by `pm preset list`.
+ *
+ * Pure metadata (no behaviour): the id drives CLI commands, `command` is the
+ * pm subcommand that applies the preset, and `templates` lists the template
+ * names installed (without extension) so the catalog can be shown without
+ * loading the full definitions.
+ */
 export interface PresetDescriptor {
   /** Stable identifier used in pm CLI commands (e.g. "bug-triage") */
   id: PresetId;

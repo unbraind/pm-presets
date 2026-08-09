@@ -85,6 +85,13 @@ export const PRESET_SEEDS = {
         },
     ],
 };
+/**
+ * Resolve a preset id to its starter seed items.
+ *
+ * Returns an empty array for an id with no seeds (including an unknown id),
+ * so callers can iterate unconditionally and a preset that ships no seeds is
+ * simply a no-op rather than an error.
+ */
 export function seedsForPreset(presetId) {
     return PRESET_SEEDS[presetId] ?? [];
 }

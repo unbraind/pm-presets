@@ -1,4 +1,11 @@
 import { applyPreset, storedTemplate, } from "../shared.js";
+/**
+ * The settings patch for the indie-dev preset.
+ *
+ * Minimal governance (`metadata_profile: core`, no close validation, no test
+ * recording) for a solo developer; the default create type is `Task` and new
+ * items are prefixed `indie-`.
+ */
 export const SETTINGS = {
     id_prefix: "indie-",
     governance: {
@@ -18,6 +25,10 @@ export const SETTINGS = {
         record_results_to_items: false,
     },
 };
+/**
+ * The templates the indie-dev preset installs: an `idea` decision record and a
+ * solo `task`, keeping the surface small for a one-person workspace.
+ */
 export const TEMPLATES = {
     "idea.json": storedTemplate("idea", {
         type: "Decision",
@@ -36,6 +47,10 @@ export const TEMPLATES = {
         body: "## Project\nTBD\n\n## Notes\nTBD\n\n## Done When\nTBD\n",
     }),
 };
+/**
+ * Command handler for the indie-dev setup command: delegates the settings,
+ * templates, and next-steps to {@link applyPreset}.
+ */
 export function runIndieDevSetup(context) {
     applyPreset(context, {
         label: "Indie dev",
