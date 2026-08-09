@@ -28,8 +28,13 @@ export const SETTINGS = {
         record_results_to_items: true,
     },
 };
-// Custom item types this preset contributes to the workspace schema. Registered
-// at activation via api.registerItemTypes — see ../../index.ts.
+/**
+ * Custom item types this preset contributes to the workspace schema, registered
+ * at activation via `api.registerItemTypes` (see `../../index.ts`). Defines an
+ * `AgentRun` type whose options capture the agent lifecycle `phase`, the
+ * autonomy `mode`, and the target `model`, so an agent board reads like a CI
+ * dashboard.
+ */
 export const ITEM_TYPES = [
     {
         name: "AgentRun",
@@ -50,6 +55,11 @@ export const ITEM_TYPES = [
         ],
     },
 ];
+/**
+ * The templates the agent-workflow preset installs: an `agent-task`, a
+ * `prompt-experiment`, and the remaining agent-run templates, each shaped
+ * around the `AgentRun` item type.
+ */
 export const TEMPLATES = {
     "agent-task.json": storedTemplate("agent-task", {
         type: "AgentRun",
@@ -79,6 +89,10 @@ export const TEMPLATES = {
         body: "## Eval Set\nTBD\n\n## Candidate\nTBD\n\n## Baseline\nTBD\n\n## Scorecard\nTBD\n",
     }),
 };
+/**
+ * Command handler for the agent-workflow setup command: delegates the settings,
+ * item types, templates, and next-steps to {@link applyPreset}.
+ */
 export function runAgentWorkflowSetup(context) {
     applyPreset(context, {
         label: "Agent workflow",

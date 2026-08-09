@@ -1,4 +1,11 @@
 import { applyPreset, storedTemplate, } from "../shared.js";
+/**
+ * The settings patch for the open-source preset.
+ *
+ * Default governance with warn-level enforcement and core metadata, suited to
+ * community contribution flow; the default create type is `Issue` and new items
+ * are prefixed `oss-`. No testing block is set.
+ */
 export const SETTINGS = {
     id_prefix: "oss-",
     governance: {
@@ -16,6 +23,11 @@ export const SETTINGS = {
         metadata_profile: "core",
     },
 };
+/**
+ * The templates the open-source preset installs: a community `bug-report`, a
+ * `feature-request`, and a `good-first-issue` scoped for a first-time
+ * contributor.
+ */
 export const TEMPLATES = {
     "bug-report.json": storedTemplate("bug-report", {
         type: "Issue",
@@ -49,6 +61,10 @@ export const TEMPLATES = {
         body: "## Task\nTBD\n\n## Skill Level\nbeginner\n\n## Relevant Files\nTBD\n\n## Mentorship Contact\nTBD\n\n## Related Docs\nTBD\n\n## Validation\nTBD\n",
     }),
 };
+/**
+ * Command handler for the open-source setup command: delegates the settings,
+ * templates, and next-steps to {@link applyPreset}.
+ */
 export function runOpenSourceSetup(context) {
     applyPreset(context, {
         label: "Open source",

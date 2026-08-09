@@ -97,6 +97,13 @@ export const PRESET_SEEDS: Record<string, SeedItem[]> = {
   ],
 };
 
+/**
+ * Resolve a preset id to its starter seed items.
+ *
+ * Returns an empty array for an id with no seeds (including an unknown id),
+ * so callers can iterate unconditionally and a preset that ships no seeds is
+ * simply a no-op rather than an error.
+ */
 export function seedsForPreset(presetId: string): SeedItem[] {
   return PRESET_SEEDS[presetId] ?? [];
 }
@@ -116,6 +123,11 @@ export function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[] {
   return args;
 }
 
+/**
+ * One entry in a seed dry-run plan: the item that would be created and the
+ * exact `pm create` command that would create it, so an operator can review
+ * before anything runs.
+ */
 export interface SeedPlanEntry {
   title: string;
   type: string;

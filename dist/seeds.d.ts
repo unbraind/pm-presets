@@ -21,9 +21,21 @@ export interface SeedItem {
 }
 /** Built-in-only seed items keyed by preset id. */
 export declare const PRESET_SEEDS: Record<string, SeedItem[]>;
+/**
+ * Resolve a preset id to its starter seed items.
+ *
+ * Returns an empty array for an id with no seeds (including an unknown id),
+ * so callers can iterate unconditionally and a preset that ships no seeds is
+ * simply a no-op rather than an error.
+ */
 export declare function seedsForPreset(presetId: string): SeedItem[];
 /** Build the `pm create` argv for one seed item (built-in fields only). */
 export declare function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[];
+/**
+ * One entry in a seed dry-run plan: the item that would be created and the
+ * exact `pm create` command that would create it, so an operator can review
+ * before anything runs.
+ */
 export interface SeedPlanEntry {
     title: string;
     type: string;

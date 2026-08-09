@@ -1,4 +1,11 @@
 import { applyPreset, storedTemplate, } from "../shared.js";
+/**
+ * The settings patch for the software-sprint preset.
+ *
+ * Default governance with warn-level enforcement and test results recorded to
+ * items, suited to a sprint cadence; the default create type is `Task` and new
+ * items are prefixed `sprint-`.
+ */
 export const SETTINGS = {
     id_prefix: "sprint-",
     governance: {
@@ -19,6 +26,11 @@ export const SETTINGS = {
         record_results_to_items: true,
     },
 };
+/**
+ * The templates the software-sprint preset installs: a sprint `bug`, an `epic`,
+ * a `feature`, and a `task`, covering the work-item shapes a sprint board
+ * needs.
+ */
 export const TEMPLATES = {
     "bug.json": storedTemplate("bug", {
         type: "Issue",
@@ -69,6 +81,10 @@ export const TEMPLATES = {
         body: "## Work\nTBD\n\n## Blocked By\nTBD\n\n## Pull Request\nTBD\n\n## Validation\nTBD\n",
     }),
 };
+/**
+ * Command handler for the software-sprint setup command: delegates the
+ * settings, templates, and next-steps to {@link applyPreset}.
+ */
 export function runSoftwareSprintSetup(context) {
     applyPreset(context, {
         label: "Software sprint",

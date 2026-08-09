@@ -25,6 +25,12 @@ import type { PresetDefinition } from "./catalog.ts";
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
 
+/**
+ * The slice of a workspace a preset diff compares against: the parsed
+ * `settings.json` (or `undefined` when it is absent or unreadable) and the
+ * template file names present under `templates/`. Captured once so the diff is
+ * computed against a stable snapshot rather than re-reading disk mid-compare.
+ */
 export interface WorkspaceSnapshot {
   /** Parsed settings.json (or `undefined` if absent/unreadable). */
   settings: JsonObject | undefined;

@@ -7,6 +7,13 @@ import {
   type PresetTemplateMap,
 } from "../shared.ts";
 
+/**
+ * The settings patch for the kanban preset.
+ *
+ * Minimal governance with warn-level parent references and no close
+ * validation, tuned for flow-based board work; the default create type is the
+ * custom `Card` and new items are prefixed `kan-`.
+ */
 export const SETTINGS = {
   id_prefix: "kan-",
   governance: {
@@ -28,8 +35,12 @@ export const SETTINGS = {
   },
 } satisfies PresetSettingsPatch;
 
-// Custom item types this preset contributes to the workspace schema. Registered
-// at activation via api.registerItemTypes — see ../../index.ts.
+/**
+ * Custom item types this preset contributes to the workspace schema, registered
+ * at activation via `api.registerItemTypes` (see `../../index.ts`). Defines a
+ * `Card` type whose options constrain a card's `column` and `swimlane`, so the
+ * board state is validated rather than free-form.
+ */
 export const ITEM_TYPES: SchemaItemTypeDefinition[] = [
   {
     name: "Card",
@@ -44,6 +55,10 @@ export const ITEM_TYPES: SchemaItemTypeDefinition[] = [
   },
 ];
 
+/**
+ * The templates the kanban preset installs: a `card`, an `expedite` card in the
+ * expedite swimlane, and a `blocked` card in the blocked swimlane.
+ */
 export const TEMPLATES = {
   "card.json": storedTemplate("card", {
     type: "Card",
@@ -78,6 +93,10 @@ export const TEMPLATES = {
   }),
 } satisfies PresetTemplateMap;
 
+/**
+ * Command handler for the kanban setup command: delegates the settings, item
+ * types, templates, and next-steps to {@link applyPreset}.
+ */
 export function runKanbanSetup(context: CommandHandlerContext): void {
   applyPreset(context, {
     label: "Kanban board",

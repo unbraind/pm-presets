@@ -1,4 +1,11 @@
 import { applyPreset, storedTemplate, } from "../shared.js";
+/**
+ * The settings patch for the startup-roadmap preset.
+ *
+ * Custom governance with strict metadata and stale-lock force required, tuned
+ * for roadmap planning; the default create type is `Feature` and new items are
+ * prefixed `road-`.
+ */
 export const SETTINGS = {
     id_prefix: "road-",
     governance: {
@@ -20,6 +27,10 @@ export const SETTINGS = {
         record_results_to_items: false,
     },
 };
+/**
+ * The templates the startup-roadmap preset installs: an `initiative`, a roadmap
+ * `feature`, and a `milestone` (the last with a `+90d` deadline default).
+ */
 export const TEMPLATES = {
     "initiative.json": storedTemplate("initiative", {
         type: "Epic",
@@ -56,6 +67,10 @@ export const TEMPLATES = {
         body: "## Owner\nTBD\n\n## Scope Summary\nTBD\n\n## Exit Criteria\nTBD\n\n## Stakeholder Sign-off\nTBD\n\n## Investor Facing\nfalse\n\n## Go-To-Market Notes\nTBD\n",
     }),
 };
+/**
+ * Command handler for the startup-roadmap setup command: delegates the
+ * settings, templates, and next-steps to {@link applyPreset}.
+ */
 export function runStartupRoadmapSetup(context) {
     applyPreset(context, {
         label: "Startup roadmap",

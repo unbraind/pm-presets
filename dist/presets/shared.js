@@ -20,12 +20,31 @@ import * as path from "node:path";
 // second time and exits with a generic code. We mirror the SDK's EXIT_CODE
 // contract here rather than importing it: standalone-installed extensions load
 // only their own `dist/`, so `@unbrained/pm-cli` is not resolvable at runtime.
+/**
+ * Numeric exit codes mirroring the pm-cli SDK contract.
+ *
+ * Duplicated here rather than imported: a standalone-installed extension loads
+ * only its own `dist/`, so `@unbrained/pm-cli` is not resolvable at runtime.
+ * pm's command runtime only honours a thrown error's numeric `exitCode` (a plain
+ * `Error` falls through to the unhandled path, which re-invokes the handler and
+ * exits with a generic code), so these values are what make a clean non-zero
+ * exit possible.
+ */
 export const EXIT_CODE = {
     GENERIC_FAILURE: 1,
     USAGE: 2,
     NOT_FOUND: 3,
 };
+/**
+ * Error whose `exitCode` pm's runtime treats as a handled non-zero exit.
+ *
+ * Extending `Error` with a numeric {@link exitCode} is the only shape the
+ * runtime recognises as "cleanly handled"; throwing a plain `Error` instead
+ * triggers the unhandled path that re-invokes the handler and exits with a
+ * generic code. Defaults to {@link EXIT_CODE.GENERIC_FAILURE}.
+ */
 export class CommandError extends Error {
+    /** Numeric exit code forwarded to `process.exitCode` by the pm runtime. */
     exitCode;
     constructor(message, exitCode = EXIT_CODE.GENERIC_FAILURE) {
         super(message);
@@ -100,6 +119,15 @@ export function readStringOption(options, ...keys) {
     }
     return undefined;
 }
+/**
+ * Trim a template name and reject anything outside the on-disk grammar.
+ *
+ * Names must match `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` because they become a file
+ * name; a violation throws a `USAGE` {@link CommandError} quoting the bad input
+ * rather than silently coercing it.
+ *
+ * @returns The trimmed name when it is valid.
+ */
 export function normalizeTemplateName(rawName) {
     const name = rawName.trim();
     if (!TEMPLATE_NAME_PATTERN.test(name)) {
@@ -107,6 +135,17 @@ export function normalizeTemplateName(rawName) {
     }
     return name;
 }
+/**
+ * Build a {@link StoredCreateTemplateDocument} for a builtin template.
+ *
+ * Stamps both timestamps with the epoch sentinel (so builtins sort below
+ * user-created templates) and runs the options through
+ * {@link sortTemplateOptions} for a stable, diff-friendly key order.
+ *
+ * @param rawName - Unvalidated name; normalized here.
+ * @param options - The template's option map.
+ * @returns A builtin document with sentinel timestamps and sorted options.
+ */
 export function storedTemplate(rawName, options) {
     const name = normalizeTemplateName(rawName);
     return {
@@ -148,6 +187,16 @@ export function mergePresetSettings(existing, patch, replace) {
     }
     return merged;
 }
+/**
+ * Apply one preset's settings and templates to the workspace on disk.
+ *
+ * Reads the existing `settings.json`, merges (or, under `--replace`, swaps the
+ * owned trees of) the preset's patch, and writes the templates the preset ships
+ * — unless `--dry-run`, which prints the planned result instead. Honours
+ * `--force` to overwrite an existing user template, and `--prefix` to override
+ * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
+ * is present, with the expected settings path in the message.
+ */
 export function applyPreset(context, input) {
     const { options } = context;
     const pmDir = resolvePmDir(context);
@@ -209,6 +258,13 @@ export function applyPreset(context, input) {
         console.warn(input.warning);
     }
 }
+/**
+ * List every template available to the workspace, builtin and user.
+ *
+ * A user template with the same name as a builtin shadows it, so the builtin is
+ * omitted from the builtin list; both lists are sorted, and the combined
+ * `templates` is the de-duplicated union.
+ */
 export function runTemplatesList(context) {
     const pmDir = resolvePmDir(context);
     ensureTrackerInitialized(pmDir);
@@ -225,6 +281,14 @@ export function runTemplatesList(context) {
         user_templates: sortedUser,
     };
 }
+/**
+ * Resolve one template by name, preferring a user file over the builtin.
+ *
+ * Requires a non-empty name argument (else `USAGE`), then looks on disk first;
+ * a user file is reported with `source: "user"` and its real path, a matching
+ * builtin with `source: "builtin"` and a `builtin:` path. A name found nowhere
+ * throws `NOT_FOUND`.
+ */
 export function runTemplatesShow(context) {
     const pmDir = resolvePmDir(context);
     ensureTrackerInitialized(pmDir);
@@ -262,12 +326,26 @@ export function runTemplatesShow(context) {
 function templatesDirectory(pmRoot) {
     return path.join(pmRoot, TEMPLATE_DIRECTORY_NAME);
 }
+/**
+ * Guard that the pm tracker is initialized before a template command runs.
+ *
+ * Only the presence of `settings.json` is checked (created by `pm init`); its
+ * absence throws `NOT_FOUND` naming the root, so the operator is told to init
+ * rather than seeing a confusing ENOENT deeper in the stack.
+ */
 function ensureTrackerInitialized(pmRoot) {
     const settingsPath = path.join(pmRoot, "settings.json");
     if (!fs.existsSync(settingsPath)) {
         throw new CommandError(`Tracker is not initialized at ${pmRoot}. Run pm init first.`, EXIT_CODE.NOT_FOUND);
     }
 }
+/**
+ * Read user template names from the workspace's templates directory.
+ *
+ * Returns an empty array when the directory does not exist (a workspace need
+ * not have added any templates), and filters both by the `.json` extension and
+ * by the template-name grammar so a stray non-template file is ignored.
+ */
 function readUserTemplateNames(pmRoot) {
     const dirPath = templatesDirectory(pmRoot);
     if (!fs.existsSync(dirPath)) {
@@ -279,6 +357,14 @@ function readUserTemplateNames(pmRoot) {
         .map((entry) => entry.slice(0, -TEMPLATE_FILE_EXTENSION.length))
         .filter((entry) => TEMPLATE_NAME_PATTERN.test(entry));
 }
+/**
+ * Parse and validate one stored template file into a document.
+ *
+ * A JSON parse failure or a non-object shape throws a {@link CommandError}
+ * naming the template. Missing or non-string fields fall back to the
+ * `normalizedName` and the builtin sentinel timestamps rather than failing, so
+ * a hand-edited file missing metadata still loads.
+ */
 function parseStoredTemplateDocument(raw, normalizedName) {
     let parsed;
     try {
@@ -304,6 +390,14 @@ function parseStoredTemplateDocument(raw, normalizedName) {
         options,
     };
 }
+/**
+ * Validate and normalize a template's option map.
+ *
+ * Each key is trimmed (an empty key throws) and each value must be a string or
+ * an all-string array; anything else throws a {@link CommandError} naming the
+ * offending option. Arrays are copied so the returned document does not alias
+ * the parsed input, and the result is sorted by key for a stable file layout.
+ */
 function parseStoredTemplateOptions(rawOptions, templateName) {
     if (!isJsonObject(rawOptions)) {
         throw new CommandError(`Template "${templateName}" has invalid options payload.`);
@@ -326,6 +420,13 @@ function parseStoredTemplateOptions(rawOptions, templateName) {
     }
     return sortTemplateOptions(normalized);
 }
+/**
+ * Read and parse a JSON file that must be a JSON object.
+ *
+ * Wraps both the read/parse step (reporting the underlying message) and the
+ * shape check, so callers get a single thrown {@link CommandError} tagged with
+ * a human `label` (e.g. "settings.json") instead of a raw `SyntaxError`.
+ */
 function readJsonObject(filePath, label) {
     let parsed;
     try {
@@ -339,6 +440,13 @@ function readJsonObject(filePath, label) {
     }
     return parsed;
 }
+/**
+ * Recursively merge two JSON objects, patch winning on conflict.
+ *
+ * Only plain objects recurse; arrays and scalars from `patch` replace the
+ * `base` value wholesale (an array is treated as a value, not concatenated).
+ * `base` is copied first so the input is never mutated.
+ */
 function deepMergeJson(base, patch) {
     const result = { ...base };
     for (const [key, value] of Object.entries(patch)) {

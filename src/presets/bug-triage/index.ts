@@ -7,6 +7,14 @@ import {
   type PresetTemplateMap,
 } from "../shared.ts";
 
+/**
+ * The settings patch for the bug-triage preset.
+ *
+ * Strict, custom governance (`metadata_profile: strict`, close validation
+ * `strict`, stale-lock force required) tuned for production incidents and
+ * hotfixes; the default create type is `Issue` and new items are prefixed
+ * `bug-`.
+ */
 export const SETTINGS = {
   id_prefix: "bug-",
   governance: {
@@ -29,6 +37,11 @@ export const SETTINGS = {
   },
 } satisfies PresetSettingsPatch;
 
+/**
+ * The templates the bug-triage preset installs: an `incident` report, a
+ * `hotfix-task`, and a `regression` tracker, each seeded with the incident/
+ * hotfix fields that workflow expects.
+ */
 export const TEMPLATES = {
   "incident.json": storedTemplate("incident", {
     type: "Issue",
@@ -79,6 +92,11 @@ export const TEMPLATES = {
   }),
 } satisfies PresetTemplateMap;
 
+/**
+ * Command handler for `pm triage-setup`: hand the bug-triage settings, templates,
+ * and next-steps to {@link applyPreset}, which writes them to the workspace
+ * (unless `--dry-run`).
+ */
 export function runBugTriageSetup(context: CommandHandlerContext): void {
   applyPreset(context, {
     label: "Bug triage",

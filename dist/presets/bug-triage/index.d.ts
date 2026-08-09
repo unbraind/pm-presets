@@ -1,4 +1,12 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+/**
+ * The settings patch for the bug-triage preset.
+ *
+ * Strict, custom governance (`metadata_profile: strict`, close validation
+ * `strict`, stale-lock force required) tuned for production incidents and
+ * hotfixes; the default create type is `Issue` and new items are prefixed
+ * `bug-`.
+ */
 export declare const SETTINGS: {
     id_prefix: string;
     governance: {
@@ -20,10 +28,20 @@ export declare const SETTINGS: {
         record_results_to_items: true;
     };
 };
+/**
+ * The templates the bug-triage preset installs: an `incident` report, a
+ * `hotfix-task`, and a `regression` tracker, each seeded with the incident/
+ * hotfix fields that workflow expects.
+ */
 export declare const TEMPLATES: {
     "incident.json": import("../shared.ts").StoredCreateTemplateDocument;
     "hotfix-task.json": import("../shared.ts").StoredCreateTemplateDocument;
     "regression.json": import("../shared.ts").StoredCreateTemplateDocument;
 };
+/**
+ * Command handler for `pm triage-setup`: hand the bug-triage settings, templates,
+ * and next-steps to {@link applyPreset}, which writes them to the workspace
+ * (unless `--dry-run`).
+ */
 export declare function runBugTriageSetup(context: CommandHandlerContext): void;
 //# sourceMappingURL=index.d.ts.map

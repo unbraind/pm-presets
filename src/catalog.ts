@@ -87,6 +87,13 @@ const RAW_PRESETS: Record<string, RawPreset> = {
   "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
 
+/**
+ * Project a stored template into the compact view the catalog exposes.
+ *
+ * Extracts the `type` (defaulting to `"Task"` when the option is absent or not a
+ * string) and the sorted option keys, so two templates with the same options in
+ * different key order compare equal.
+ */
 function templateView(document: StoredCreateTemplateDocument): PresetTemplateView {
   const options = document.options as CreateTemplateOptions;
   const type = typeof options.type === "string" ? options.type : "Task";
@@ -94,6 +101,13 @@ function templateView(document: StoredCreateTemplateDocument): PresetTemplateVie
   return { name: document.name, type, optionKeys };
 }
 
+/**
+ * Project a preset's item-type definitions into plain view objects.
+ *
+ * Returns an empty array when the preset defines no item types. Every alias
+ * list and option value list is copied, so the returned views never alias the
+ * raw preset's internal arrays and cannot be mutated through the catalog.
+ */
 function itemTypeViews(raw: RawPreset): PresetItemTypeView[] {
   if (!raw.itemTypes) {
     return [];

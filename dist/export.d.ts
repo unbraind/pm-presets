@@ -19,6 +19,11 @@
  * documents, which fully reconstruct an applied preset.
  */
 import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
+/**
+ * One template in a workspace export: its name and the option map a re-import
+ * would reinstall. Mirrors the user-facing slice of
+ * {@link StoredCreateTemplateDocument} without the storage timestamps.
+ */
 export interface ExportedTemplate {
     name: string;
     options: CreateTemplateOptions;

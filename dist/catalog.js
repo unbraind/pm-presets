@@ -23,12 +23,26 @@ const RAW_PRESETS = {
     "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
     "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
+/**
+ * Project a stored template into the compact view the catalog exposes.
+ *
+ * Extracts the `type` (defaulting to `"Task"` when the option is absent or not a
+ * string) and the sorted option keys, so two templates with the same options in
+ * different key order compare equal.
+ */
 function templateView(document) {
     const options = document.options;
     const type = typeof options.type === "string" ? options.type : "Task";
     const optionKeys = Object.keys(options).sort((left, right) => left.localeCompare(right));
     return { name: document.name, type, optionKeys };
 }
+/**
+ * Project a preset's item-type definitions into plain view objects.
+ *
+ * Returns an empty array when the preset defines no item types. Every alias
+ * list and option value list is copied, so the returned views never alias the
+ * raw preset's internal arrays and cannot be mutated through the catalog.
+ */
 function itemTypeViews(raw) {
     if (!raw.itemTypes) {
         return [];
