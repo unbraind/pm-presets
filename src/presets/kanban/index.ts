@@ -94,8 +94,13 @@ export const TEMPLATES = {
 } satisfies PresetTemplateMap;
 
 /**
- * Command handler for the kanban setup command: delegates the settings, item
- * types, templates, and next-steps to {@link applyPreset}.
+ * Command handler for the kanban setup command: delegates the settings,
+ * templates and next-steps to {@link applyPreset}.
+ *
+ * Item types are deliberately not part of this delegation. The `Card` type is
+ * registered at activation through `api.registerItemTypes` (see
+ * `../../index.ts`), because the type must exist for every command in the
+ * session rather than only after setup has been run.
  */
 export function runKanbanSetup(context: CommandHandlerContext): void {
   applyPreset(context, {

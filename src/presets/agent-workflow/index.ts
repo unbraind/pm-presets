@@ -105,7 +105,12 @@ export const TEMPLATES = {
 
 /**
  * Command handler for the agent-workflow setup command: delegates the settings,
- * item types, templates, and next-steps to {@link applyPreset}.
+ * templates and next-steps to {@link applyPreset}.
+ *
+ * Item types are deliberately not part of this delegation. The `AgentRun` type
+ * is registered at activation through `api.registerItemTypes` (see
+ * `../../index.ts`), because the type must exist for every command in the
+ * session rather than only after setup has been run.
  */
 export function runAgentWorkflowSetup(context: CommandHandlerContext): void {
   applyPreset(context, {
