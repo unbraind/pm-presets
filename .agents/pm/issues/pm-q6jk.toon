@@ -1,0 +1,25 @@
+id: pm-q6jk
+title: A Dependabot bump to pm-cli 2026.8.10 turned the tracker's own history into a CI failure
+description: "The bump PR was innocent: main was green and the diff touched only package.json and package-lock.json, but the health gate failed. pm health --strict-exit reported ok:false with a single non-ok check, and the cause was in the top-level warnings array rather than any check status: provenance_value_domain_invalid:claude-code:role:single_digit:19. Nineteen history events in this tracker carry agent_provenance.role.value of 1, written by pm-cli 2026.8.7 itself, which reads the CLAUDE_CODE_CHILD_SESSION boolean flag as the agent role. 2026.8.10 added a validation that treats those values as fatal; 2026.8.13 downgraded it to a non-fatal warning. Same bytes on disk, three different verdicts."
+type: Issue
+status: closed
+priority: 1
+tags[2]: correctness,toolchain
+created_at: "2026-08-13T17:10:52.114Z"
+updated_at: "2026-08-13T17:14:14.246Z"
+closed_at: "2026-08-13T17:14:14.230Z"
+completed_at: "2026-08-13T17:14:14.230Z"
+author: "harness:claude-code"
+resolution: "Pin @unbrained/pm-cli to 2026.8.13, which both stops the mis-capture for future writes and restores the gate, superseding the Dependabot 2026.8.10 bump."
+expected_result: A dependency bump whose diff contains only lockfile changes either passes the health gate or fails with a message naming a repair command.
+actual_result: "Bumping to 2026.8.13 instead of 2026.8.10 makes health ok:true again and release:check pass, because 2026.8.13 treats the same nineteen values as a non-fatal warning. The underlying values are still invalid and no pm command normalizes them; upstream unbraind/pm-cli#998 requests the repair path."
+files[2]{path,scope,note}:
+  package-lock.json,project,resolves pm-cli 2026.8.13
+  package.json,project,pm-cli devDependency pinned to 2026.8.13
+tests[2]{command,scope}:
+  "name=pm health --strict-exit under 2026.8.13,result=pass",project
+  "name=npm run release:check under 2026.8.13,result=pass",project
+docs[1]{path,scope,note}:
+  "https://github.com/unbraind/pm-cli/issues/998",project,"upstream: no repair path for provenance values pm-cli wrote"
+close_reason: "Pinned @unbrained/pm-cli to 2026.8.13. pm health --strict-exit is ok:true and release:check passes; the nineteen invalid provenance values remain as a non-fatal warning pending the upstream repair path in unbraind/pm-cli#998."
+body: ""
