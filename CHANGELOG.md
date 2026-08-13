@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A Dependabot bump to pm-cli 2026.8.10 turned the tracker's own history into a CI failure ([pm-q6jk](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-q6jk.toon))
+
 ## 2026.8.10 - 2026-08-10
 
 ### Other
