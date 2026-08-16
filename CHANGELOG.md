@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- The pm CLI compatibility floor was declared only where npm enforces it, and absent from the field the CLI actually reads ([pm-6n63](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6n63.toon))
+- The pm CLI compatibility floor was declared only in peerDependencies, which only npm enforces, and not in manifest.json pm_min_version, which is the field the CLI enforces ([pm-6n63](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6n63.toon))
 
 ## 2026.8.14 - 2026-08-14
 
