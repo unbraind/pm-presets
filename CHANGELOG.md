@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- The pm CLI compatibility floor was declared only in peerDependencies, which only npm enforces, and not in manifest.json pm_min_version, which is the field the CLI enforces ([pm-6n63](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6n63.toon))
+- The manifest declared a pm CLI floor of 2026.7.28 while peerDependencies required 2026.8.7, so the CLI enforced a weaker minimum than npm ([pm-6n63](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6n63.toon))
 
 ## 2026.8.14 - 2026-08-14
 
