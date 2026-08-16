@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The pm CLI compatibility floor is declared where npm enforces it and absent from the field the CLI actually reads ([pm-6n63](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6n63.toon))
+
 ## 2026.8.14 - 2026-08-14
 
 ### Fixed
