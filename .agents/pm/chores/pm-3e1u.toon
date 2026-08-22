@@ -1,0 +1,25 @@
+id: pm-3e1u
+title: Relocate the preset catalog out of manifest.json and guard the closed manifest vocabulary
+description: "pm-cli 2026.8.19 made its extension-manifest vocabulary a closed set of 18 keys; the inert top-level pm compatibility blob and the embedded presets catalog now produce manifest_unknown_key warnings (observed as strict-assertion CI failures in unbraind/pm-linear PRs #75 and #76). Move the preset catalog to presets.json, update tests/registry.test.ts to read it from there, delete the inert pm key, pin @unbrained/pm-cli to 2026.8.22, ship presets.json in the npm package files, and add a regression test asserting checkExtensionManifestCompatibility reports zero manifest_unknown_key findings."
+type: Chore
+status: closed
+priority: 2
+tags: []
+created_at: "2026-08-22T17:50:40.903Z"
+updated_at: "2026-08-22T17:51:22.365Z"
+closed_at: "2026-08-22T17:51:22.256Z"
+completed_at: "2026-08-22T17:51:22.256Z"
+author: ox-alpha
+notes[1]{created_at,author,text}:
+  "2026-08-22T17:50:44.022Z",ox-alpha,"Verified by temporarily re-adding the pm key: tests/manifest-vocabulary.test.ts fails while any unknown key is present and passes once removed. Relocated catalog verified byte-equivalent via registry sync test. npm test: 74 pass 0 fail. release:check exit 0. ./node_modules/.bin/pm health --strict-exit exit 0 on pinned 2026.8.22."
+files[6]{path,scope}:
+  manifest.json,project
+  package-lock.json,project
+  package.json,project
+  presets.json,project
+  tests/manifest-vocabulary.test.ts,project
+  tests/registry.test.ts,project
+tests[1]{command,path,scope}:
+  PM_PATH=/tmp/pm-mv-pm-presets PM_GLOBAL_PATH=/tmp/pm-mv-g-pm-presets node --test tests/manifest-vocabulary.test.ts,tests/manifest-vocabulary.test.ts,project
+close_reason: "Moved the preset catalog to presets.json (shipped in package files), updated tests/registry.test.ts to read it there, and removed the inert pm key from manifest.json. Pinned @unbrained/pm-cli at 2026.8.22. Regression test tests/manifest-vocabulary.test.ts verified to fail on re-adding an unknown key and pass after removal; npm test 74/74, release:check exit 0, pinned pm health --strict-exit exit 0."
+body: ""

@@ -27,7 +27,8 @@
     "dist/",
     "manifest.json",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "presets.json"
   ],
   "scripts": {
     "build": "tsc",
@@ -54,7 +55,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
-    "@unbrained/pm-cli": "2026.8.17",
+    "@unbrained/pm-cli": "2026.8.22",
     "pm-changelog": "^2026.8.7",
     "pm-ops": "2026.8.17",
     "typescript": "^7.0.2"
