@@ -114,22 +114,27 @@ test("kanban registry metadata matches the bundled settings", () => {
   assert.deepStrictEqual(preset.templates, ["card", "expedite", "blocked"]);
 });
 
-test("manifest preset metadata stays in sync with the registry", async () => {
+test("bundled preset catalog stays in sync with the registry", async () => {
   const { readFileSync } = await import("node:fs");
+  // The preset catalog lives in its own `presets.json`, not in `manifest.json`:
+  // the CLI's extension-manifest vocabulary is a closed key set and silently
+  // ignores (and since pm-cli 2026.8.19, warns about) any other key.
   const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf-8")) as {
     description?: string;
+  };
+  const bundled = JSON.parse(readFileSync(new URL("../presets.json", import.meta.url), "utf-8")) as {
     presets?: Array<{ id: string; command: string; idPrefix: string; templates: string[] }>;
   };
   assert.match(manifest.description ?? "", /All 7 official/);
-  assert.strictEqual(manifest.presets?.length, PRESET_REGISTRY.length);
+  assert.strictEqual(bundled.presets?.length, PRESET_REGISTRY.length);
   for (const preset of PRESET_REGISTRY) {
-    const manifestPreset = manifest.presets?.find((entry) => entry.id === preset.id) as
+    const bundledPreset = bundled.presets?.find((entry) => entry.id === preset.id) as
       | { id: string; command: string; idPrefix: string; templates: string[] }
       | undefined;
-    assert.ok(manifestPreset, `manifest missing preset ${preset.id}`);
-    assert.strictEqual(manifestPreset.command, preset.command);
-    assert.strictEqual(manifestPreset.idPrefix, preset.idPrefix);
-    assert.deepStrictEqual(manifestPreset.templates, preset.templates);
+    assert.ok(bundledPreset, `presets.json missing preset ${preset.id}`);
+    assert.strictEqual(bundledPreset.command, preset.command);
+    assert.strictEqual(bundledPreset.idPrefix, preset.idPrefix);
+    assert.deepStrictEqual(bundledPreset.templates, preset.templates);
   }
 });
 

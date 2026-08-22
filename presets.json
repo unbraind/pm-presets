@@ -1,0 +1,95 @@
+{
+  "presets": [
+    {
+      "id": "bug-triage",
+      "command": "triage-setup",
+      "displayName": "Bug Triage",
+      "description": "Strict governance for production incidents, hotfixes, and mandatory root-cause metadata.",
+      "idPrefix": "bug-",
+      "governance": "custom",
+      "templates": [
+        "incident",
+        "hotfix-task",
+        "regression"
+      ]
+    },
+    {
+      "id": "indie-dev",
+      "command": "indie-setup",
+      "displayName": "Indie Dev",
+      "description": "Minimal-ceremony workspace for solo developers and personal projects.",
+      "idPrefix": "indie-",
+      "governance": "minimal",
+      "templates": [
+        "idea",
+        "task"
+      ]
+    },
+    {
+      "id": "open-source",
+      "command": "oss-setup",
+      "displayName": "Open Source",
+      "description": "Issue triage, milestone releases, and contributor-friendly templates for OSS maintainers.",
+      "idPrefix": "oss-",
+      "governance": "default",
+      "templates": [
+        "bug-report",
+        "feature-request",
+        "good-first-issue"
+      ]
+    },
+    {
+      "id": "software-sprint",
+      "command": "sprint-setup",
+      "displayName": "Software Sprint",
+      "description": "Sprint-based team workflow with epics, features, tasks, and bugs.",
+      "idPrefix": "sprint-",
+      "governance": "default",
+      "templates": [
+        "epic",
+        "feature",
+        "task",
+        "bug"
+      ]
+    },
+    {
+      "id": "startup-roadmap",
+      "command": "roadmap-setup",
+      "displayName": "Startup Roadmap",
+      "description": "Investor-grade milestones, strategic initiatives, and quarterly planning for startups.",
+      "idPrefix": "road-",
+      "governance": "custom",
+      "templates": [
+        "initiative",
+        "feature",
+        "milestone"
+      ]
+    },
+    {
+      "id": "kanban",
+      "command": "kanban-setup",
+      "displayName": "Kanban",
+      "description": "Continuous-flow board with backlog/ready/in-progress/review/done and WIP-friendly card templates.",
+      "idPrefix": "kan-",
+      "governance": "minimal",
+      "templates": [
+        "card",
+        "expedite",
+        "blocked"
+      ]
+    },
+    {
+      "id": "agent-workflow",
+      "command": "agent-setup",
+      "displayName": "Agent Workflow",
+      "description": "AI agent project management: delegated agent runs, prompt experiments, and eval suites with a custom AgentRun item type.",
+      "idPrefix": "agent-",
+      "governance": "default",
+      "templates": [
+        "agent-task",
+        "prompt-experiment",
+        "eval-run"
+      ]
+    }
+  ]
+}

@@ -6,6 +6,10 @@
 
 - changelog scripts read the pm workspace with default budgets instead of canonical complete reads ([pm-4wc5](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-4wc5.toon))
 
+### Other
+
+- Relocate the preset catalog out of manifest.json and guard the closed manifest vocabulary ([pm-3e1u](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-3e1u.toon))
+
 ## 2026.8.17 - 2026-08-17
 
 ### Fixed
