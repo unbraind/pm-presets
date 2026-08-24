@@ -1,0 +1,29 @@
+id: pm-rwp3
+title: Stabilise the changelog gate release date by deriving it from the calendar version instead of the clock
+description: ""
+type: Issue
+status: closed
+priority: 2
+tags: []
+created_at: "2026-08-24T09:23:14.786Z"
+updated_at: "2026-08-24T09:25:08.193Z"
+closed_at: "2026-08-24T09:25:08.167Z"
+completed_at: "2026-08-24T09:25:08.167Z"
+claim_principal: pi-agent
+author: pi-agent
+notes[1]:
+  - created_at: "2026-08-24T09:23:52.273Z"
+    author: pi-agent
+    text: "[{\"body\":\"Proof at version 2026.8.23 (a non-today calendar version): without the date-from-version flag the generator heading was 2026.8.23 - 2026-08-24 (today clock date, the midnight-flip bug); with the flag it was 2026.8.23 - 2026-08-23 (the version own date, the fix). package.json was restored to 2026.8.24 afterwards and the gate re-verified green.\"}]"
+    format: json
+    data[1]{body}:
+      "Proof at version 2026.8.23 (a non-today calendar version): without the date-from-version flag the generator heading was 2026.8.23 - 2026-08-24 (today clock date, the midnight-flip bug); with the flag it was 2026.8.23 - 2026-08-23 (the version own date, the fix). package.json was restored to 2026.8.24 afterwards and the gate re-verified green."
+files[1]{path,scope,note}:
+  package.json,project,"inserted the date-from-version flag after release-version-from-package in the changelog, changelog:full and changelog:check scripts; bumped pm-changelog to ^2026.8.17"
+tests[4]{command,scope,note}:
+  "npm run changelog:check",project,changelog gate passes with the derived date
+  npm test,project,unit tests
+  npm run coverage,project,coverage thresholds
+  ./node_modules/.bin/pm health --strict-exit,project,pinned binary health
+close_reason: "Changelog scripts now derive the no-tag release date from the calendar version (pm-changelog ^2026.8.17). Proof at version 2026.8.23: without flag heading 2026-08-24 (clock), with flag heading 2026-08-23 (version date). Gate green at real version 2026.8.24: changelog:check ok, npm test 74/74 pass, coverage thresholds met, pinned pm health --strict-exit exit 0."
+body: ""
