@@ -123,6 +123,7 @@ jobs:
           echo "npm_version=$npm_version" >> "$GITHUB_OUTPUT"
           echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+
       # Refuse non-main release runs BEFORE publishing. `github.ref` is the
       # authoritative workflow trigger ref: schedule -> refs/heads/main;
       # workflow_dispatch from main -> refs/heads/main; workflow_dispatch from a
