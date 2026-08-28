@@ -4,7 +4,6 @@
 
 ### Fixed
 
-- A failed provenance publish silently falls back to an unattested one ([pm-vkfm](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-vkfm.toon))
 - A failed provenance publish silently falls back to an unattested one ([pm-acsd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-acsd.toon))
 - changelog scripts read the pm workspace with default budgets instead of canonical complete reads ([pm-4wc5](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-4wc5.toon))
 
