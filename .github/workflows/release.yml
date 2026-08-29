@@ -123,6 +123,7 @@ jobs:
           echo "npm_version=$npm_version" >> "$GITHUB_OUTPUT"
           echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+
       # Refuse non-main release runs BEFORE publishing. `github.ref` is the
       # authoritative workflow trigger ref: schedule -> refs/heads/main;
       # workflow_dispatch from main -> refs/heads/main; workflow_dispatch from a
@@ -285,9 +286,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm --github-step-summary --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
-          npx pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm --check --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
-          npx pm-changelog --pm-root .agents/pm --stdout --all-release-tags --release-version-from-package --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm > RELEASE_NOTES.md --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
+          npx pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --date-from-version --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm --github-step-summary --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
+          npx pm-changelog --pm-root .agents/pm --mode replace --output CHANGELOG.md --all-release-tags --release-version-from-package --date-from-version --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm --check --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
+          npx pm-changelog --pm-root .agents/pm --stdout --all-release-tags --release-version-from-package --date-from-version --item-url-base https://github.com/unbraind/pm-presets/blob/main/.agents/pm --respect-item-release --pm-bin ./node_modules/.bin/pm > RELEASE_NOTES.md --pm-arg=--output-budget --pm-arg=unbounded --pm-arg=--output-limit --pm-arg=unbounded
 
       - name: Run release checks
         if: steps.decide.outputs.should_release == 'true'
