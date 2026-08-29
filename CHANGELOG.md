@@ -1,9 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Harden publish attestation scanner against review bypasses ([pm-scbd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-scbd.toon))
+
 ## 2026.8.28 - 2026-08-28
 
 ### Fixed
 
+- A failed provenance publish silently falls back to an unattested one ([pm-acsd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-acsd.toon))
 - changelog scripts read the pm workspace with default budgets instead of canonical complete reads ([pm-4wc5](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-4wc5.toon))
 
 ### Security
