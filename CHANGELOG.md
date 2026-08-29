@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Harden publish attestation scanner against review bypasses ([pm-scbd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-scbd.toon))
+
 ## 2026.8.28 - 2026-08-28
 
 ### Fixed

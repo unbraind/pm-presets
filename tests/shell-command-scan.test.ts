@@ -23,8 +23,17 @@ test("an unknown array reference is left in place rather than erased", () => {
   assert.equal(expandArrays('cmd "${known[@]}"', new Map([["known", "--a --b"]])), "cmd --a --b");
 });
 
-test("bashArrays collapses whitespace so a multi-line declaration is one flag string", () => {
+test("bashArrays accepts only line-leading flat literal declarations", () => {
   assert.equal(bashArrays("common=(\n  --a\n  --b\n)").get("common"), "--a --b");
+  for (const text of [
+    "# common=( --provenance )",
+    "echo common=( --provenance )",
+    "echo 'common=( --provenance )'",
+    "common=( --tag \"latest\" )",
+    "common=( $(flags) )",
+  ]) {
+    assert.equal(bashArrays(text).get("common"), undefined, text);
+  }
 });
 
 test("the main-invocation guard answers both ways", () => {

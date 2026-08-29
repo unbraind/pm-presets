@@ -709,6 +709,14 @@ test("npm selects a workspace with a flag, so a word after it does not excuse a 
     publishInvocationsIn({ file: "release.yml", text: "          npm run publish\n" }),
     [],
   );
+  // `run` is the value of --tag here, not the runner subcommand.
+  assert.equal(
+    auditPublishAttestation([{
+      file: "release.yml",
+      text: "          npm publish --provenance\n          npm --tag run publish --ignore-scripts\n",
+    }]).failures.length,
+    1,
+  );
 });
 
 test("a substitution tracks both quote kinds and an escape while finding its close", () => {
@@ -761,19 +769,57 @@ test("a scalar carrying a substitution or a quote of its own is never inlined", 
   assert.deepEqual(found, ["npm publish --access public --provenance --ignore-scripts"]);
 });
 
-test("a substitution's quote state does not leak across its lines", () => {
-  // Workflow prose carries apostrophes inside double-quoted messages. If an
-  // unbalanced one persisted past the newline, every later parenthesis would
-  // look quoted and the substitution would run on past its real close,
-  // swallowing unrelated commands into it.
+test("a substitution keeps quote state across literal newlines", () => {
+  // Shell quotes span newlines. Clearing the state made the quoted `)` below
+  // close the substitution and hid the unattested publish after it.
   const text = [
-    "          x=$(echo \"GitHub's endpoint\"",
-    "             npm publish)",
-    "          npm publish --provenance",
+    `          npm publish ${ATTESTATION_FLAG}`,
+    "          x=$(printf \"first",
+    ")\" && npm publish)",
   ].join("\n");
-  const found = publishInvocationsIn({ file: "release.yml", text }).map((i) => renderCommand(i.command));
-  assert.ok(found.includes("npm publish"), "the publish inside the substitution is still found");
-  assert.ok(found.includes("npm publish --provenance"), "and the one after it is not swallowed");
+  const result = auditPublishAttestation([{ file: "release.yml", text }]);
+  assert.equal(result.failures.length, 1);
+});
+
+test("scalar assignments follow execution order and do not cross execution scopes", () => {
+  const reassignedLater = auditPublishAttestation([{
+    file: "release.yml",
+    text: [
+      "          FLAG=--ignore-scripts",
+      "          npm publish $FLAG",
+      "          FLAG=--provenance",
+    ].join("\n"),
+  }]);
+  assert.equal(reassignedLater.failures.length, 1, "a future value cannot rewrite an earlier use");
+
+  const separateSteps = auditPublishAttestation([{
+    file: "release.yml",
+    text: [
+      "      - run: |",
+      "          FLAG=--provenance",
+      "          npm publish --provenance",
+      "      - run: npm publish $FLAG",
+    ].join("\n"),
+  }]);
+  assert.equal(separateSteps.failures.length, 1, "a workflow step cannot inherit another step's shell");
+
+  const manifest = JSON.stringify({ scripts: {
+    define: "FLAG=--provenance; npm publish --provenance",
+    publish: "npm publish $FLAG",
+  } });
+  assert.equal(
+    auditPublishAttestation([{ file: "package.json", text: manifest }]).failures.length,
+    1,
+    "one package script cannot lend a binding to another",
+  );
+});
+
+test("a commented array cannot lend provenance to a publish", () => {
+  const result = auditPublishAttestation([{
+    file: "release.yml",
+    text: "          # flags=( --provenance )\n          npm publish ${flags[@]}\n",
+  }]);
+  assert.equal(result.failures.length, 1);
 });
 
 test("a publish routed through an unquoted scalar is audited, not hidden by an attested sibling", () => {

@@ -84,25 +84,34 @@ const EXECUTABLE_PATHS = [
  * @param text - The manifest's contents.
  * @returns One line per script body, newline joined.
  */
-export function manifestCommandLines(text: string): string {
+function manifestCommandScopes(text: string): string[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return "";
+    return [];
   }
-  if (typeof parsed !== "object" || parsed === null) return "";
+  if (typeof parsed !== "object" || parsed === null) return [];
   const scripts = (parsed as { scripts?: unknown }).scripts;
-  if (typeof scripts !== "object" || scripts === null) return "";
+  if (typeof scripts !== "object" || scripts === null) return [];
+  return Object.values(scripts as Record<string, unknown>)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.replace(/\\+$/, ""));
+}
+
+/**
+ * Return manifest script bodies as newline-separated command text.
+ *
+ * @param text - The manifest's contents.
+ * @returns One line per script body, newline joined.
+ */
+export function manifestCommandLines(text: string): string {
   // Each script is its own command list, so one cannot continue into the next.
   // A body ending in a backslash would otherwise be joined to the following
   // script by continuation collapsing, and a script beginning `--provenance`
   // would lend its flag to the unattested publish that ended the script before
   // it -- turning two commands into one attested-looking command.
-  return Object.values(scripts as Record<string, unknown>)
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.replace(/\\+$/, ""))
-    .join("\n");
+  return manifestCommandScopes(text).join("\n");
 }
 
 /** Subcommands that run something else, so a later `publish` word is its argument. */
@@ -111,6 +120,12 @@ export function manifestCommandLines(text: string): string {
 // -- npm selects a workspace with the `-w`/`--workspace` FLAG -- and listing it
 // here only meant that a `publish` written after the word was never audited.
 const RUNNER_SUBCOMMANDS = new Set(["run", "run-script", "exec", "explore", "x"]);
+
+/** npm options whose value may be written as the following argument. */
+const NPM_OPTIONS_WITH_VALUE = new Set([
+  "--access", "--cache", "--color", "--loglevel", "--otp", "--provenance-file",
+  "--registry", "--tag", "--userconfig", "--workspace", "-w",
+]);
 
 /**
  * Decide whether one command is a direct `npm publish`.
@@ -140,11 +155,20 @@ const RUNNER_SUBCOMMANDS = new Set(["run", "run-script", "exec", "explore", "x"]
  * @returns True when the command publishes.
  */
 export function isPublishCommand(command: ShellCommand): boolean {
-  for (const token of commandArguments(command)) {
-    if (RUNNER_SUBCOMMANDS.has(token.value)) return false;
-    if (token.value === "publish") return true;
+  const args = commandArguments(command);
+  let subcommand: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index]!.value;
+    if (NPM_OPTIONS_WITH_VALUE.has(value)) {
+      index += 1;
+      continue;
+    }
+    if (value.startsWith("-")) continue;
+    subcommand = value;
+    break;
   }
-  return false;
+  if (subcommand !== undefined && RUNNER_SUBCOMMANDS.has(subcommand)) return false;
+  return args.some((token) => token.value === "publish");
 }
 
 /**
@@ -203,28 +227,38 @@ export function attestationEnabled(command: ShellCommand): boolean {
  * @returns The publish invocations found, in file order.
  */
 export function publishInvocationsIn(source: SourceFile): PublishInvocation[] {
-  const raw = source.file.endsWith("package.json") ? manifestCommandLines(source.text) : source.text;
-  const text = joinContinuations(raw);
-  const arrays = bashArrays(text);
-  const scalars = shellScalars(text);
-  const expanded = text
-    .split("\n")
-    .map((line) => expandScalars(expandArrays(line, arrays), scalars))
-    .join("\n");
+  const rawScopes = source.file.endsWith("package.json")
+    ? manifestCommandScopes(source.text)
+    : [source.text];
   const found: PublishInvocation[] = [];
-  for (const command of tokenizeCommands(expanded)) {
-    // Every reading, not just the command's own: a wrapper option that takes a
-    // value (`sudo -u root npm publish`) moves the program past where naming it
-    // once would look. Missing a publish is a failed audit; offering one that no
-    // shell would run is noise an operator dismisses.
-    for (const candidate of commandCandidates(command)) {
-      const program = commandName(candidate);
-      if (program === undefined) continue;
-      if (program !== "npm" && !FOREIGN_PUBLISHERS.has(program)) continue;
-      if (!isPublishCommand(candidate)) continue;
-      // Not de-duplicated: two identical publish lines are two invocations, and
-      // collapsing them would report one of them as if the other did not exist.
-      found.push({ file: source.file, program, command: candidate });
+  for (const raw of rawScopes) {
+    const text = joinContinuations(raw);
+    const arrays = bashArrays(text);
+    const scalars = new Map<string, string>();
+    const expanded = text.split("\n").map((line) => {
+      // GitHub Actions run steps and package scripts are separate shells. A
+      // binding from one execution scope must never attest a publish in the
+      // next one.
+      if (/^[ \t]*(?:-[ \t]*)?run:/.test(line)) scalars.clear();
+      // Apply a declaration before expanding the rest of its own line so
+      // `NPM=npm; $NPM publish` retains ordinary shell execution order.
+      for (const [name, value] of shellScalars(line)) scalars.set(name, value);
+      return expandScalars(expandArrays(line, arrays), scalars);
+    }).join("\n");
+    for (const command of tokenizeCommands(expanded)) {
+      // Every reading, not just the command's own: a wrapper option that takes a
+      // value (`sudo -u root npm publish`) moves the program past where naming it
+      // once would look. Missing a publish is a failed audit; offering one that no
+      // shell would run is noise an operator dismisses.
+      for (const candidate of commandCandidates(command)) {
+        const program = commandName(candidate);
+        if (program === undefined) continue;
+        if (program !== "npm" && !FOREIGN_PUBLISHERS.has(program)) continue;
+        if (!isPublishCommand(candidate)) continue;
+        // Not de-duplicated: two identical publish lines are two invocations, and
+        // collapsing them would report one of them as if the other did not exist.
+        found.push({ file: source.file, program, command: candidate });
+      }
     }
   }
   return found;

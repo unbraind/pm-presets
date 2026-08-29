@@ -1,0 +1,23 @@
+id: pm-scbd
+title: Harden publish attestation scanner against review bypasses
+description: "Resolve PR 71 review findings for npm option parsing, shell substitution quotes, array declarations, scalar execution scope, and scanner documentation."
+type: Issue
+status: closed
+priority: 2
+tags: []
+created_at: "2026-08-29T04:14:01.761Z"
+updated_at: "2026-08-29T04:14:47.857Z"
+closed_at: "2026-08-29T04:14:47.845Z"
+completed_at: "2026-08-29T04:14:47.845Z"
+claim_principal: pi-agent
+author: pi-agent
+comments[1]{created_at,author,text}:
+  "2026-08-29T04:14:47.428Z",pi-agent,"Implemented and verified npm option-value classification, multiline substitution quote tracking, safe array declarations, position-aware scalar expansion with execution-scope resets, and regression coverage. npm test (149/149), coverage, changelog check, and strict health passed."
+files[3]{path,scope,note}:
+  scripts/shell-command-scan.ts,project,Review hardening
+  scripts/verify-release-publish-attestation.ts,project,Publish classification and scope
+  tests/verify-release-publish-attestation.test.ts,project,Security regressions
+tests[1]{command,path,scope,provenance{author,created_at,source_kind,source_ref}}:
+  npm test,tests,project,pi-agent,"2026-08-29T04:14:14.777Z",local_mutation,fix/refuse-unattested-publish-fallback
+close_reason: PR 71 review hardening implemented with full regression coverage and all local gates green.
+body: ""

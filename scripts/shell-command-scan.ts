@@ -23,10 +23,11 @@
  * and `sh -c` payloads recursed into -- and each command records whether its
  * words were quoted. Nothing downstream has to guess.
  *
- * This is deliberately not a shell. It does not expand variables, globs or
- * arithmetic, and it does not track redirections. It exists to enumerate
- * candidate command invocations for auditing, where missing one is a security
- * failure and inventing one is merely noise.
+ * This is deliberately not a shell. It resolves quoting, drops redirections
+ * and inlines only fully literal scalar and array assignments; it does not
+ * expand globs or arithmetic. It exists to enumerate candidate command
+ * invocations for auditing, where missing one is a security failure and
+ * inventing one is merely noise.
  *
  * @packageDocumentation
  */
@@ -174,13 +175,10 @@ function readSubstitution(text: string, start: number): { inner: string; end: nu
     const character = text[index]!;
     if (character === "\\") index += 2;
     else {
-      // Quote state is bounded to one line. A workflow's prose carries
-      // apostrophes -- "GitHub's", "workflow's" -- inside double-quoted
-      // messages, and letting an unbalanced one persist across lines makes
-      // every later parenthesis look quoted, so the substitution runs on and
-      // swallows unrelated commands.
-      if (character === "\n") { single = false; double = false; }
-      else if (character === "'" && !double) single = !single;
+      // Shell quotes remain active across literal newlines. Resetting state at
+      // a newline lets a quoted `)` close the substitution early and can hide
+      // every command that follows it inside the substitution.
+      if (character === "'" && !double) single = !single;
       else if (character === '"' && !single) double = !double;
       else if (!single && !double && character === "(") depth += 1;
       else if (!single && !double && character === ")") depth -= 1;
@@ -548,8 +546,15 @@ export function joinContinuations(text: string): string {
  */
 export function bashArrays(text: string): Map<string, string> {
   const arrays = new Map<string, string>();
-  for (const match of text.matchAll(/(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)=\(([\s\S]*?)\)/g)) {
-    arrays.set(match[1], match[2].replace(/\s+/g, " ").trim());
+  // A declaration must begin a line. This prevents comments and command
+  // arguments that merely contain `NAME=(...)` from creating bindings.
+  for (const match of text.matchAll(/^[ \t]*([A-Za-z_][A-Za-z0-9_]*)=\(([\s\S]*?)\)[ \t]*(?:#.*)?$/gm)) {
+    const value = match[2];
+    // Only literal, flat flag lists are safe to inline. Nested syntax, quotes
+    // and substitutions need a shell parser; treating them as literals can
+    // turn an unattested publish into an attested-looking one.
+    if (/[$`"'()]/.test(value)) continue;
+    arrays.set(match[1], value.replace(/\s+/g, " ").trim());
   }
   return arrays;
 }
