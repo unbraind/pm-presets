@@ -329,7 +329,9 @@ export function verify(root: string, today: string): VerifierResult {
   const sources = tracked.map((file) => ({ file, text: readFileSync(resolve(root, file), "utf-8") }));
   const statics = auditInvocations(sources);
 
-  const probe = "2026.1.2";
+  // The release workflow adds a numeric suffix for a second release on the
+  // same day, so the behavioural probe must exercise that supported shape.
+  const probe = "2026.1.2-2";
   const { bin, lead } = resolveGenerator(root);
   // The generator refuses a truncated workspace read rather than silently
   // omitting entries, so the unbounded controls the real scripts pass are
