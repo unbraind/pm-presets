@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- The release changelog remained Unreleased after the release tag was created ([pm-70um](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-70um.toon))
+
+## 2026.8.29 - 2026-08-29
+
+### Fixed
+
 - Finish suffix-safe changelog date verification ([pm-75jv](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-75jv.toon))
 - Harden publish attestation scanner against review bypasses ([pm-scbd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-scbd.toon))
 
