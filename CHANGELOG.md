@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- This repository has never produced a static analysis, because it runs no CodeQL workflow ([pm-q9vo](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-q9vo.toon))
+- Group codeql-action bumps into one pull request to end the split-PR deadlock ([pm-jg3f](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jg3f.toon))
+
 ## 2026.8.31 - 2026-08-31
 
 ### Fixed
