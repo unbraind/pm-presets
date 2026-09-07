@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- Consume the canonical attestation gate instead of carrying a copy of it ([pm-y0j0](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-y0j0.toon))
+
 ## 2026.9.1 - 2026-09-01
 
 ### Fixed
