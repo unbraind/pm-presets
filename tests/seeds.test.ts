@@ -158,24 +158,31 @@ test("runPresetSeeds logs the seedless case, a dry-run plan, successes, and fail
   const failBin = writeFakePm('echo "boom" >&2; exit 1');
   t.after(() => rmSync(join(failBin, ".."), { recursive: true, force: true }));
   lines.length = 0;
-  try {
-    runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: failBin });
-    assert.fail("expected throw");
-  } catch (error) {
-    assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
-    assert.match((error as Error).message, /Seeded 0 item\(s\) but 1 failed/);
-    assert.ok(lines.some((line) => line.includes("Failed:  Set up project skeleton (boom)")));
-  }
+  assert.throws(
+    () => runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: failBin }),
+    (error: unknown) => {
+      assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
+      assert.match((error as Error).message, /Seeded 0 item\(s\) but 1 failed/);
+      return true;
+    },
+  );
+  assert.ok(lines.some((line) => line.includes("Failed:  Set up project skeleton (boom)")));
 
   const silent = writeFakePm("exit 1");
   t.after(() => rmSync(join(silent, ".."), { recursive: true, force: true }));
   lines.length = 0;
-  try {
-    runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: silent });
-    assert.fail("expected throw");
-  } catch {
-    assert.ok(lines.some((line) => line === "WARN   Failed:  Set up project skeleton"));
-  }
+  // assert.throws, not try/assert.fail/catch: a bare `catch` accepts the
+  // AssertionError that `assert.fail` itself throws, so if runPresetSeeds
+  // returned normally the test would still pass on the warning check alone.
+  // The throw is the assertion here, so it has to be one the runner can see.
+  assert.throws(
+    () => runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: silent }),
+    (error: unknown) => {
+      assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
+      return true;
+    },
+  );
+  assert.ok(lines.some((line) => line === "WARN   Failed:  Set up project skeleton"));
 });
 
 test("agent-workflow has a starter AgentRun seed", () => {

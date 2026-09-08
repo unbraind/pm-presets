@@ -372,6 +372,15 @@ export function validateAllPresets(): PresetValidationResult {
 
   for (const definition of definitions) {
     const descriptor = PRESET_REGISTRY.find((preset) => preset.id === definition.id);
+    // This lookup is unchecked on purpose, and it is safe for a reason that is
+    // not local: every `definition` here came from `listPresetDefinitions()`,
+    // which maps `buildDefinition` over the registry, and `buildDefinition`
+    // throws on a descriptor with no raw exports. A drifted registry entry can
+    // therefore never reach this line — `listPresetDefinitions()` above raises
+    // the actionable error first. Adding a second guard here would be
+    // unreachable code, so the invariant is recorded instead. If
+    // `buildDefinition`'s guard is ever removed, this line becomes a
+    // `Cannot read properties of undefined`.
     issues.push(
       ...collectPresetIssues(definition, RAW_PRESETS[definition.id].templates, descriptor?.templates),
     );
