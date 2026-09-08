@@ -12,6 +12,7 @@
  * only `seedPresetItems` touches the process.
  */
 import { spawnSync } from "node:child_process";
+import { CommandError } from "./presets/shared.js";
 /** Built-in-only seed items keyed by preset id. */
 export const PRESET_SEEDS = {
     "bug-triage": [
@@ -144,5 +145,41 @@ export function seedPresetItems(pmRoot, presetId, pmBin = "pm") {
         }
     }
     return { created, failed, details };
+}
+/**
+ * Print a dry-run plan or create starter items for an already-applied preset.
+ *
+ * Logs the seedless case so `presets apply --with-seeds` on a preset with no
+ * seeds is an explicit no-op rather than silence. Throws {@link CommandError}
+ * when one or more creates fail, after reporting each outcome.
+ */
+export function runPresetSeeds(pmRoot, presetId, options) {
+    const seeds = seedsForPreset(presetId);
+    if (seeds.length === 0) {
+        console.log(`No starter seeds defined for '${presetId}'.`);
+        return;
+    }
+    if (options.dryRun) {
+        console.log("");
+        console.log(`[dry-run] Would seed ${seeds.length} starter item(s):`);
+        for (const entry of planSeeds(pmRoot, presetId)) {
+            console.log(`  - ${entry.type}: ${entry.title}`);
+        }
+        return;
+    }
+    console.log("");
+    console.log(`Seeding ${seeds.length} starter item(s)...`);
+    const seedResult = seedPresetItems(pmRoot, presetId, options.pmBin);
+    for (const detail of seedResult.details) {
+        if (detail.ok) {
+            console.log(`  Created: ${detail.title}`);
+        }
+        else {
+            console.warn(`  Failed:  ${detail.title}${detail.message ? ` (${detail.message})` : ""}`);
+        }
+    }
+    if (seedResult.failed > 0) {
+        throw new CommandError(`Seeded ${seedResult.created} item(s) but ${seedResult.failed} failed.`);
+    }
 }
 //# sourceMappingURL=seeds.js.map

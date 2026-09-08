@@ -68,6 +68,16 @@ test("--replace removes an owned tree the preset does not set", () => {
   assert.ok(!Object.prototype.hasOwnProperty.call(replaced, "testing"));
 });
 
+test("deep merge replaces a scalar with an object and an object with a scalar", () => {
+  const merged = mergePresetSettings(
+    { governance: "legacy", extra: { keep: true } },
+    { governance: { preset: "strict" }, extra: "now-a-string" },
+    false,
+  );
+  assert.deepStrictEqual(merged.governance, { preset: "strict" });
+  assert.strictEqual(merged.extra, "now-a-string");
+});
+
 test("merge and replace agree when the preset sets every owned subkey", () => {
   const base = { id_prefix: "b-" };
   const full = {

@@ -57,4 +57,22 @@ export interface SeedResult {
  * Non-throwing: failures are collected so a partial seed still reports clearly.
  */
 export declare function seedPresetItems(pmRoot: string, presetId: string, pmBin?: string): SeedResult;
+/**
+ * Options for {@link runPresetSeeds}: whether to print a plan instead of creating
+ * items, and which `pm` binary to invoke.
+ */
+export interface RunPresetSeedsOptions {
+    /** When true, print the plan and do not spawn `pm create`. */
+    readonly dryRun: boolean;
+    /** `pm` executable used to create items. Defaults to `"pm"` on PATH. */
+    readonly pmBin?: string;
+}
+/**
+ * Print a dry-run plan or create starter items for an already-applied preset.
+ *
+ * Logs the seedless case so `presets apply --with-seeds` on a preset with no
+ * seeds is an explicit no-op rather than silence. Throws {@link CommandError}
+ * when one or more creates fail, after reporting each outcome.
+ */
+export declare function runPresetSeeds(pmRoot: string, presetId: string, options: RunPresetSeedsOptions): void;
 //# sourceMappingURL=seeds.d.ts.map

@@ -36,7 +36,7 @@ import {
   agentWorkflowTemplates,
   agentWorkflowItemTypes,
 } from "./registry.ts";
-import { PRESET_REGISTRY, type PresetDescriptor } from "./registry.ts";
+import { PRESET_REGISTRY, type PresetDescriptor, type PresetId } from "./registry.ts";
 
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
@@ -76,8 +76,17 @@ interface RawPreset {
   itemTypes?: readonly { name: string; aliases?: string[]; options?: Array<{ key: string; values?: string[] }> }[];
 }
 
-/** Raw exports keyed by preset id. */
-const RAW_PRESETS: Record<string, RawPreset> = {
+/**
+ * Raw exports keyed by the closed {@link PresetId} union.
+ *
+ * Typing the map this way is what makes a missing export a compile error: every
+ * {@link PRESET_REGISTRY} descriptor's id is a `PresetId`, so {@link buildDefinition}
+ * and {@link validateAllPresets} can index without a runtime existence check.
+ * Call sites are `listPresetDefinitions` (maps the registry), `findPresetDefinition`
+ * (builds only after a registry hit), and `validateAllPresets` (iterates
+ * `listPresetDefinitions()`). There is no other caller.
+ */
+const RAW_PRESETS: Record<PresetId, RawPreset> = {
   "bug-triage": { settings: bugTriageSettings, templates: bugTriageTemplates },
   "indie-dev": { settings: indieDevSettings, templates: indieDevTemplates },
   "open-source": { settings: openSourceSettings, templates: openSourceTemplates },
@@ -94,7 +103,7 @@ const RAW_PRESETS: Record<string, RawPreset> = {
  * string) and the sorted option keys, so two templates with the same options in
  * different key order compare equal.
  */
-function templateView(document: StoredCreateTemplateDocument): PresetTemplateView {
+export function projectTemplateView(document: StoredCreateTemplateDocument): PresetTemplateView {
   const options = document.options as CreateTemplateOptions;
   const type = typeof options.type === "string" ? options.type : "Task";
   const optionKeys = Object.keys(options).sort((left, right) => left.localeCompare(right));
@@ -107,12 +116,16 @@ function templateView(document: StoredCreateTemplateDocument): PresetTemplateVie
  * Returns an empty array when the preset defines no item types. Every alias
  * list and option value list is copied, so the returned views never alias the
  * raw preset's internal arrays and cannot be mutated through the catalog.
+ * Missing `aliases` / `options` / `values` become empty arrays rather than
+ * throwing, so an incomplete host schema still produces a usable view.
  */
-function itemTypeViews(raw: RawPreset): PresetItemTypeView[] {
-  if (!raw.itemTypes) {
+export function projectItemTypeViews(
+  itemTypes: RawPreset["itemTypes"],
+): PresetItemTypeView[] {
+  if (!itemTypes) {
     return [];
   }
-  return raw.itemTypes.map((entry) => ({
+  return itemTypes.map((entry) => ({
     name: entry.name,
     aliases: Array.isArray(entry.aliases) ? [...entry.aliases] : [],
     options: Array.isArray(entry.options)
@@ -124,16 +137,30 @@ function itemTypeViews(raw: RawPreset): PresetItemTypeView[] {
   }));
 }
 
-/** Build the full structured definition for a known descriptor. */
+/**
+ * Build the full structured definition for a known descriptor.
+ *
+ * The `RAW_PRESETS` key type makes a missing export a compile error for any
+ * descriptor this package itself registers. It does not make the lookup total
+ * at runtime: {@link PRESET_REGISTRY} is an exported, mutable array, so a
+ * consumer can append a descriptor whose id is outside the union (through a
+ * cast, or from JavaScript, where the union does not exist at all). Without
+ * this guard that appended descriptor reaches `raw.templates` and fails with
+ * `Cannot read properties of undefined`, naming neither the preset nor the
+ * cause. Keeping it turns registry drift into a diagnostic that says which
+ * preset has no exports.
+ *
+ * @param descriptor - The registry descriptor to expand.
+ * @returns The full preset definition.
+ * @throws {CommandError} When no raw export exists for the descriptor's id.
+ */
 function buildDefinition(descriptor: PresetDescriptor): PresetDefinition {
-  const raw = RAW_PRESETS[descriptor.id];
+  const raw = RAW_PRESETS[descriptor.id] as RawPreset | undefined;
   if (!raw) {
-    // Registry and raw exports are compile-time bound, so this is a guard for
-    // future drift rather than a runtime-reachable path.
     throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
   }
   const templates = Object.values(raw.templates)
-    .map(templateView)
+    .map(projectTemplateView)
     .sort((left, right) => left.name.localeCompare(right.name));
   return {
     id: descriptor.id,
@@ -144,7 +171,7 @@ function buildDefinition(descriptor: PresetDescriptor): PresetDefinition {
     governance: descriptor.governance,
     settings: raw.settings,
     templates,
-    itemTypes: itemTypeViews(raw),
+    itemTypes: projectItemTypeViews(raw.itemTypes),
   };
 }
 
@@ -236,6 +263,102 @@ const GOVERNANCE_VALUES = new Set(["minimal", "default", "strict", "custom"]);
 const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 /**
+ * The loosely-typed slice of a preset that {@link collectPresetIssues} inspects.
+ *
+ * Production {@link PresetDefinition} already excludes many of the states this
+ * validator exists to reject (invalid governance, a missing prefix). Tests feed
+ * this looser shape so those failure paths stay reachable without corrupting
+ * the bundled catalog.
+ */
+export interface PresetValidationSubject {
+  /** Preset id reported on each issue. */
+  readonly id: string;
+  /** Governance value; must be one of the known enum strings. */
+  readonly governance: string;
+  /** Descriptor-level id prefix; must be a non-empty string. */
+  readonly idPrefix: unknown;
+  /** Settings patch; must carry a non-empty string `id_prefix`. */
+  readonly settings: { readonly id_prefix?: unknown };
+  /** Catalog template views; an empty list is an issue. */
+  readonly templates: readonly { readonly name: string }[];
+}
+
+/**
+ * Collect validation issues for one preset against its raw template map.
+ *
+ * The checks are the same ones {@link validateAllPresets} runs on the bundled
+ * catalog: known governance, present prefixes, valid template names and option
+ * values, and agreement between advertised and exported template names.
+ */
+export function collectPresetIssues(
+  definition: PresetValidationSubject,
+  rawTemplates: PresetTemplateMap,
+  advertisedTemplates?: readonly string[],
+): PresetValidationIssue[] {
+  const issues: PresetValidationIssue[] = [];
+  const add = (message: string) => issues.push({ presetId: definition.id, message });
+
+  if (!GOVERNANCE_VALUES.has(definition.governance)) {
+    add(`invalid governance '${definition.governance}'`);
+  }
+  if (typeof definition.idPrefix !== "string" || definition.idPrefix.length === 0) {
+    add("missing id_prefix");
+  }
+  if (typeof definition.settings.id_prefix !== "string" || definition.settings.id_prefix.length === 0) {
+    add("settings patch is missing id_prefix");
+  }
+  if (definition.templates.length === 0) {
+    add("has no templates");
+  }
+
+  for (const [filename, document] of Object.entries(rawTemplates)) {
+    if (!TEMPLATE_NAME_PATTERN.test(document.name)) {
+      add(`template name '${document.name}' is invalid`);
+    }
+    if (filename !== `${document.name}.json`) {
+      add(`template map key '${filename}' does not match document name '${document.name}'`);
+    }
+    for (const [key, value] of Object.entries(document.options)) {
+      const validValue =
+        typeof value === "string" ||
+        (Array.isArray(value) && value.every((entry) => typeof entry === "string"));
+      if (key.trim().length === 0) {
+        add(`template '${document.name}' has an empty option key`);
+      }
+      if (!validValue) {
+        add(`template '${document.name}' option '${key}' has a non-string value`);
+      }
+    }
+  }
+
+  const advertised = [...(advertisedTemplates ?? [])].sort((left, right) => left.localeCompare(right));
+  const exported = definition.templates.map((template) => template.name).sort((left, right) => left.localeCompare(right));
+  if (JSON.stringify(advertised) !== JSON.stringify(exported)) {
+    add(
+      `registry templates [${advertised.join(", ")}] differ from exported [${exported.join(", ")}]`,
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * Throw when a validation result is not clean, matching the `presets validate`
+ * command's failure formatting.
+ */
+export function requireValidPresets(result: PresetValidationResult): PresetValidationResult {
+  if (!result.ok) {
+    const detail = result.issues
+      .map((issue) => `  ${issue.presetId}: ${issue.message}`)
+      .join("\n");
+    throw new CommandError(
+      `${result.issues.length} preset validation issue(s) across ${result.checked} preset(s):\n${detail}`,
+    );
+  }
+  return result;
+}
+
+/**
  * Validate that every bundled preset parses/loads coherently:
  *  - registry descriptor and raw exports agree,
  *  - governance is a known enum value,
@@ -244,56 +367,23 @@ const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
  *  - the descriptor's advertised template list matches what is exported.
  */
 export function validateAllPresets(): PresetValidationResult {
-  const issues: PresetValidationIssue[] = [];
   const definitions = listPresetDefinitions();
+  const issues: PresetValidationIssue[] = [];
 
   for (const definition of definitions) {
-    const add = (message: string) => issues.push({ presetId: definition.id, message });
-
-    if (!GOVERNANCE_VALUES.has(definition.governance)) {
-      add(`invalid governance '${definition.governance}'`);
-    }
-    if (typeof definition.idPrefix !== "string" || definition.idPrefix.length === 0) {
-      add("missing id_prefix");
-    }
-    if (typeof definition.settings.id_prefix !== "string" || definition.settings.id_prefix.length === 0) {
-      add("settings patch is missing id_prefix");
-    }
-    if (definition.templates.length === 0) {
-      add("has no templates");
-    }
-
-    const raw = RAW_PRESETS[definition.id];
-    for (const [filename, document] of Object.entries(raw.templates)) {
-      if (!TEMPLATE_NAME_PATTERN.test(document.name)) {
-        add(`template name '${document.name}' is invalid`);
-      }
-      if (filename !== `${document.name}.json`) {
-        add(`template map key '${filename}' does not match document name '${document.name}'`);
-      }
-      for (const [key, value] of Object.entries(document.options)) {
-        const validValue =
-          typeof value === "string" ||
-          (Array.isArray(value) && value.every((entry) => typeof entry === "string"));
-        if (key.trim().length === 0) {
-          add(`template '${document.name}' has an empty option key`);
-        }
-        if (!validValue) {
-          add(`template '${document.name}' option '${key}' has a non-string value`);
-        }
-      }
-    }
-
-    // The registry descriptor advertises a template list; confirm it matches
-    // what the preset module actually exports (drift would mislead `list`).
     const descriptor = PRESET_REGISTRY.find((preset) => preset.id === definition.id);
-    const advertised = [...(descriptor?.templates ?? [])].sort((a, b) => a.localeCompare(b));
-    const exported = definition.templates.map((template) => template.name).sort((a, b) => a.localeCompare(b));
-    if (JSON.stringify(advertised) !== JSON.stringify(exported)) {
-      add(
-        `registry templates [${advertised.join(", ")}] differ from exported [${exported.join(", ")}]`,
-      );
-    }
+    // This lookup is unchecked on purpose, and it is safe for a reason that is
+    // not local: every `definition` here came from `listPresetDefinitions()`,
+    // which maps `buildDefinition` over the registry, and `buildDefinition`
+    // throws on a descriptor with no raw exports. A drifted registry entry can
+    // therefore never reach this line — `listPresetDefinitions()` above raises
+    // the actionable error first. Adding a second guard here would be
+    // unreachable code, so the invariant is recorded instead. If
+    // `buildDefinition`'s guard is ever removed, this line becomes a
+    // `Cannot read properties of undefined`.
+    issues.push(
+      ...collectPresetIssues(definition, RAW_PRESETS[definition.id].templates, descriptor?.templates),
+    );
   }
 
   return { ok: issues.length === 0, checked: definitions.length, issues };

@@ -14,6 +14,8 @@
 
 import { spawnSync } from "node:child_process";
 
+import { CommandError } from "./presets/shared.ts";
+
 /** A single starter item, restricted to built-in create fields. */
 export interface SeedItem {
   type: string;
@@ -177,4 +179,57 @@ export function seedPresetItems(pmRoot: string, presetId: string, pmBin = "pm"):
   }
 
   return { created, failed, details };
+}
+
+/**
+ * Options for {@link runPresetSeeds}: whether to print a plan instead of creating
+ * items, and which `pm` binary to invoke.
+ */
+export interface RunPresetSeedsOptions {
+  /** When true, print the plan and do not spawn `pm create`. */
+  readonly dryRun: boolean;
+  /** `pm` executable used to create items. Defaults to `"pm"` on PATH. */
+  readonly pmBin?: string;
+}
+
+/**
+ * Print a dry-run plan or create starter items for an already-applied preset.
+ *
+ * Logs the seedless case so `presets apply --with-seeds` on a preset with no
+ * seeds is an explicit no-op rather than silence. Throws {@link CommandError}
+ * when one or more creates fail, after reporting each outcome.
+ */
+export function runPresetSeeds(
+  pmRoot: string,
+  presetId: string,
+  options: RunPresetSeedsOptions,
+): void {
+  const seeds = seedsForPreset(presetId);
+  if (seeds.length === 0) {
+    console.log(`No starter seeds defined for '${presetId}'.`);
+    return;
+  }
+  if (options.dryRun) {
+    console.log("");
+    console.log(`[dry-run] Would seed ${seeds.length} starter item(s):`);
+    for (const entry of planSeeds(pmRoot, presetId)) {
+      console.log(`  - ${entry.type}: ${entry.title}`);
+    }
+    return;
+  }
+  console.log("");
+  console.log(`Seeding ${seeds.length} starter item(s)...`);
+  const seedResult = seedPresetItems(pmRoot, presetId, options.pmBin);
+  for (const detail of seedResult.details) {
+    if (detail.ok) {
+      console.log(`  Created: ${detail.title}`);
+    } else {
+      console.warn(`  Failed:  ${detail.title}${detail.message ? ` (${detail.message})` : ""}`);
+    }
+  }
+  if (seedResult.failed > 0) {
+    throw new CommandError(
+      `Seeded ${seedResult.created} item(s) but ${seedResult.failed} failed.`,
+    );
+  }
 }

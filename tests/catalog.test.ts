@@ -13,7 +13,13 @@ import {
   requirePresetDefinition,
   buildListRows,
   validateAllPresets,
+  collectPresetIssues,
+  requireValidPresets,
+  projectTemplateView,
+  projectItemTypeViews,
 } from "../src/catalog.ts";
+import { CommandError, type StoredCreateTemplateDocument } from "../src/presets/shared.ts";
+import { PRESET_REGISTRY } from "../src/registry.ts";
 
 test("listPresetDefinitions returns all 7 presets with structured fields", () => {
   const defs = listPresetDefinitions();
@@ -88,6 +94,145 @@ test("agent-workflow definition exposes its custom AgentRun item type", () => {
   assert.ok(run?.options.some((o) => o.key === "model"));
 });
 
+test("projectTemplateView defaults a missing or non-string type to Task", () => {
+  const base = {
+    name: "orphan",
+    created_at: "1970-01-01T00:00:00.000Z",
+    updated_at: "1970-01-01T00:00:00.000Z",
+  };
+  assert.strictEqual(
+    projectTemplateView({ ...base, options: { priority: "1" } }).type,
+    "Task",
+  );
+  assert.strictEqual(
+    projectTemplateView({ ...base, options: { type: ["Issue"] } }).type,
+    "Task",
+  );
+  assert.strictEqual(
+    projectTemplateView({ ...base, options: { type: "Issue", priority: "1" } }).type,
+    "Issue",
+  );
+});
+
+test("projectItemTypeViews copies arrays and fills in missing schema pieces", () => {
+  assert.deepStrictEqual(projectItemTypeViews(undefined), []);
+  assert.deepStrictEqual(projectItemTypeViews([]), []);
+  const views = projectItemTypeViews([
+    { name: "Card" },
+    { name: "Run", aliases: "agent", options: { key: "phase" } },
+    {
+      name: "Typed",
+      aliases: ["typed"],
+      options: [{ key: "phase" }, { key: "mode", values: ["auto"] }],
+    },
+  ] as Parameters<typeof projectItemTypeViews>[0]);
+  assert.deepStrictEqual(views[0], { name: "Card", aliases: [], options: [] });
+  assert.deepStrictEqual(views[1], { name: "Run", aliases: [], options: [] });
+  assert.deepStrictEqual(views[2], {
+    name: "Typed",
+    aliases: ["typed"],
+    options: [
+      { key: "phase", values: [] },
+      { key: "mode", values: ["auto"] },
+    ],
+  });
+  views[2].aliases.push("mutated");
+  assert.deepStrictEqual(
+    projectItemTypeViews([
+      {
+        name: "Typed",
+        aliases: ["typed"],
+        options: [{ key: "mode", values: ["auto"] }],
+      },
+    ])[0].aliases,
+    ["typed"],
+  );
+});
+
+test("collectPresetIssues reports every malformed-preset class", () => {
+  const stored = (name: string, options: StoredCreateTemplateDocument["options"]): StoredCreateTemplateDocument => ({
+    name,
+    created_at: "1970-01-01T00:00:00.000Z",
+    updated_at: "1970-01-01T00:00:00.000Z",
+    options,
+  });
+  const issues = collectPresetIssues(
+    {
+      id: "broken",
+      governance: "unknown",
+      idPrefix: "",
+      settings: { id_prefix: 1 },
+      templates: [],
+    },
+    {
+      "other.json": stored("bad name", {
+        "": "x",
+        "  ": "y",
+        type: "Task",
+        tags: [1, 2] as unknown as string[],
+        ok: ["a"],
+      }),
+    },
+  );
+  const messages = issues.map((issue) => issue.message);
+  assert.ok(messages.includes("invalid governance 'unknown'"));
+  assert.ok(messages.includes("missing id_prefix"));
+  assert.ok(messages.includes("settings patch is missing id_prefix"));
+  assert.ok(messages.includes("has no templates"));
+  assert.ok(messages.some((message) => message.includes("template name 'bad name' is invalid")));
+  assert.ok(messages.some((message) => message.includes("does not match document name")));
+  assert.ok(messages.some((message) => message.includes("empty option key")));
+  assert.ok(messages.some((message) => message.includes("option 'tags' has a non-string value")));
+});
+
+test("collectPresetIssues flags advertised template drift and a missing settings prefix", () => {
+  const issues = collectPresetIssues(
+    {
+      id: "drift",
+      governance: "strict",
+      idPrefix: 12,
+      settings: {},
+      templates: [{ name: "task" }],
+    },
+    {
+      "task.json": {
+        name: "task",
+        created_at: "1970-01-01T00:00:00.000Z",
+        updated_at: "1970-01-01T00:00:00.000Z",
+        options: { type: "Task" },
+      },
+    },
+    ["other"],
+  );
+  const messages = issues.map((issue) => issue.message);
+  assert.ok(messages.includes("missing id_prefix"));
+  assert.ok(messages.includes("settings patch is missing id_prefix"));
+  assert.ok(
+    messages.includes("registry templates [other] differ from exported [task]"),
+  );
+});
+
+test("requireValidPresets throws a formatted CommandError and returns a clean result", () => {
+  const clean = requireValidPresets({ ok: true, checked: 7, issues: [] });
+  assert.strictEqual(clean.ok, true);
+  try {
+    requireValidPresets({
+      ok: false,
+      checked: 2,
+      issues: [
+        { presetId: "a", message: "missing id_prefix" },
+        { presetId: "b", message: "has no templates" },
+      ],
+    });
+    assert.fail("expected throw");
+  } catch (error) {
+    assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
+    assert.match((error as Error).message, /2 preset validation issue\(s\) across 2 preset\(s\)/);
+    assert.match((error as Error).message, /a: missing id_prefix/);
+    assert.match((error as Error).message, /b: has no templates/);
+  }
+});
+
 test("agent-workflow list row reports the AgentRun custom item type and 3 templates", () => {
   const rows = buildListRows();
   const agent = rows.find((r) => r.id === "agent-workflow");
@@ -97,4 +242,35 @@ test("agent-workflow list row reports the AgentRun custom item type and 3 templa
   assert.ok(agent.templates.includes("agent-task"));
   assert.ok(agent.templates.includes("prompt-experiment"));
   assert.ok(agent.templates.includes("eval-run"));
+});
+
+test("a registry descriptor with no raw exports is named, not dereferenced", () => {
+  // PRESET_REGISTRY is exported and mutable, so the RAW_PRESETS key type does
+  // not make the lookup total at runtime: a consumer can append a descriptor
+  // whose id is outside the PresetId union through a cast, or from JavaScript
+  // where the union does not exist at all. Without the guard in
+  // buildDefinition that descriptor reaches raw.templates and fails with
+  // "Cannot read properties of undefined", naming neither the preset nor the
+  // cause. This asserts the diagnostic instead.
+  const drifted = {
+    id: "ghost-preset",
+    displayName: "Ghost",
+    description: "Registered without exports.",
+    command: "ghost",
+    idPrefix: "gh",
+    governance: "solo",
+  } as unknown as (typeof PRESET_REGISTRY)[number];
+  PRESET_REGISTRY.push(drifted);
+  try {
+    assert.throws(
+      () => listPresetDefinitions(),
+      (error: unknown) =>
+        error instanceof CommandError && /No definition exports for preset 'ghost-preset'/u.test(error.message),
+    );
+  } finally {
+    const index = PRESET_REGISTRY.indexOf(drifted);
+    if (index >= 0) PRESET_REGISTRY.splice(index, 1);
+  }
+  // The registry is restored, so the rest of the suite sees the real catalog.
+  assert.strictEqual(listPresetDefinitions().length, PRESET_REGISTRY.length);
 });
