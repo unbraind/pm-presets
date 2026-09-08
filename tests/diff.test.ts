@@ -6,8 +6,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { requirePresetDefinition } from "../src/catalog.ts";
-import { computePresetDiff } from "../src/diff.ts";
+import { computePresetDiff, readWorkspaceSnapshot } from "../src/diff.ts";
+
+test("kanban diff lists the custom Card item type", () => {
+  const def = requirePresetDefinition("kanban");
+  const result = computePresetDiff(def, { settings: undefined, templateNames: [] });
+  assert.deepStrictEqual(result.itemTypes, ["Card"]);
+});
 
 test("empty workspace -> everything is an add / missing, not in sync", () => {
   const def = requirePresetDefinition("indie-dev");
@@ -56,6 +66,30 @@ test("nested settings paths are flattened with dotted keys", () => {
   const result = computePresetDiff(def, { settings: {}, templateNames: [] });
   assert.ok(result.settings.some((e) => e.path === "governance.preset"));
   assert.ok(result.settings.some((e) => e.path === "validation.metadata_profile"));
+});
+
+test("readWorkspaceSnapshot reads settings and template names from disk", (t) => {
+  const pmDir = mkdtempSync(join(tmpdir(), "pm-presets-diff-snap-"));
+  t.after(() => rmSync(pmDir, { recursive: true, force: true }));
+
+  const empty = readWorkspaceSnapshot(pmDir);
+  assert.equal(empty.settings, undefined);
+  assert.deepStrictEqual(empty.templateNames, []);
+
+  writeFileSync(join(pmDir, "settings.json"), "{not json");
+  assert.equal(readWorkspaceSnapshot(pmDir).settings, undefined);
+
+  writeFileSync(join(pmDir, "settings.json"), "[1]\n");
+  assert.equal(readWorkspaceSnapshot(pmDir).settings, undefined);
+
+  writeFileSync(join(pmDir, "settings.json"), '{"id_prefix":"snap-"}\n');
+  mkdirSync(join(pmDir, "templates"));
+  writeFileSync(join(pmDir, "templates", "idea.json"), "{}");
+  writeFileSync(join(pmDir, "templates", "README.JSON"), "{}");
+  writeFileSync(join(pmDir, "templates", "notes.txt"), "ignore");
+  const snapshot = readWorkspaceSnapshot(pmDir);
+  assert.deepStrictEqual(snapshot.settings, { id_prefix: "snap-" });
+  assert.deepStrictEqual([...snapshot.templateNames].sort(), ["README", "idea"]);
 });
 
 test("partially-applied workspace lists present and missing templates", () => {

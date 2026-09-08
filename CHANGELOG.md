@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Close the coverage mandate gap ([pm-kqnt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-kqnt.toon))
+
 ## 2026.9.8 - 2026-09-08
 
 ### Security

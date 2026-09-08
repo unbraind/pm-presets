@@ -38,6 +38,7 @@ import { PRESET_REGISTRY, type PresetId } from "./registry.ts";
 import {
   buildListRows,
   requirePresetDefinition,
+  requireValidPresets,
   validateAllPresets,
 } from "./catalog.ts";
 import { computePresetDiff, readWorkspaceSnapshot } from "./diff.ts";
@@ -46,7 +47,7 @@ import {
   readWorkspaceSettings,
   readWorkspaceTemplates,
 } from "./export.ts";
-import { planSeeds, seedPresetItems, seedsForPreset } from "./seeds.ts";
+import { runPresetSeeds } from "./seeds.ts";
 import * as fs from "node:fs";
 
 // Drift exit code for `presets diff --strict`. Distinct from GENERIC(1)/
@@ -360,15 +361,10 @@ export default defineExtension({
         }
 
         // --custom <name>: export the current workspace as a preset definition.
-        // Mirror the `presets export` guard: a whitespace-only name would trim to
-        // "" and produce a preset definition with an empty id.
+        // Whitespace-only names are rejected above (before readStringOption),
+        // and readStringOption itself returns undefined for empty/whitespace, so
+        // `customName` here is a non-empty trimmed string.
         const name = customName as string;
-        if (name.trim().length === 0) {
-          throw new PresetError(
-            "`presets --custom` requires a non-empty preset name.",
-            EXIT_CODE_USAGE,
-          );
-        }
         const pmDir = resolvePmDir(ctx);
         const settings = readWorkspaceSettings(pmDir);
         if (!settings) {
@@ -525,19 +521,7 @@ export default defineExtension({
       action: "presets-validate",
       description: "Validate that all bundled presets parse and load correctly.",
       examples: ["pm presets validate", "pm presets validate --json"],
-      run: () => {
-        const result = validateAllPresets();
-        if (!result.ok) {
-          const detail = result.issues
-            .map((issue) => `  ${issue.presetId}: ${issue.message}`)
-            .join("\n");
-          throw new PresetError(
-            `${result.issues.length} preset validation issue(s) across ${result.checked} preset(s):\n${detail}`,
-            1,
-          );
-        }
-        return result;
-      },
+      run: () => requireValidPresets(validateAllPresets()),
     });
 
     api.registerCommand({
@@ -566,38 +550,9 @@ export default defineExtension({
         if (!withSeeds) {
           return;
         }
-
-        const dryRun = readBooleanOption(ctx.options, "dryRun", "dry-run");
-        const pmRoot = resolvePmDir(ctx);
-        const seeds = seedsForPreset(definition.id);
-        if (seeds.length === 0) {
-          console.log(`No starter seeds defined for '${definition.id}'.`);
-          return;
-        }
-        if (dryRun) {
-          console.log("");
-          console.log(`[dry-run] Would seed ${seeds.length} starter item(s):`);
-          for (const entry of planSeeds(pmRoot, definition.id)) {
-            console.log(`  - ${entry.type}: ${entry.title}`);
-          }
-          return;
-        }
-        console.log("");
-        console.log(`Seeding ${seeds.length} starter item(s)...`);
-        const seedResult = seedPresetItems(pmRoot, definition.id);
-        for (const detail of seedResult.details) {
-          if (detail.ok) {
-            console.log(`  Created: ${detail.title}`);
-          } else {
-            console.warn(`  Failed:  ${detail.title}${detail.message ? ` (${detail.message})` : ""}`);
-          }
-        }
-        if (seedResult.failed > 0) {
-          throw new PresetError(
-            `Seeded ${seedResult.created} item(s) but ${seedResult.failed} failed.`,
-            1,
-          );
-        }
+        runPresetSeeds(resolvePmDir(ctx), definition.id, {
+          dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
+        });
       },
     });
 
