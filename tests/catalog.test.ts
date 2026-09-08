@@ -18,7 +18,8 @@ import {
   projectTemplateView,
   projectItemTypeViews,
 } from "../src/catalog.ts";
-import type { StoredCreateTemplateDocument } from "../src/presets/shared.ts";
+import { CommandError, type StoredCreateTemplateDocument } from "../src/presets/shared.ts";
+import { PRESET_REGISTRY } from "../src/registry.ts";
 
 test("listPresetDefinitions returns all 7 presets with structured fields", () => {
   const defs = listPresetDefinitions();
@@ -241,4 +242,35 @@ test("agent-workflow list row reports the AgentRun custom item type and 3 templa
   assert.ok(agent.templates.includes("agent-task"));
   assert.ok(agent.templates.includes("prompt-experiment"));
   assert.ok(agent.templates.includes("eval-run"));
+});
+
+test("a registry descriptor with no raw exports is named, not dereferenced", () => {
+  // PRESET_REGISTRY is exported and mutable, so the RAW_PRESETS key type does
+  // not make the lookup total at runtime: a consumer can append a descriptor
+  // whose id is outside the PresetId union through a cast, or from JavaScript
+  // where the union does not exist at all. Without the guard in
+  // buildDefinition that descriptor reaches raw.templates and fails with
+  // "Cannot read properties of undefined", naming neither the preset nor the
+  // cause. This asserts the diagnostic instead.
+  const drifted = {
+    id: "ghost-preset",
+    displayName: "Ghost",
+    description: "Registered without exports.",
+    command: "ghost",
+    idPrefix: "gh",
+    governance: "solo",
+  } as unknown as (typeof PRESET_REGISTRY)[number];
+  PRESET_REGISTRY.push(drifted);
+  try {
+    assert.throws(
+      () => listPresetDefinitions(),
+      (error: unknown) =>
+        error instanceof CommandError && /No definition exports for preset 'ghost-preset'/u.test(error.message),
+    );
+  } finally {
+    const index = PRESET_REGISTRY.indexOf(drifted);
+    if (index >= 0) PRESET_REGISTRY.splice(index, 1);
+  }
+  // The registry is restored, so the rest of the suite sees the real catalog.
+  assert.strictEqual(listPresetDefinitions().length, PRESET_REGISTRY.length);
 });

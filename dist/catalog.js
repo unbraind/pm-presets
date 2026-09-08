@@ -69,9 +69,28 @@ export function projectItemTypeViews(itemTypes) {
             : [],
     }));
 }
-/** Build the full structured definition for a known descriptor. */
+/**
+ * Build the full structured definition for a known descriptor.
+ *
+ * The `RAW_PRESETS` key type makes a missing export a compile error for any
+ * descriptor this package itself registers. It does not make the lookup total
+ * at runtime: {@link PRESET_REGISTRY} is an exported, mutable array, so a
+ * consumer can append a descriptor whose id is outside the union (through a
+ * cast, or from JavaScript, where the union does not exist at all). Without
+ * this guard that appended descriptor reaches `raw.templates` and fails with
+ * `Cannot read properties of undefined`, naming neither the preset nor the
+ * cause. Keeping it turns registry drift into a diagnostic that says which
+ * preset has no exports.
+ *
+ * @param descriptor - The registry descriptor to expand.
+ * @returns The full preset definition.
+ * @throws {CommandError} When no raw export exists for the descriptor's id.
+ */
 function buildDefinition(descriptor) {
     const raw = RAW_PRESETS[descriptor.id];
+    if (!raw) {
+        throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
+    }
     const templates = Object.values(raw.templates)
         .map(projectTemplateView)
         .sort((left, right) => left.name.localeCompare(right.name));
