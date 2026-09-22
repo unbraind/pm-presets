@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A publish that npm accepts late is reported as failed and the GitHub Release is skipped on bun mirror lag ([pm-y8lz](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-y8lz.toon))
+
+### Other
+
+- Certify pm CLI 2026.9.21 and install merge drivers through the canonical pm-ops launcher ([pm-wmxk](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-wmxk.toon))
+
 ## 2026.9.18 - 2026-09-18
 
 ### Other
