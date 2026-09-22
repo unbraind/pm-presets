@@ -306,7 +306,7 @@ that maps those tracker artifacts to pm-cli's field-aware Git merge drivers, so 
 tracker edits merge cleanly instead of hard-conflicting. Generated extension assets are excluded
 from semantic merging, while their managed manifest retains key-level JSON merging. The driver
 **definitions** live in per-clone Git config; `npm install` / `npm ci` wires them automatically via
-the erasable TypeScript `scripts/prepare-merge-driver.ts` lifecycle. It runs `pm merge install` only
+the erasable TypeScript `scripts/prepare-merge-driver.ts`, a thin launcher over `pm-ops/merge-driver` lifecycle. It runs `pm merge install` only
 when an executable `pm` CLI resolves on `PATH`, no-ops cleanly when development dependencies are
 omitted, and surfaces failures from a present CLI. The lifecycle is exercised through POSIX tests
 and a real Windows `cmd.exe` CI job. To (re)run manually: `npm run merge:install`.
