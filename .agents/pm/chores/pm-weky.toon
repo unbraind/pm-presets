@@ -6,17 +6,19 @@ status: open
 priority: 1
 tags[6]: bun,certify,npm,pm-changelog,pm-cli-2026.9.28,pm-ops
 created_at: "2026-09-28T22:37:53.097Z"
-updated_at: "2026-09-28T22:49:20.234Z"
+updated_at: "2026-09-28T22:56:26.133Z"
 author: "harness:codex"
 acceptance_criteria: "Manifest and lockfile resolve published PM CLI SDK 2026.9.28, pm-ops 2026.9.28, and pm-changelog 2026.9.25; launcher is byte-identical to the installed published template; strict PM health and full release:check pass with measured tests, skips, coverage scope and audit results; a packed archive installs and activates in fresh npm/Node and Bun projects; exact pushed head, GitHub CI and bot review state are recorded without treating absent reviews as approval."
-notes[3]{created_at,author,text}:
+notes[4]{created_at,author,text}:
   "2026-09-28T22:45:09.152Z","harness:codex","During SDK surface investigation, a read-intended config probe accidentally invoked pm config project set id-prefix sample- in this checkout. It was immediately restored with pm config project set id-prefix pm-. Strict health passed afterward. The two append-only _workspace events are retained, and settings.json differs only by canonical JSON key order. This is inspection evidence, not a package behavior change."
   "2026-09-28T22:48:16.803Z","harness:codex","Candidate local gate after exact published pins passed 151/151, zero failures/skips; 16 declared source files at 100% lines/branches/functions, 93/93 documented declarations, zero production npm vulnerabilities, pack/changelog/provenance checks passed. It does not measure statements or cover every executable script; pm-915f remains open. Packed npm/Node and Bun 1.3.5 projects both installed and activated seven presets and validated them. Applying agent-workflow made preset diff inSync=true but strict health failed with settings.json history drift in both; Bun also has independent five-driver drift on fresh CLI-only init. Package issue pm-1vx6 and upstream pm-cli #1345/#1346 block certification. The initial combined npm install returned a transient E404 while separate explicit published-version installs succeeded. A read-intended id-prefix config probe changed this checkout and was restored via the CLI; append-only audit entries are retained as recorded in the earlier note."
   "2026-09-28T22:49:20.234Z","harness:codex","Private companion owner reference: pm-cli-website-5s6z. The companion records the package PR, hosted boundaries, and imported upstream issues; no private companion contents are copied into this public package."
-files[3]{path,scope,note}:
+  "2026-09-28T22:56:26.107Z","harness:codex","Greptile review on PR 109 identified the broken pm-ops install branch without a fixture. Added a real child-process checkout test for a package directory without package.json and for a dangling pm-ops symlink; both must fail with MODULE_NOT_FOUND and register no drivers. The full release:check passed on the amended candidate with 152 tests. Settings-history and Bun strict-health defects remain open."
+files[4]{path,scope,note}:
   package-lock.json,project,Resolved toolchain graph
   package.json,project,Published PM toolchain exact pins
   scripts/prepare-merge-driver.ts,project,Published pm-ops canonical launcher copy
+  tests/prepare-merge-driver.test.ts,project,Real checkout fixtures for broken installed pm-ops entries
 tests[1]{command,scope,timeout_seconds,pm_context_mode,workspace_context_mode,provenance{author,created_at,source_kind,source_ref},note}:
   "npm run release:check",project,600,none,snapshot,"harness:codex","2026-09-28T22:48:27.146Z",local_mutation,chore/pm-presets-cli-sdk-2026-9-28,Direct full package gate; tracked run context may differ from release environment
 docs[2]{path,scope,note}:
