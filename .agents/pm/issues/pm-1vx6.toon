@@ -2,14 +2,25 @@ id: pm-1vx6
 title: Preset apply bypasses workspace settings history and leaves strict health failing
 description: "Packed pm-presets on published PM CLI 2026.9.28: initialize a disposable workspace, install the packed extension, run pm presets apply agent-workflow, then pm health --strict-exit --json. Apply reports success and diff --strict reports inSync=true, but health reports history_drift_workspace_state_mismatch:settings.json. applyPreset writes settings.json directly with fs.writeFileSync, bypassing the SDK audited singleton mutation. All preset entry points share this path."
 type: Issue
-status: open
+status: in_progress
 priority: 1
 tags[5]: agent-workflow,history,integrity,pm-sdk,settings
 created_at: "2026-09-28T22:43:35.841Z"
-updated_at: "2026-09-28T22:45:08.609Z"
+updated_at: "2026-09-30T05:34:32.527Z"
+assignee: codex-presets-settings
+claim_principal: codex-presets-settings
 author: "harness:codex"
+estimated_minutes: 120
 acceptance_criteria: Packed npm/Node and Bun acceptance apply a preset and pass strict PM health; settings changes appear in the verified workspace history; dry-run and failed apply leave both settings and history unchanged; merge and replace semantics remain correct; a missing audited mutation capability fails closed with actionable guidance.
 parent: pm-weky
-docs[1]{path,scope,note}:
+notes[2]{created_at,author,text}:
+  "2026-09-30T05:30:31.457Z",codex-presets-settings,"CLI SDK 2026.9.30 implements upstream 1345 and 1346. Package now awaits host-bound mutateWorkspaceSettings, computes the merge under its lock, prevalidates template names, refuses missing capabilities, and uses SDK settings types. Named governance definitions drop ignored derived keys; bug-triage validation agrees with its strict parent policy. Full release gate passes 155 tests with zero skips and 100 lines/branches/functions over its 16-file scope. Statements and whole-repository quality remain owned by pm-915f. Real synthetic initialized trackers verify history, previews, refusal and simultaneous unrelated settings mutation. Template filesystem writes remain separate after the settings commit."
+  "2026-09-30T05:34:32.527Z",codex-presets-settings,"Packed tarball acceptance on npm/npx and Bun bunx --bun with CLI 2026.9.30 passed initialization, complete packed extension install, agent-workflow apply, presets diff --strict and strict health. Both runtimes now pass the earlier settings-history and Bun merge-driver failures. Synthetic acceptance logs retained locally. No release or publication approval is implied; pm-915f and exact-head reviews remain gates."
+files[1]{path,scope,note}:
+  src/presets/shared.ts,project,Host-bound audited settings mutation
+tests[1]{command,scope,timeout_seconds,pm_context_mode,workspace_context_mode,provenance{author,created_at,source_kind,source_ref},note}:
+  node --test tests/audited-settings.test.ts,project,300,none,snapshot,codex-presets-settings,"2026-09-30T05:31:32.596Z",local_mutation,fix/audited-preset-settings,"Real SDK settings audit, previews, refusal and concurrent unrelated setting preservation"
+docs[2]{path,scope,note}:
   "https://github.com/unbraind/pm-cli/issues/1345",global,Upstream host-bound audited settings mutation API gap
+  tests/audited-settings.test.ts,project,Real host SDK audit and health regressions
 body: ""

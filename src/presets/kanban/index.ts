@@ -18,17 +18,10 @@ export const SETTINGS = {
   id_prefix: "kan-",
   governance: {
     preset: "minimal",
-    ownership_enforcement: "warn",
-    create_mode_default: "progressive",
-    close_validation_default: "off",
-    parent_reference: "warn",
-    metadata_profile: "core",
     create_default_type: "Card",
   },
   validation: {
     sprint_release_format: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
   },
   testing: {
     record_results_to_items: false,
@@ -102,8 +95,8 @@ export const TEMPLATES = {
  * `../../index.ts`), because the type must exist for every command in the
  * session rather than only after setup has been run.
  */
-export function runKanbanSetup(context: CommandHandlerContext): void {
-  applyPreset(context, {
+export async function runKanbanSetup(context: CommandHandlerContext): Promise<void> {
+  await applyPreset(context, {
     label: "Kanban board",
     settings: SETTINGS,
     templates: TEMPLATES,

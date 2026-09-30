@@ -20,17 +20,10 @@ export const SETTINGS = {
   id_prefix: "agent-",
   governance: {
     preset: "default",
-    ownership_enforcement: "warn",
-    create_mode_default: "progressive",
-    close_validation_default: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
     create_default_type: "AgentRun",
   },
   validation: {
     sprint_release_format: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
   },
   testing: {
     record_results_to_items: true,
@@ -112,8 +105,8 @@ export const TEMPLATES = {
  * `../../index.ts`), because the type must exist for every command in the
  * session rather than only after setup has been run.
  */
-export function runAgentWorkflowSetup(context: CommandHandlerContext): void {
-  applyPreset(context, {
+export async function runAgentWorkflowSetup(context: CommandHandlerContext): Promise<void> {
+  await applyPreset(context, {
     label: "Agent workflow",
     settings: SETTINGS,
     templates: TEMPLATES,

@@ -115,6 +115,9 @@ plus:
 
 **Idempotency & safety.** `apply` is safe to re-run:
 
+- Requires host pm CLI **2026.9.30 or newer**. Settings changes use the host-bound
+  SDK audit lock and workspace history. Application awaits that commit before
+  writing templates or creating seeds; an unavailable audit capability fails closed.
 - `settings.json` is **deep-merged** by default — the preset's keys are layered
   over your existing settings, so unrelated config (telemetry, locks, etc.) is
   preserved.
@@ -284,6 +287,12 @@ pm install github.com/unbraind/pm-presets --project
 ```
 
 The preset commands are identical — only the package name changed.
+
+Preset setup handlers and `applyPreset` return `Promise<void>`; await their
+completion before reading the updated configuration. Dry runs validate and
+preview the locked current settings without writing settings or history.
+Templates are separate filesystem writes after the audited settings commit;
+a later filesystem failure does not roll back that committed settings event.
 
 ## Programmatic API
 
