@@ -211,7 +211,7 @@ export async function applyPreset(context, input) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
             `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
-    const existingSettings = readJsonObject(settingsPath, "settings.json");
+    readJsonObject(settingsPath, "settings.json");
     const effectivePatch = {
         ...input.settings,
         id_prefix: prefixOverride ?? input.settings.id_prefix,
@@ -226,13 +226,12 @@ export async function applyPreset(context, input) {
     if (typeof context.sdk?.mutateWorkspaceSettings !== "function") {
         throw new CommandError("Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability.");
     }
-    let mergedSettings = existingSettings;
     try {
         await context.sdk.mutateWorkspaceSettings({
             operationId: `pm-presets-${randomUUID()}`,
             dryRun,
             mutate: (current) => {
-                mergedSettings = mergePresetSettings(current, effectivePatch, replace);
+                const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
                 return mergedSettings;
             },
         });
@@ -243,7 +242,8 @@ export async function applyPreset(context, input) {
     const verb = replace ? "replace" : "merge";
     if (dryRun) {
         console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
-        console.log(JSON.stringify(mergedSettings, null, 2));
+        console.log("Preset patch (the host derives governance policies and canonical storage):");
+        console.log(JSON.stringify(effectivePatch, null, 2));
     }
     else {
         console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);

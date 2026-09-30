@@ -289,8 +289,10 @@ pm install github.com/unbraind/pm-presets --project
 The preset commands are identical — only the package name changed.
 
 Preset setup handlers and `applyPreset` return `Promise<void>`; await their
-completion before reading the updated configuration. Dry runs validate and
-preview the locked current settings without writing settings or history.
+completion before reading the updated configuration. Dry runs validate against
+locked current settings and display a labeled preset patch without writing
+settings or history. The host derives governance policies and canonical storage;
+the patch is a proposed change, rather than a serialized final settings tree.
 Templates are separate filesystem writes after the audited settings commit;
 a later filesystem failure does not roll back that committed settings event.
 
