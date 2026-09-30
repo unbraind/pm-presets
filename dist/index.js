@@ -453,12 +453,12 @@ export default defineExtension({
                 { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
             ],
             flags: APPLY_FLAGS,
-            run: (ctx) => {
+            run: async (ctx) => {
                 const id = ctx.args?.[0];
                 // Validate the id up front (NOT_FOUND/exit 3 for unknown names).
                 const definition = requirePresetDefinition(id);
                 const handler = PRESET_HANDLERS[definition.id];
-                handler(ctx);
+                await handler(ctx);
                 const withSeeds = readBooleanOption(ctx.options, "withSeeds", "with-seeds");
                 if (!withSeeds) {
                     return;

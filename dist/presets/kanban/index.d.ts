@@ -10,17 +10,10 @@ export declare const SETTINGS: {
     id_prefix: string;
     governance: {
         preset: "minimal";
-        ownership_enforcement: "warn";
-        create_mode_default: "progressive";
-        close_validation_default: "off";
-        parent_reference: "warn";
-        metadata_profile: "core";
         create_default_type: string;
     };
     validation: {
         sprint_release_format: "warn";
-        parent_reference: "warn";
-        metadata_profile: "core";
     };
     testing: {
         record_results_to_items: false;
@@ -51,5 +44,5 @@ export declare const TEMPLATES: {
  * `../../index.ts`), because the type must exist for every command in the
  * session rather than only after setup has been run.
  */
-export declare function runKanbanSetup(context: CommandHandlerContext): void;
+export declare function runKanbanSetup(context: CommandHandlerContext): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

@@ -18,16 +18,10 @@ export const SETTINGS = {
   id_prefix: "indie-",
   governance: {
     preset: "minimal",
-    ownership_enforcement: "none",
-    create_mode_default: "progressive",
-    close_validation_default: "off",
-    metadata_profile: "core",
     create_default_type: "Task",
   },
   validation: {
     sprint_release_format: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
   },
   testing: {
     record_results_to_items: false,
@@ -62,8 +56,8 @@ export const TEMPLATES = {
  * Command handler for the indie-dev setup command: delegates the settings,
  * templates, and next-steps to {@link applyPreset}.
  */
-export function runIndieDevSetup(context: CommandHandlerContext): void {
-  applyPreset(context, {
+export async function runIndieDevSetup(context: CommandHandlerContext): Promise<void> {
+  await applyPreset(context, {
     label: "Indie dev",
     settings: SETTINGS,
     templates: TEMPLATES,

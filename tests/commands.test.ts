@@ -20,9 +20,10 @@ import { test, type TestContext } from "node:test";
 
 import { createExtensionTestHarness, type ExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
 import type { CommandHandlerContext, ExtensionCapability } from "@unbrained/pm-cli/sdk/authoring";
+import { PmClient } from "@unbrained/pm-cli/sdk";
 
 import mod from "../src/index.ts";
-import { runIndieDevSetup } from "../src/registry.ts";
+
 
 const MANIFEST_CAPABILITIES: readonly ExtensionCapability[] = (
   JSON.parse(
@@ -46,11 +47,10 @@ function activatePresets(): Promise<ExtensionTestHarness> {
 }
 
 /** Create an initialized temp pm root and delete it after the test. */
-function workspace(t: TestContext): string {
+async function workspace(t: TestContext): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "pm-presets-cmd-"));
   const pmDir = join(root, ".agents", "pm");
-  mkdirSync(pmDir, { recursive: true });
-  writeFileSync(join(pmDir, "settings.json"), "{}\n");
+  await new PmClient({ pmRoot: pmDir, cwd: root, noExtensions: true }).init();
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return pmDir;
 }
@@ -110,7 +110,7 @@ test("presets show returns a full definition", async () => {
 
 test("presets --diff and presets diff report drift, including --strict", async (t) => {
   const h = await activatePresets();
-  const pmDir = workspace(t);
+  const pmDir = await workspace(t);
   const drifted = await h.runCommand({
     command: "presets",
     options: { diff: "indie-dev" },
@@ -180,13 +180,7 @@ test("presets --diff and presets diff report drift, including --strict", async (
   assert.ok(jsonLines.some((line) => line.includes('"presetId"')));
 
   t.mock.method(console, "log", () => {});
-  runIndieDevSetup({
-    command: "indie-setup",
-    args: [],
-    options: {},
-    global: { json: true, quiet: true, noPager: true },
-    pm_root: pmDir,
-  });
+  await h.runCommand({ command: "indie-setup", pmRoot: pmDir });
   const synced = await h.runCommand({
     command: "presets diff",
     args: ["indie-dev"],
@@ -198,7 +192,7 @@ test("presets --diff and presets diff report drift, including --strict", async (
 
 test("presets --custom and presets export snapshot the workspace", async (t) => {
   const h = await activatePresets();
-  const emptyDir = workspace(t);
+  const emptyDir = await workspace(t);
   writeFileSync(join(emptyDir, "settings.json"), "[1]\n");
   await assert.rejects(
     () => h.runCommand({ command: "presets", options: { custom: "ours" }, pmRoot: emptyDir }),
@@ -213,15 +207,9 @@ test("presets --custom and presets export snapshot the workspace", async (t) => 
     /presets export requires a preset name argument/,
   );
 
-  const pmDir = workspace(t);
+  const pmDir = await workspace(t);
   t.mock.method(console, "log", () => {});
-  runIndieDevSetup({
-    command: "indie-setup",
-    args: [],
-    options: {},
-    global: { json: true, quiet: true, noPager: true },
-    pm_root: pmDir,
-  });
+  await h.runCommand({ command: "indie-setup", pmRoot: pmDir });
 
   const exported = await h.runCommand({
     command: "presets",
@@ -274,7 +262,7 @@ test("presets validate returns the clean bundled catalog", async () => {
 
 test("presets apply writes the preset and optionally seeds", async (t) => {
   const h = await activatePresets();
-  const pmDir = workspace(t);
+  const pmDir = await workspace(t);
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "warn", () => {});
 
@@ -320,7 +308,7 @@ test("presets apply writes the preset and optionally seeds", async (t) => {
 
 test("templates commands are wired through the extension", async (t) => {
   const h = await activatePresets();
-  const pmDir = workspace(t);
+  const pmDir = await workspace(t);
   const listed = await h.runCommand({ command: "templates", pmRoot: pmDir });
   assert.ok(((listed.result as { builtin_templates: string[] }).builtin_templates).includes("bug"));
   const listedAlias = await h.runCommand({ command: "templates list", pmRoot: pmDir });

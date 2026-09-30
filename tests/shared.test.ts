@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+import { createExtensionCommandSdk, PmClient, type CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
 import {
   runAgentWorkflowSetup,
@@ -41,11 +41,10 @@ import {
 } from "../src/presets/shared.ts";
 
 /** Create an initialized temp pm root and delete it after the test. */
-function workspace(t: TestContext): string {
+async function workspace(t: TestContext): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "pm-presets-shared-"));
   const pmDir = join(root, ".agents", "pm");
-  mkdirSync(pmDir, { recursive: true });
-  writeFileSync(join(pmDir, "settings.json"), "{}\n");
+  await new PmClient({ pmRoot: pmDir, cwd: root, noExtensions: true }).init();
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return pmDir;
 }
@@ -61,6 +60,7 @@ function context(
     options: {},
     global: { json: true, quiet: true, noPager: true },
     pm_root: pmDir,
+    sdk: createExtensionCommandSdk(pmDir, new PmClient({ pmRoot: pmDir, noExtensions: true })),
     ...overrides,
   };
 }
@@ -111,11 +111,11 @@ test("CommandError defaults to GENERIC_FAILURE", () => {
   assert.strictEqual(error.name, "CommandError");
 });
 
-test("applyPreset refuses an uninitialized workspace", (t) => {
+test("applyPreset refuses an uninitialized workspace", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "pm-presets-missing-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   try {
-    applyPreset(context(join(root, ".agents", "pm")), {
+    await applyPreset(context(join(root, ".agents", "pm")), {
       label: "Indie dev",
       settings: { id_prefix: "indie-" },
       templates: {},
@@ -129,31 +129,32 @@ test("applyPreset refuses an uninitialized workspace", (t) => {
   }
 });
 
-test("applyPreset dry-run previews merge output without writing templates", (t) => {
-  const pmDir = workspace(t);
+test("applyPreset dry-run previews merge output without writing templates", async (t) => {
+  const pmDir = await workspace(t);
   const lines: string[] = [];
   t.mock.method(console, "log", (...args: unknown[]) => {
     lines.push(args.map(String).join(" "));
   });
-  applyPreset(context(pmDir, { options: { dryRun: true, prefix: "tmp-" } }), {
+  const before = readFileSync(join(pmDir, "settings.json"), "utf8");
+  await applyPreset(context(pmDir, { options: { dryRun: true, prefix: "tmp-" } }), {
     label: "Indie dev",
     settings: { id_prefix: "indie-", governance: { preset: "minimal" } },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision" }) },
     nextSteps: ["pm list"],
   });
   const settings = readFileSync(join(pmDir, "settings.json"), "utf8");
-  assert.strictEqual(settings.trim(), "{}");
+  assert.strictEqual(settings, before);
   assert.ok(lines.some((line) => line.includes("[dry-run] Would merge Indie dev settings")));
   assert.ok(lines.some((line) => line.includes('"id_prefix": "tmp-"')));
   assert.ok(lines.some((line) => line.includes("[dry-run] Would write template:")));
   assert.ok(lines.some((line) => line.includes("Indie dev preset applied. Next steps:")));
 });
 
-test("applyPreset replace mode and force overwrite, and skips without force", (t) => {
-  const pmDir = workspace(t);
+test("applyPreset replace mode and force overwrite, and skips without force", async (t) => {
+  const pmDir = await workspace(t);
   writeFileSync(
     join(pmDir, "settings.json"),
-    JSON.stringify({ governance: { preset: "default", leftover: true }, testing: { record_results_to_items: false } }, null, 2),
+    JSON.stringify({ ...JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")), governance: { preset: "default", leftover: true }, testing: { record_results_to_items: false } }, null, 2),
   );
   const warns: string[] = [];
   t.mock.method(console, "log", () => {});
@@ -161,7 +162,7 @@ test("applyPreset replace mode and force overwrite, and skips without force", (t
     warns.push(args.map(String).join(" "));
   });
 
-  applyPreset(context(pmDir, { options: { replace: true } }), {
+  await applyPreset(context(pmDir, { options: { replace: true } }), {
     label: "Indie dev",
     settings: { id_prefix: "indie-", governance: { preset: "minimal" } },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision" }) },
@@ -171,10 +172,11 @@ test("applyPreset replace mode and force overwrite, and skips without force", (t
     governance?: { leftover?: boolean; preset?: string };
     testing?: unknown;
   };
-  assert.deepStrictEqual(afterReplace.governance, { preset: "minimal" });
-  assert.equal(afterReplace.testing, undefined);
+  assert.strictEqual(afterReplace.governance?.preset, "minimal");
+  assert.equal(afterReplace.governance?.leftover, undefined);
+  assert.equal((afterReplace.testing as { record_results_to_items: boolean }).record_results_to_items, false);
 
-  applyPreset(context(pmDir), {
+  await applyPreset(context(pmDir), {
     label: "Indie dev",
     settings: { id_prefix: "indie-" },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) },
@@ -186,7 +188,7 @@ test("applyPreset replace mode and force overwrite, and skips without force", (t
   };
   assert.notEqual(skipped.options.priority, "9");
 
-  applyPreset(context(pmDir, { options: { force: true } }), {
+  await applyPreset(context(pmDir, { options: { force: true } }), {
     label: "Indie dev",
     settings: { id_prefix: "indie-" },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) },
@@ -200,9 +202,9 @@ test("applyPreset replace mode and force overwrite, and skips without force", (t
   assert.ok(warns.some((line) => line.includes("Strict governance is active.")));
 });
 
-test("applyPreset rejects a template map key that does not match the document name", (t) => {
-  const pmDir = workspace(t);
-  assert.throws(
+test("applyPreset rejects a template map key that does not match the document name", async (t) => {
+  const pmDir = await workspace(t);
+  await assert.rejects(
     () =>
       applyPreset(context(pmDir), {
         label: "Broken",
@@ -214,11 +216,11 @@ test("applyPreset rejects a template map key that does not match the document na
   );
 });
 
-test("applyPreset reports unreadable and non-object settings.json", (t) => {
-  const pmDir = workspace(t);
+test("applyPreset reports unreadable and non-object settings.json", async (t) => {
+  const pmDir = await workspace(t);
   writeFileSync(join(pmDir, "settings.json"), "{not json");
   try {
-    applyPreset(context(pmDir), {
+    await applyPreset(context(pmDir), {
       label: "Indie dev",
       settings: { id_prefix: "indie-" },
       templates: {},
@@ -232,7 +234,7 @@ test("applyPreset reports unreadable and non-object settings.json", (t) => {
 
   writeFileSync(join(pmDir, "settings.json"), "[1]\n");
   try {
-    applyPreset(context(pmDir), {
+    await applyPreset(context(pmDir), {
       label: "Indie dev",
       settings: { id_prefix: "indie-" },
       templates: {},
@@ -245,10 +247,10 @@ test("applyPreset reports unreadable and non-object settings.json", (t) => {
   }
 });
 
-test("every bundled setup handler writes its id_prefix", (t) => {
+test("every bundled setup handler writes its id_prefix", async (t) => {
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "warn", () => {});
-  const handlers: Array<{ idPrefix: string; run: (ctx: CommandHandlerContext) => void }> = [
+  const handlers: Array<{ idPrefix: string; run: (ctx: CommandHandlerContext) => Promise<void> }> = [
     { idPrefix: "bug-", run: runBugTriageSetup },
     { idPrefix: "indie-", run: runIndieDevSetup },
     { idPrefix: "oss-", run: runOpenSourceSetup },
@@ -258,8 +260,8 @@ test("every bundled setup handler writes its id_prefix", (t) => {
     { idPrefix: "agent-", run: runAgentWorkflowSetup },
   ];
   for (const handler of handlers) {
-    const pmDir = workspace(t);
-    handler.run(context(pmDir));
+    const pmDir = await workspace(t);
+    await handler.run(context(pmDir));
     const settings = JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")) as {
       id_prefix: string;
     };
@@ -267,8 +269,8 @@ test("every bundled setup handler writes its id_prefix", (t) => {
   }
 });
 
-test("runTemplatesList shadows builtins with user files and ignores stray names", (t) => {
-  const pmDir = workspace(t);
+test("runTemplatesList shadows builtins with user files and ignores stray names", async (t) => {
+  const pmDir = await workspace(t);
   mkdirSync(join(pmDir, "templates"));
   writeFileSync(join(pmDir, "templates", "zebra.json"), "{\"name\":\"zebra\",\"options\":{}}\n");
   writeFileSync(join(pmDir, "templates", "bug.json"), "{\"name\":\"bug\",\"options\":{}}\n");
@@ -282,7 +284,7 @@ test("runTemplatesList shadows builtins with user files and ignores stray names"
   assert.ok(!result.templates.includes("not valid"));
 });
 
-test("runTemplatesList requires an initialized tracker and tolerates a missing templates directory", (t) => {
+test("runTemplatesList requires an initialized tracker and tolerates a missing templates directory", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "pm-presets-uninit-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   try {
@@ -293,14 +295,14 @@ test("runTemplatesList requires an initialized tracker and tolerates a missing t
     assert.strictEqual(error.exitCode, EXIT_CODE.NOT_FOUND);
   }
 
-  const pmDir = workspace(t);
+  const pmDir = await workspace(t);
   const listed = runTemplatesList(context(pmDir));
   assert.ok(listed.builtin_templates.includes("spike"));
   assert.deepStrictEqual(listed.user_templates, []);
 });
 
-test("runTemplatesShow prefers user files, then builtins, and rejects bad input", (t) => {
-  const pmDir = workspace(t);
+test("runTemplatesShow prefers user files, then builtins, and rejects bad input", async (t) => {
+  const pmDir = await workspace(t);
   try {
     runTemplatesShow(context(pmDir, { args: [] }));
     assert.fail("expected throw");
@@ -345,8 +347,8 @@ test("runTemplatesShow prefers user files, then builtins, and rejects bad input"
   }
 });
 
-test("runTemplatesShow recovers incomplete documents and rejects invalid ones", (t) => {
-  const pmDir = workspace(t);
+test("runTemplatesShow recovers incomplete documents and rejects invalid ones", async (t) => {
+  const pmDir = await workspace(t);
   mkdirSync(join(pmDir, "templates"));
 
   writeFileSync(join(pmDir, "templates", "bare.json"), "{\"options\":{\"type\":\"Task\",\"tags\":[\"a\"]}}\n");

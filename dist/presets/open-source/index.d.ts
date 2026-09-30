@@ -10,17 +10,10 @@ export declare const SETTINGS: {
     id_prefix: string;
     governance: {
         preset: "default";
-        ownership_enforcement: "warn";
-        create_mode_default: "progressive";
-        close_validation_default: "warn";
-        parent_reference: "warn";
-        metadata_profile: "core";
         create_default_type: string;
     };
     validation: {
         sprint_release_format: "warn";
-        parent_reference: "warn";
-        metadata_profile: "core";
     };
 };
 /**
@@ -37,5 +30,5 @@ export declare const TEMPLATES: {
  * Command handler for the open-source setup command: delegates the settings,
  * templates, and next-steps to {@link applyPreset}.
  */
-export declare function runOpenSourceSetup(context: CommandHandlerContext): void;
+export declare function runOpenSourceSetup(context: CommandHandlerContext): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

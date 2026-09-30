@@ -21,7 +21,7 @@ export const SETTINGS = {
     },
     validation: {
         sprint_release_format: "strict_error",
-        parent_reference: "warn",
+        parent_reference: "strict_error",
         metadata_profile: "strict",
     },
     testing: {
@@ -81,8 +81,8 @@ export const TEMPLATES = {
  * and next-steps to {@link applyPreset}, which writes them to the workspace
  * (unless `--dry-run`).
  */
-export function runBugTriageSetup(context) {
-    applyPreset(context, {
+export async function runBugTriageSetup(context) {
+    await applyPreset(context, {
         label: "Bug triage",
         settings: SETTINGS,
         templates: TEMPLATES,

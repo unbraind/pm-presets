@@ -18,17 +18,10 @@ export const SETTINGS = {
   id_prefix: "oss-",
   governance: {
     preset: "default",
-    ownership_enforcement: "warn",
-    create_mode_default: "progressive",
-    close_validation_default: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
     create_default_type: "Issue",
   },
   validation: {
     sprint_release_format: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
   },
 } satisfies PresetSettingsPatch;
 
@@ -81,8 +74,8 @@ export const TEMPLATES = {
  * Command handler for the open-source setup command: delegates the settings,
  * templates, and next-steps to {@link applyPreset}.
  */
-export function runOpenSourceSetup(context: CommandHandlerContext): void {
-  applyPreset(context, {
+export async function runOpenSourceSetup(context: CommandHandlerContext): Promise<void> {
+  await applyPreset(context, {
     label: "Open source",
     settings: SETTINGS,
     templates: TEMPLATES,
