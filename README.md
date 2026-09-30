@@ -293,6 +293,8 @@ completion before reading the updated configuration. Dry runs validate against
 locked current settings and display a labeled preset patch without writing
 settings or history. The host derives governance policies and canonical storage;
 the patch is a proposed change, rather than a serialized final settings tree.
+Replacement previews also list omitted existing owned trees and keys that the
+host resets to defaults or preset policy, without printing their old values.
 Templates are separate filesystem writes after the audited settings commit;
 a later filesystem failure does not roll back that committed settings event.
 

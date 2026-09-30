@@ -106,3 +106,31 @@ test("a named-preset preview labels its patch and omits inherited custom policy 
   assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
   assert.equal(readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8"), historyBefore);
 });
+
+test("replace preview names omitted owned trees and keys without exposing their old values", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-replace-preview-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const pmRoot = join(root, ".agents", "pm");
+  const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
+  await client.init();
+  const sdk = createExtensionCommandSdk(pmRoot, client);
+  await sdk.mutateWorkspaceSettings({ operationId: "replace-custom-policy-baseline", mutate: (current) => ({
+    ...current, governance: { ...current.governance, preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" },
+  }) });
+  const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
+  const output: string[] = [];
+  t.mock.method(console, "log", (...args: unknown[]) => { output.push(args.map(String).join(" ")); });
+  await applyPreset({ command: "presets apply", args: [], options: { dryRun: true, replace: true }, global: {}, pm_root: pmRoot, sdk }, {
+    label: "Open source", settings: requirePresetDefinition("open-source").settings, templates: {}, nextSteps: [],
+  });
+  const resetLine = output.find((line) => line.startsWith("Replacement resets existing paths"));
+  assert.ok(resetLine);
+  const resets = JSON.parse(resetLine.slice(resetLine.indexOf("["))) as string[];
+  assert.ok(resets.includes("testing"));
+  assert.ok(resets.includes("governance.ownership_enforcement"));
+  assert.ok(resets.includes("validation.metadata_profile"));
+  assert.ok(!resets.includes("governance.preset"));
+  assert.ok(!resets.includes("validation.sprint_release_format"));
+  assert.deepEqual(resets, [...resets].sort());
+  assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
+});

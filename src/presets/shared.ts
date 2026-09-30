@@ -332,6 +332,7 @@ export async function applyPreset(
       "Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability."
     );
   }
+  const replacementResets: string[] = [];
   try {
     await context.sdk.mutateWorkspaceSettings({
       operationId: `pm-presets-${randomUUID()}`,
@@ -342,6 +343,20 @@ export async function applyPreset(
           effectivePatch as unknown as JsonObject,
           replace
         );
+        if (dryRun && replace) {
+          for (const tree of REPLACE_SETTINGS_TREES) {
+            const patch = effectivePatch[tree];
+            if (patch === undefined) {
+              replacementResets.push(tree);
+              continue;
+            }
+            for (const key of Object.keys(current[tree])) {
+              if (!Object.prototype.hasOwnProperty.call(patch, key)) {
+                replacementResets.push(`${tree}.${key}`);
+              }
+            }
+          }
+        }
         return mergedSettings as unknown as PmSettings;
       },
     });
@@ -356,6 +371,9 @@ export async function applyPreset(
     console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
     console.log("Preset patch (the host derives governance policies and canonical storage):");
     console.log(JSON.stringify(effectivePatch, null, 2));
+    if (replace) {
+      console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+    }
   } else {
     console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
   }
