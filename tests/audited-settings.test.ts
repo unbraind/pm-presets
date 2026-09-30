@@ -80,3 +80,29 @@ test("invalid templates and refused audited mutations leave settings and templat
   assert.deepEqual(readdirSync(join(pmRoot, "history")).map((file) => [file, readFileSync(join(pmRoot, "history", file), "utf8")]), historyBefore);
   assert.throws(() => readdirSync(join(pmRoot, "templates")), /ENOENT/);
 });
+
+test("a named-preset preview labels its patch and omits inherited custom policy values", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-policy-preview-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const pmRoot = join(root, ".agents", "pm");
+  const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
+  await client.init();
+  const sdk = createExtensionCommandSdk(pmRoot, client);
+  await sdk.mutateWorkspaceSettings({ operationId: "custom-policy-baseline", mutate: (current) => ({
+    ...current, governance: { ...current.governance, preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" },
+  }) });
+  const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
+  const historyBefore = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
+  const output: string[] = [];
+  t.mock.method(console, "log", (...args: unknown[]) => { output.push(args.map(String).join(" ")); });
+  await applyPreset({ command: "presets apply", args: [], options: { dryRun: true }, global: {}, pm_root: pmRoot, sdk }, {
+    label: "Indie", settings: requirePresetDefinition("indie-dev").settings, templates: {}, nextSteps: [],
+  });
+  assert.ok(output.some((line) => line.includes("Preset patch") && line.includes("host")));
+  const patch = JSON.parse(output.find((line) => line.startsWith("{"))!) as { governance: { preset: string; ownership_enforcement?: string; metadata_profile?: string } };
+  assert.equal(patch.governance.preset, "minimal");
+  assert.equal(patch.governance.ownership_enforcement, undefined);
+  assert.equal(patch.governance.metadata_profile, undefined);
+  assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
+  assert.equal(readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8"), historyBefore);
+});

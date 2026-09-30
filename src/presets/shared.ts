@@ -313,7 +313,7 @@ export async function applyPreset(
     );
   }
 
-  const existingSettings = readJsonObject(settingsPath, "settings.json");
+  readJsonObject(settingsPath, "settings.json");
   const effectivePatch: PresetSettingsPatch = {
     ...input.settings,
     id_prefix: prefixOverride ?? input.settings.id_prefix,
@@ -332,13 +332,12 @@ export async function applyPreset(
       "Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability."
     );
   }
-  let mergedSettings = existingSettings;
   try {
     await context.sdk.mutateWorkspaceSettings({
       operationId: `pm-presets-${randomUUID()}`,
       dryRun,
       mutate: (current) => {
-        mergedSettings = mergePresetSettings(
+        const mergedSettings = mergePresetSettings(
           current as unknown as JsonObject,
           effectivePatch as unknown as JsonObject,
           replace
@@ -355,7 +354,8 @@ export async function applyPreset(
   const verb = replace ? "replace" : "merge";
   if (dryRun) {
     console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
-    console.log(JSON.stringify(mergedSettings, null, 2));
+    console.log("Preset patch (the host derives governance policies and canonical storage):");
+    console.log(JSON.stringify(effectivePatch, null, 2));
   } else {
     console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
   }
