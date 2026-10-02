@@ -1,0 +1,15 @@
+id: pm-1vx6
+title: Preset apply bypasses workspace settings history and leaves strict health failing
+description: "Packed pm-presets on published PM CLI 2026.9.28: initialize a disposable workspace, install the packed extension, run pm presets apply agent-workflow, then pm health --strict-exit --json. Apply reports success and diff --strict reports inSync=true, but health reports history_drift_workspace_state_mismatch:settings.json. applyPreset writes settings.json directly with fs.writeFileSync, bypassing the SDK audited singleton mutation. All preset entry points share this path."
+type: Issue
+status: open
+priority: 1
+tags[5]: agent-workflow,history,integrity,pm-sdk,settings
+created_at: "2026-09-28T22:43:35.841Z"
+updated_at: "2026-09-28T22:45:08.609Z"
+author: "harness:codex"
+acceptance_criteria: Packed npm/Node and Bun acceptance apply a preset and pass strict PM health; settings changes appear in the verified workspace history; dry-run and failed apply leave both settings and history unchanged; merge and replace semantics remain correct; a missing audited mutation capability fails closed with actionable guidance.
+parent: pm-weky
+docs[1]{path,scope,note}:
+  "https://github.com/unbraind/pm-cli/issues/1345",global,Upstream host-bound audited settings mutation API gap
+body: ""
