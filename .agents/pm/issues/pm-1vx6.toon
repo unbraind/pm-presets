@@ -2,14 +2,50 @@ id: pm-1vx6
 title: Preset apply bypasses workspace settings history and leaves strict health failing
 description: "Packed pm-presets on published PM CLI 2026.9.28: initialize a disposable workspace, install the packed extension, run pm presets apply agent-workflow, then pm health --strict-exit --json. Apply reports success and diff --strict reports inSync=true, but health reports history_drift_workspace_state_mismatch:settings.json. applyPreset writes settings.json directly with fs.writeFileSync, bypassing the SDK audited singleton mutation. All preset entry points share this path."
 type: Issue
-status: open
+status: blocked
 priority: 1
 tags[5]: agent-workflow,history,integrity,pm-sdk,settings
 created_at: "2026-09-28T22:43:35.841Z"
-updated_at: "2026-09-28T22:45:08.609Z"
+updated_at: "2026-10-03T00:06:25.882Z"
 author: "harness:codex"
+estimated_minutes: 120
 acceptance_criteria: Packed npm/Node and Bun acceptance apply a preset and pass strict PM health; settings changes appear in the verified workspace history; dry-run and failed apply leave both settings and history unchanged; merge and replace semantics remain correct; a missing audited mutation capability fails closed with actionable guidance.
 parent: pm-weky
-docs[1]{path,scope,note}:
-  "https://github.com/unbraind/pm-cli/issues/1345",global,Upstream host-bound audited settings mutation API gap
+blocked_by: pm-915f
+blocked_reason: Audited application and truthful patch preview pass local release and packed acceptance; whole-source statement/quality certification and substantive final-head review remain required.
+dependencies[1]{id,kind,created_at,author,source_kind,author_source}:
+  pm-915f,blocked_by,"2026-09-30T05:48:25.458Z",codex-presets-settings,"cli:update:blocked_by",detected
+comments[7]{created_at,author,text}:
+  "2026-10-02T23:26:56.311Z",codex-sol-land,"Resumed PR #110 from a16b14309b9287426025e1a9233346b554920034. Rebase onto current chore/pm-presets-cli-sdk-2026-9-28 yields 56e236b81c001268921a3facb6b37ecc02dc23bf. All existing bot artifacts and restart-era owner replies inspected; no new actionable finding. Preserve earlier fixes and technical refusals. Verifying unchanged CI gates under the shared heavy lock; no merge, release or closure."
+  "2026-10-02T23:27:32.360Z",codex-sol-land,"Resumed verification: npm ci, current-base rebase, fresh committed-dist comparison, strict local tracker health with required merge drivers, npm run release:check, and bun install --no-save all passed. Full gate: 157 tests, 157 pass, 0 skips; configured coverage thresholds unchanged. PM-linked tests/release-workflow.test.ts passed. Earlier findings and technical refusals retained; no new source fix was needed in this restart. Exact pushed-head CI and substantive reviewer availability remain separate checks; no merge, release, publication or item closure."
+  "2026-10-02T23:39:27.458Z",codex-sol-land,"Corrected restart focused evidence to the already-linked audited-settings real SDK regressions. The publication-workflow check remains part of full release:check but is not focused settings-repair evidence. Removed only the newly added unrelated link; all dated notes and append-only history remain. Re-running the unchanged gate with the relevant PM-linked suite."
+  "2026-10-02T23:47:01.627Z",codex-sol-land,"Delta from the earlier verification receipt: removed only the newly linked publication-workflow test/file from the settings issue; the existing real audited-settings SDK suite is now the focused evidence. No preset runtime/dependency change was needed. New full release:check verification passes: 157 tests, 157 pass, 0 skips; PM-linked tests/audited-settings.test.ts, strict health, fresh dist equality and Bun install pass with unchanged gates. Exact-head CI/reviews and prior broader blockers remain separate."
+  "2026-10-02T23:55:01.403Z",codex-sol-land,"Round-three Cubic feedback is being verified: reproduce absent-tree replacement preview with the real published SDK first, clarify host-derived governance comments, strengthen per-apply audit/settings assertions and read-only preview evidence, and remove the extra blank line. Preserve all thresholds and history."
+  "2026-10-02T23:57:23.921Z",codex-sol-land,"Cubic 4170751157 premise refused by real SDK evidence: open-source replacement materializes default testing settings rather than leaving the tree absent. Added a replacement-then-preview regression preserving settings/history. Accepted the two stale host-policy comments, per-apply history/settings verification, explicit replacement-preview history equality and extra blank line. No application logic or threshold changed."
+  "2026-10-03T00:06:24.892Z",codex-sol-land,"Round-three review delta: refused the missing-tree crash claim with a real SDK replacement/preview regression proving materialized host defaults. Corrected two host-derived governance comments, asserted each changed apply has its own history delta and prefix/governance values, asserted replacement preview history byte identity, and removed redundant whitespace. Six real SDK tests pass; candidate dist was regenerated and matched a fresh rebuild. Verification: npm ci, current-base rebase, fresh committed-dist comparison, strict local tracker health with required merge drivers, npm run release:check, and bun install --no-save all passed. Full gate: 158 tests, 158 pass, 0 skips; configured coverage thresholds unchanged. PM-linked tests/audited-settings.test.ts passed. Application logic is unchanged; review fixes affect documentation and regression strength. Exact pushed-head CI and substantive reviewer availability remain separate checks; no merge, release, publication or item closure."
+notes[4]{created_at,author,text}:
+  "2026-09-30T05:30:31.457Z",codex-presets-settings,"CLI SDK 2026.9.30 implements upstream 1345 and 1346. Package now awaits host-bound mutateWorkspaceSettings, computes the merge under its lock, prevalidates template names, refuses missing capabilities, and uses SDK settings types. Named governance definitions drop ignored derived keys; bug-triage validation agrees with its strict parent policy. Full release gate passes 155 tests with zero skips and 100 lines/branches/functions over its 16-file scope. Statements and whole-repository quality remain owned by pm-915f. Real synthetic initialized trackers verify history, previews, refusal and simultaneous unrelated settings mutation. Template filesystem writes remain separate after the settings commit."
+  "2026-09-30T05:34:32.527Z",codex-presets-settings,"Packed tarball acceptance on npm/npx and Bun bunx --bun with CLI 2026.9.30 passed initialization, complete packed extension install, agent-workflow apply, presets diff --strict and strict health. Both runtimes now pass the earlier settings-history and Bun merge-driver failures. Synthetic acceptance logs retained locally. No release or publication approval is implied; pm-915f and exact-head reviews remain gates."
+  "2026-09-30T05:48:24.226Z",codex-presets-settings,"Greptile 4141161202 was valid, upvoted and answered: the host normalizes named governance after the callback, while its dry-run receipt lacks the normalized tree. Red-first real SDK regression failed on the old preview. Dry-run now emits a clearly labeled proposed preset patch, avoiding inherited custom policies and reducing unrelated context. Upstream SDK request 1356 is independently reproduced without extension code. The updated release gate passes 156 tests with zero skips and the same 16-file three-metric 100 scope. Separate final-head review, pm-915f whole-source quality and existing history privacy requirements still block approval."
+  "2026-09-30T06:07:58.581Z",codex-presets-settings,"Greptile 4141224174 confirmed: replace dry-run hid omitted settings. Red-first initialized SDK regression now sets real custom policies and verifies reset paths, preserved patch keys and unchanged settings. Preview lists omitted owned trees/keys from the SDK locked snapshot without their old values. release:check passes 157 tests, no skips, declared 16-file 100 lines/branches/functions; independent statements/all-source quality blocker pm-915f remains. Review and packed exact-head receipts follow in PR110."
+files[2]:
+  - path: src/presets/shared.ts
+    scope: project
+    note: Host-bound audited settings mutation
+  - path: tests/audited-settings.test.ts
+    scope: project
+tests[1]{command,scope,timeout_seconds,pm_context_mode,workspace_context_mode,provenance{author,created_at,source_kind,source_ref},note}:
+  node --test tests/audited-settings.test.ts,project,300,none,snapshot,codex-presets-settings,"2026-09-30T05:31:32.596Z",local_mutation,fix/audited-preset-settings,"Real SDK settings audit, previews, refusal and concurrent unrelated setting preservation"
+docs[4]:
+  - path: "https://github.com/unbraind/pm-cli/issues/1345"
+    scope: global
+    note: Upstream host-bound audited settings mutation API gap
+  - path: "https://github.com/unbraind/pm-cli/issues/1356"
+    scope: project
+    note: Host-bound canonical preview capability request
+  - path: "https://github.com/unbraind/pm-presets/pull/110"
+    scope: project
+  - path: tests/audited-settings.test.ts
+    scope: project
+    note: Real host SDK audit and health regressions
 body: ""

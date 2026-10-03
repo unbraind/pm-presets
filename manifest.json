@@ -4,7 +4,7 @@
   "description": "All 7 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban, agent-workflow",
   "author": "@unbraind",
   "entry": "./dist/index.js",
-  "pm_min_version": "2026.8.7",
+  "pm_min_version": "2026.9.30",
   "priority": 50,
   "manifest_version": 2,
   "trusted": true,

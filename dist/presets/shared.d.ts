@@ -11,7 +11,7 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
-import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
 /**
  * Numeric exit codes mirroring the pm-cli SDK contract.
  *
@@ -64,34 +64,22 @@ export type PresetTemplateMap = Record<string, StoredCreateTemplateDocument>;
  * either deep-merged over the existing settings or, under `--replace`, swapped
  * out wholesale so stale keys a preset no longer sets are dropped.
  */
-export interface PresetSettingsPatch {
-    id_prefix: string;
-    governance?: {
-        preset?: "minimal" | "default" | "strict" | "custom";
-        ownership_enforcement?: "none" | "warn" | "strict";
-        create_mode_default?: "progressive" | "strict";
-        close_validation_default?: "off" | "warn" | "strict";
-        parent_reference?: "warn" | "strict_error";
-        metadata_profile?: "core" | "strict" | "custom";
-        force_required_for_stale_lock?: boolean;
-        create_default_type?: string;
-    };
-    validation?: {
-        sprint_release_format: "warn" | "strict_error";
-        parent_reference?: "warn" | "strict_error";
-        metadata_profile?: "core" | "strict" | "custom";
-        metadata_required_fields?: string[];
-    };
-    testing?: {
-        record_results_to_items: boolean;
-    };
-}
+export type PresetSettingsPatch = Pick<PmSettings, "id_prefix"> & {
+    /** Named governance presets own their derived knobs; custom presets specify overrides. */
+    governance?: Partial<PmSettings["governance"]>;
+    /** Validation policies accepted by the installed SDK; governance owns mirrored fields. */
+    validation?: Partial<PmSettings["validation"]>;
+    /** Test execution and evidence settings accepted by the installed SDK. */
+    testing?: Partial<PmSettings["testing"]>;
+};
+/** Sorted template inventory after user templates shadow builtin names. */
 export interface TemplatesListResult {
     templates: string[];
     count: number;
     builtin_templates: string[];
     user_templates: string[];
 }
+/** Template provenance, on-disk location and create options returned by show. */
 export interface TemplatesShowResult {
     name: string;
     source: "builtin" | "user";
@@ -139,8 +127,8 @@ export declare function mergePresetSettings(existing: JsonObject, patch: JsonObj
 /**
  * Apply one preset's settings and templates to the workspace on disk.
  *
- * Reads the existing `settings.json`, merges (or, under `--replace`, swaps the
- * owned trees of) the preset's patch, and writes the templates the preset ships
+ * Merges (or, under `--replace`, swaps owned trees) against the settings read
+ * under the host's audit lock, then writes the templates the preset ships
  * — unless `--dry-run`, which prints the planned result instead. Honours
  * `--force` to overwrite an existing user template, and `--prefix` to override
  * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
@@ -152,7 +140,7 @@ export declare function applyPreset(context: CommandHandlerContext, input: {
     templates: PresetTemplateMap;
     nextSteps: string[];
     warning?: string;
-}): void;
+}): Promise<void>;
 /**
  * List every template available to the workspace, builtin and user.
  *
