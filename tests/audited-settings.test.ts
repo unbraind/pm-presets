@@ -1,7 +1,7 @@
 /** Real workspace regressions for audited preset settings and read-only previews. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -30,10 +30,18 @@ test("all seven presets preserve audited settings history through merge, replace
     assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
     assert.deepEqual(readdirSync(join(pmRoot, "history")).map((file) => [file, readFileSync(join(pmRoot, "history", file), "utf8")]), historyBefore);
     for (const replace of [false, true]) {
+      await sdk.mutateWorkspaceSettings({ operationId: `audit-baseline-${preset.id}-${replace}`, mutate: (current) => ({ ...current, id_prefix: `baseline-${preset.id}-${replace}-` }) });
+      const workspaceHistory = join(pmRoot, "history", "_workspace.jsonl");
+      const historyStart = existsSync(workspaceHistory) ? readFileSync(workspaceHistory, "utf8") : "";
       await applyPreset({ ...context, options: { replace } }, input);
-      const history = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
-      assert.match(history, /pm-presets-/);
-      assert.match(history, /preset-history-test/);
+      const history = readFileSync(workspaceHistory, "utf8");
+      assert.ok(history.startsWith(historyStart));
+      const delta = history.slice(historyStart.length);
+      assert.match(delta, /pm-presets-/);
+      assert.match(delta, /preset-history-test/);
+      const applied = JSON.parse(readFileSync(join(pmRoot, "settings.json"), "utf8")) as { id_prefix: string; governance: { preset: string } };
+      assert.equal(applied.id_prefix, preset.idPrefix, `${preset.id} replace=${replace} commits its prefix`);
+      assert.equal(applied.governance.preset, preset.governance, `${preset.id} replace=${replace} commits its governance`);
       const health = spawnSync(process.execPath, [cli, "--no-extensions", "health", "--strict-exit", "--json"], { cwd: root, encoding: "utf8" });
       assert.equal(health.status, 0, `${preset.id} replace=${replace}: ${health.stdout}\n${health.stderr}`);
     }
@@ -118,6 +126,7 @@ test("replace preview names omitted owned trees and keys without exposing their 
     ...current, governance: { ...current.governance, preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" },
   }) });
   const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
+  const historyBefore = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
   const output: string[] = [];
   t.mock.method(console, "log", (...args: unknown[]) => { output.push(args.map(String).join(" ")); });
   await applyPreset({ command: "presets apply", args: [], options: { dryRun: true, replace: true }, global: {}, pm_root: pmRoot, sdk }, {
@@ -133,4 +142,29 @@ test("replace preview names omitted owned trees and keys without exposing their 
   assert.ok(!resets.includes("validation.sprint_release_format"));
   assert.deepEqual(resets, [...resets].sort());
   assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
+  assert.equal(readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8"), historyBefore);
+});
+
+/** A replacement may omit owned trees that a later preview wants to populate. */
+test("replacement preview uses host defaults for an owned tree omitted by the preset", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-missing-tree-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const pmRoot = join(root, ".agents", "pm");
+  const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
+  await client.init();
+  const sdk = createExtensionCommandSdk(pmRoot, client);
+  const context = { command: "presets apply", args: [], options: {}, global: { quiet: true }, pm_root: pmRoot, sdk };
+  await applyPreset({ ...context, options: { replace: true } }, {
+    label: "Open source", settings: requirePresetDefinition("open-source").settings, templates: {}, nextSteps: [],
+  });
+  const settingsPath = join(pmRoot, "settings.json");
+  const before = readFileSync(settingsPath, "utf8");
+  const stored = JSON.parse(before) as { testing: { record_results_to_items: boolean; allow_untrusted_linked_tests: boolean } };
+  assert.deepEqual(stored.testing, { record_results_to_items: false, allow_untrusted_linked_tests: false }, "the host materializes the omitted tree before subsequent previews");
+  const historyBefore = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
+  await applyPreset({ ...context, options: { dryRun: true, replace: true } }, {
+    label: "Indie", settings: requirePresetDefinition("indie-dev").settings, templates: {}, nextSteps: [],
+  });
+  assert.equal(readFileSync(settingsPath, "utf8"), before);
+  assert.equal(readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8"), historyBefore);
 });

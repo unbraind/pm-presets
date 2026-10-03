@@ -24,7 +24,6 @@ import { PmClient } from "@unbrained/pm-cli/sdk";
 
 import mod from "../src/index.ts";
 
-
 const MANIFEST_CAPABILITIES: readonly ExtensionCapability[] = (
   JSON.parse(
     readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "manifest.json"), "utf8"),
