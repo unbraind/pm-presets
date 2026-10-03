@@ -2,9 +2,9 @@ import { applyPreset, storedTemplate, } from "../shared.js";
 /**
  * The settings patch for the open-source preset.
  *
- * Default governance with warn-level enforcement and core metadata, suited to
- * community contribution flow; the default create type is `Issue` and new items
- * are prefixed `oss-`. No testing block is set.
+ * The host's `default` governance preset derives enforcement and metadata
+ * policy for community contribution flow. The default create type is `Issue`
+ * and new items are prefixed `oss-`. No testing block is set.
  */
 export const SETTINGS = {
     id_prefix: "oss-",

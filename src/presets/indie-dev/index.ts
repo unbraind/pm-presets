@@ -10,9 +10,9 @@ import {
 /**
  * The settings patch for the indie-dev preset.
  *
- * Minimal governance (`metadata_profile: core`, no close validation, no test
- * recording) for a solo developer; the default create type is `Task` and new
- * items are prefixed `indie-`.
+ * The host's `minimal` governance preset derives enforcement and metadata
+ * policy for a solo developer. Test recording is explicitly disabled; the
+ * default create type is `Task` and new items are prefixed `indie-`.
  */
 export const SETTINGS = {
   id_prefix: "indie-",
