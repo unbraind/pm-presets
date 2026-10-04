@@ -53,11 +53,11 @@
     "verify:release-changelog-date": "node scripts/verify-release-changelog-date.ts"
   },
   "peerDependencies": {
-    "@unbrained/pm-cli": ">=2026.8.7"
+    "@unbrained/pm-cli": ">=2026.9.30"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
-    "@unbrained/pm-cli": "2026.9.28",
+    "@unbrained/pm-cli": "2026.9.30",
     "pm-changelog": "2026.9.25",
     "pm-ops": "2026.9.28",
     "typescript": "^7.0.2"

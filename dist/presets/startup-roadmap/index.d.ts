@@ -40,5 +40,5 @@ export declare const TEMPLATES: {
  * Command handler for the startup-roadmap setup command: delegates the
  * settings, templates, and next-steps to {@link applyPreset}.
  */
-export declare function runStartupRoadmapSetup(context: CommandHandlerContext): void;
+export declare function runStartupRoadmapSetup(context: CommandHandlerContext): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

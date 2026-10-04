@@ -2,25 +2,18 @@ import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 /**
  * The settings patch for the open-source preset.
  *
- * Default governance with warn-level enforcement and core metadata, suited to
- * community contribution flow; the default create type is `Issue` and new items
- * are prefixed `oss-`. No testing block is set.
+ * The host's `default` governance preset derives enforcement and metadata
+ * policy for community contribution flow. The default create type is `Issue`
+ * and new items are prefixed `oss-`. No testing block is set.
  */
 export declare const SETTINGS: {
     id_prefix: string;
     governance: {
         preset: "default";
-        ownership_enforcement: "warn";
-        create_mode_default: "progressive";
-        close_validation_default: "warn";
-        parent_reference: "warn";
-        metadata_profile: "core";
         create_default_type: string;
     };
     validation: {
         sprint_release_format: "warn";
-        parent_reference: "warn";
-        metadata_profile: "core";
     };
 };
 /**
@@ -37,5 +30,5 @@ export declare const TEMPLATES: {
  * Command handler for the open-source setup command: delegates the settings,
  * templates, and next-steps to {@link applyPreset}.
  */
-export declare function runOpenSourceSetup(context: CommandHandlerContext): void;
+export declare function runOpenSourceSetup(context: CommandHandlerContext): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

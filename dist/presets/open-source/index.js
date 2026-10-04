@@ -2,25 +2,18 @@ import { applyPreset, storedTemplate, } from "../shared.js";
 /**
  * The settings patch for the open-source preset.
  *
- * Default governance with warn-level enforcement and core metadata, suited to
- * community contribution flow; the default create type is `Issue` and new items
- * are prefixed `oss-`. No testing block is set.
+ * The host's `default` governance preset derives enforcement and metadata
+ * policy for community contribution flow. The default create type is `Issue`
+ * and new items are prefixed `oss-`. No testing block is set.
  */
 export const SETTINGS = {
     id_prefix: "oss-",
     governance: {
         preset: "default",
-        ownership_enforcement: "warn",
-        create_mode_default: "progressive",
-        close_validation_default: "warn",
-        parent_reference: "warn",
-        metadata_profile: "core",
         create_default_type: "Issue",
     },
     validation: {
         sprint_release_format: "warn",
-        parent_reference: "warn",
-        metadata_profile: "core",
     },
 };
 /**
@@ -65,8 +58,8 @@ export const TEMPLATES = {
  * Command handler for the open-source setup command: delegates the settings,
  * templates, and next-steps to {@link applyPreset}.
  */
-export function runOpenSourceSetup(context) {
-    applyPreset(context, {
+export async function runOpenSourceSetup(context) {
+    await applyPreset(context, {
         label: "Open source",
         settings: SETTINGS,
         templates: TEMPLATES,

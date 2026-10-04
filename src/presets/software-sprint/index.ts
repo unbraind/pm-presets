@@ -18,17 +18,10 @@ export const SETTINGS = {
   id_prefix: "sprint-",
   governance: {
     preset: "default",
-    ownership_enforcement: "warn",
-    create_mode_default: "progressive",
-    close_validation_default: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
     create_default_type: "Task",
   },
   validation: {
     sprint_release_format: "warn",
-    parent_reference: "warn",
-    metadata_profile: "core",
   },
   testing: {
     record_results_to_items: true,
@@ -99,8 +92,8 @@ export const TEMPLATES = {
  * Command handler for the software-sprint setup command: delegates the
  * settings, templates, and next-steps to {@link applyPreset}.
  */
-export function runSoftwareSprintSetup(context: CommandHandlerContext): void {
-  applyPreset(context, {
+export async function runSoftwareSprintSetup(context: CommandHandlerContext): Promise<void> {
+  await applyPreset(context, {
     label: "Software sprint",
     settings: SETTINGS,
     templates: TEMPLATES,

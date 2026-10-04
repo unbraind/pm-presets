@@ -71,8 +71,8 @@ export const TEMPLATES = {
  * Command handler for the startup-roadmap setup command: delegates the
  * settings, templates, and next-steps to {@link applyPreset}.
  */
-export function runStartupRoadmapSetup(context) {
-    applyPreset(context, {
+export async function runStartupRoadmapSetup(context) {
+    await applyPreset(context, {
         label: "Startup roadmap",
         settings: SETTINGS,
         templates: TEMPLATES,

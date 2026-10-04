@@ -11,6 +11,7 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 // pm's extension command runtime only treats a thrown error as a cleanly
@@ -190,14 +191,14 @@ export function mergePresetSettings(existing, patch, replace) {
 /**
  * Apply one preset's settings and templates to the workspace on disk.
  *
- * Reads the existing `settings.json`, merges (or, under `--replace`, swaps the
- * owned trees of) the preset's patch, and writes the templates the preset ships
+ * Merges (or, under `--replace`, swaps owned trees) against the settings read
+ * under the host's audit lock, then writes the templates the preset ships
  * — unless `--dry-run`, which prints the planned result instead. Honours
  * `--force` to overwrite an existing user template, and `--prefix` to override
  * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
  * is present, with the expected settings path in the message.
  */
-export function applyPreset(context, input) {
+export async function applyPreset(context, input) {
     const { options } = context;
     const pmDir = resolvePmDir(context);
     const settingsPath = path.join(pmDir, "settings.json");
@@ -210,19 +211,59 @@ export function applyPreset(context, input) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
             `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
-    const existingSettings = readJsonObject(settingsPath, "settings.json");
+    readJsonObject(settingsPath, "settings.json");
     const effectivePatch = {
         ...input.settings,
         id_prefix: prefixOverride ?? input.settings.id_prefix,
     };
-    const mergedSettings = mergePresetSettings(existingSettings, effectivePatch, replace);
+    const templates = Object.entries(input.templates).map(([filename, template]) => {
+        const normalizedName = normalizeTemplateName(template.name);
+        if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
+            throw new CommandError(`Template map key "${filename}" must match document name "${normalizedName}".`);
+        }
+        return { template, templatePath: path.join(templatesDir, filename) };
+    });
+    if (typeof context.sdk?.mutateWorkspaceSettings !== "function") {
+        throw new CommandError("Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability.");
+    }
+    const replacementResets = [];
+    try {
+        await context.sdk.mutateWorkspaceSettings({
+            operationId: `pm-presets-${randomUUID()}`,
+            dryRun,
+            mutate: (current) => {
+                const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
+                if (dryRun && replace) {
+                    for (const tree of REPLACE_SETTINGS_TREES) {
+                        const patch = effectivePatch[tree];
+                        if (patch === undefined) {
+                            replacementResets.push(tree);
+                            continue;
+                        }
+                        for (const key of Object.keys(current[tree])) {
+                            if (!Object.prototype.hasOwnProperty.call(patch, key)) {
+                                replacementResets.push(`${tree}.${key}`);
+                            }
+                        }
+                    }
+                }
+                return mergedSettings;
+            },
+        });
+    }
+    catch (error) {
+        throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
     const verb = replace ? "replace" : "merge";
     if (dryRun) {
         console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
-        console.log(JSON.stringify(mergedSettings, null, 2));
+        console.log("Preset patch (the host derives governance policies and canonical storage):");
+        console.log(JSON.stringify(effectivePatch, null, 2));
+        if (replace) {
+            console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+        }
     }
     else {
-        fs.writeFileSync(settingsPath, `${JSON.stringify(mergedSettings, null, 2)}\n`, "utf8");
         console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
     }
     if (dryRun) {
@@ -231,12 +272,7 @@ export function applyPreset(context, input) {
     else {
         fs.mkdirSync(templatesDir, { recursive: true });
     }
-    for (const [filename, template] of Object.entries(input.templates)) {
-        const normalizedName = normalizeTemplateName(template.name);
-        const templatePath = path.join(templatesDir, `${normalizedName}${TEMPLATE_FILE_EXTENSION}`);
-        if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
-            throw new CommandError(`Template map key "${filename}" must match document name "${normalizedName}".`);
-        }
+    for (const { template, templatePath } of templates) {
         if (!dryRun && fs.existsSync(templatePath) && !force) {
             console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
             continue;

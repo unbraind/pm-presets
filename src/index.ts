@@ -79,7 +79,7 @@ class PresetError extends Error {
 // exist — fails the build instead of surfacing as a runtime "unknown preset".
 // The handlers apply settings and templates for their side effects and return
 // nothing, so the value type is `void`, not `unknown`.
-const PRESET_HANDLERS: Record<PresetId, (ctx: CommandHandlerContext) => void> = {
+const PRESET_HANDLERS: Record<PresetId, (ctx: CommandHandlerContext) => Promise<void>> = {
   "bug-triage": runBugTriageSetup,
   "indie-dev": runIndieDevSetup,
   "open-source": runOpenSourceSetup,
@@ -539,12 +539,12 @@ export default defineExtension({
         { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
       ],
       flags: APPLY_FLAGS,
-      run: (ctx: CommandHandlerContext) => {
+      run: async (ctx: CommandHandlerContext) => {
         const id = ctx.args?.[0];
         // Validate the id up front (NOT_FOUND/exit 3 for unknown names).
         const definition = requirePresetDefinition(id);
         const handler = PRESET_HANDLERS[definition.id];
-        handler(ctx);
+        await handler(ctx);
 
         const withSeeds = readBooleanOption(ctx.options, "withSeeds", "with-seeds");
         if (!withSeeds) {
