@@ -45,3 +45,7 @@ Both launchers `npx -y @unbrained/pm-cli@2026.10.4` and `bunx --bun @unbrained/p
 ```
 
 Both exported snapshots parsed; npm and native Bun catalogs matched. Output: `Real tracker npm/native Bun preset catalog equality; all seven merge/replace paths completed.` Scratch tracker deleted. These successful preset workflows do not override the separate omitted-raw-key regression.
+
+## Review handoff
+
+At source candidate `31ee4a3060362259dd641c284fe56f00fa171a6f`, Node 22/26 CI fails the preserved SDK replacement assertion. Manual CodeRabbit and Greptile reviews identify no additional actionable findings; all observed bot bodies were reacted to and answered, with zero unresolved threads. Sourcery quota, cubic neutral status and absent Gemini/Copilot responses remain missing evidence. Certification stays blocked by SDK issue #1394; tracker items remain open and released.
