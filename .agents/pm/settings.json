@@ -172,13 +172,13 @@
       "hierarchy": true,
       "activity": true,
       "progress": true,
+      "recently_created": true,
+      "unparented": true,
       "blockers": true,
       "files": true,
       "workload": true,
       "staleness": true,
-      "tests": true,
-      "recently_created": true,
-      "unparented": true
+      "tests": true
     }
   },
   "extensions": {
