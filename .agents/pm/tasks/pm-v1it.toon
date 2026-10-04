@@ -2,19 +2,22 @@ id: pm-v1it
 title: Auto-merge green Dependabot updates and group the pm toolchain into one daily PR
 description: "Version bumps of the pm CLI, SDK-bearing packages and fleet gates are mechanical: they must land without a hand-written certification PR. Dependabot now checks npm daily, groups @unbrained/pm-cli and pm-* packages into one pm-toolchain PR and other minor/patch updates into one dependencies PR, and a workflow enables GitHub auto-merge (squash) for every non-major Dependabot PR so it merges as soon as the required checks pass. A failing bump is a real defect to fix, not a certification task."
 type: Task
-status: in_progress
+status: closed
 priority: 2
 tags[3]: automation,ci,dependencies
 created_at: "2026-10-04T16:27:57.340Z"
-updated_at: "2026-10-04T16:46:09.921Z"
-assignee: claude-orchestrator
-claim_principal: claude-orchestrator
+updated_at: "2026-10-04T17:20:41.858Z"
+closed_at: "2026-10-04T16:53:28.276Z"
+completed_at: "2026-10-04T16:53:28.276Z"
 author: claude-orchestrator
-acceptance_criteria: dependabot.yml checks npm daily with pm-toolchain and dependencies groups; dependabot-auto-merge.yml enables squash auto-merge only for Dependabot non-major updates with least-privilege permissions; repository allows auto-merge; required checks still gate every merge
-comments[2]{created_at,author,text}:
+acceptance_criteria: "dependabot.yml checks npm daily with disjoint pm-toolchain and dependencies groups; dependabot-auto-merge.yml enables squash auto-merge for the calendar-versioned pm-toolchain group (year rollovers read as semver-major) and otherwise only for updates classified minor or patch, with documented least-privilege permissions; repository allows auto-merge; required checks still gate every merge"
+comments[4]{created_at,author,text}:
   "2026-10-04T16:29:01.887Z",claude-orchestrator,"Pilot of the fleet-wide rule 'version bumps are automated' (companion pm-cli-website docs/fleet-operating-rules.md). release:check passes locally (158 tests, gates ok)."
   "2026-10-04T16:46:09.921Z",claude-orchestrator,"Review round 1 (CodeRabbit: keep majors out of pm-toolchain): pm is calendar-versioned, so the 2026->2027 rollover is a semver major for every pm package; filtering the group to minor/patch would stall every January bump. Instead the group stays unfiltered and the workflow auto-merges pm-toolchain regardless of update type, while any other major still waits for a person. Required checks gate both."
+  "2026-10-04T16:53:27.440Z",claude-orchestrator,"Proof after merging #118: Dependabot superseded #112/#114 with grouped PR #119 and dependabot-auto-merge enabled squash auto-merge on it (run on dependabot/npm_and_yarn/dependencies-852671bb2a, success). Found: pm-ops landed in the generic dependencies group (capped at 2026.9.29) instead of pm-toolchain, so the groups are now disjoint via exclude-patterns. One red run is a benign race: Dependabot closed #112 as superseded while the job ran."
+  "2026-10-04T17:20:41.858Z",claude-orchestrator,"Review round 2 (Greptile/CodeRabbit across the fleet rollout): explicit minor/patch allow-list so an unclassified update never auto-merges; documented why the job needs write permissions; explicit patterns for the dependencies group; acceptance criteria now name the pm-toolchain calendar-version exception. Refused: switching to pull_request_target (GitHub keeps Dependabot-authored runs read-only there too; the pull_request + permissions pattern is proven by pm-presets#119) and removing the pm-toolchain exception (owner rule pm-cli-website-6d05: pm bumps land unattended; required checks gate them)."
 files[2]{path,scope,note}:
   .github/dependabot.yml,project,daily npm with pm-toolchain group
   .github/workflows/dependabot-auto-merge.yml,project,auto-merge non-major Dependabot PRs
+close_reason: "Daily grouped pm-toolchain Dependabot updates plus least-privilege auto-merge are live (#118); auto-merge proven on #119; groups made disjoint in this follow-up. Greptile 5/5, CodeRabbit verified the calendar-version rollover fix in-thread."
 body: ""
