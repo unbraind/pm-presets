@@ -3,8 +3,20 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
+    groups:
+      # The pm CLI, its SDK-bearing packages and the fleet gates move together
+      # in one pull request per day; dependabot-auto-merge.yml merges it as soon
+      # as the required checks pass, so a release bump needs no manual work.
+      pm-toolchain:
+        patterns:
+          - "@unbrained/pm-cli"
+          - "pm-*"
+      dependencies:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"

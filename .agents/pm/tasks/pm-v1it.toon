@@ -1,0 +1,19 @@
+id: pm-v1it
+title: Auto-merge green Dependabot updates and group the pm toolchain into one daily PR
+description: "Version bumps of the pm CLI, SDK-bearing packages and fleet gates are mechanical: they must land without a hand-written certification PR. Dependabot now checks npm daily, groups @unbrained/pm-cli and pm-* packages into one pm-toolchain PR and other minor/patch updates into one dependencies PR, and a workflow enables GitHub auto-merge (squash) for every non-major Dependabot PR so it merges as soon as the required checks pass. A failing bump is a real defect to fix, not a certification task."
+type: Task
+status: in_progress
+priority: 2
+tags[3]: automation,ci,dependencies
+created_at: "2026-10-04T16:27:57.340Z"
+updated_at: "2026-10-04T16:29:01.887Z"
+assignee: claude-orchestrator
+claim_principal: claude-orchestrator
+author: claude-orchestrator
+acceptance_criteria: dependabot.yml checks npm daily with pm-toolchain and dependencies groups; dependabot-auto-merge.yml enables squash auto-merge only for Dependabot non-major updates with least-privilege permissions; repository allows auto-merge; required checks still gate every merge
+comments[1]{created_at,author,text}:
+  "2026-10-04T16:29:01.887Z",claude-orchestrator,"Pilot of the fleet-wide rule 'version bumps are automated' (companion pm-cli-website docs/fleet-operating-rules.md). release:check passes locally (158 tests, gates ok)."
+files[2]{path,scope,note}:
+  .github/dependabot.yml,project,daily npm with pm-toolchain group
+  .github/workflows/dependabot-auto-merge.yml,project,auto-merge non-major Dependabot PRs
+body: ""
