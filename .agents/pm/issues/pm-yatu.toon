@@ -1,0 +1,20 @@
+id: pm-yatu
+title: Audited SDK replacement preserves omitted raw governance keys
+description: "Independent published SDK reproduction shows callback and preview omit an unknown owned governance key while persisted raw settings retain it; unchanged replace-mode regression fails. Upstream https://github.com/unbraind/pm-cli/issues/1394. Preserve audit boundary and assertion; cannot directly write settings or weaken replace semantics."
+type: Issue
+status: open
+priority: 1
+tags: []
+created_at: "2026-10-04T12:05:25.703Z"
+updated_at: "2026-10-04T12:07:05.221Z"
+author: codex-sol
+severity: high
+expected_result: Owned subtree replacement removes omitted keys with locked audited persistence and accurate preview.
+actual_result: "CLI 2026.10.4: callbackHadLeftover=false, previewHasLeftover=false, persistedLeftover=true. Full gate 158/159, coverage 100 lines/branches/functions, zero skips."
+files[3]{path,scope}:
+  docs/SDK-1394-repro.mjs,project
+  src/presets/shared.ts,project
+  tests/shared.test.ts,project
+tests[1]{command,scope,pm_context_mode,workspace_context_mode,provenance{author,created_at,source_kind,source_ref}}:
+  node docs/SDK-1394-repro.mjs,project,tracker,source,codex-sol,"2026-10-04T12:07:05.186Z",local_mutation,chore/pm-presets-pm-cli-2026-10-4
+body: ""

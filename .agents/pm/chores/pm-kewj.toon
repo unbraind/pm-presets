@@ -1,0 +1,39 @@
+id: pm-kewj
+title: Certify pm-presets on PM CLI/SDK 2026.10.4 and consolidate pending dependency updates
+description: "Exact pins, Dependabot consolidation, canonical launcher, unchanged coverage thresholds, full CI gate and real tracker packed npm/native Bun acceptance; orchestrator merges and closes."
+type: Chore
+status: in_progress
+priority: 1
+tags: []
+created_at: "2026-10-04T11:53:44.882Z"
+updated_at: "2026-10-04T12:10:16.978Z"
+assignee: codex-sol
+claim_principal: codex-sol
+author: codex-sol
+blocked_by: pm-yatu
+actual_result: "Full release gate 158/159, zero skips, 100 lines/branches/functions across 16 configured files; statements unmeasured. Existing replace assertion blocked by independently reproduced upstream pm-cli#1394, package owner pm-yatu. Both audits clean; strict health exit0 with one advisory. All remaining release steps pass. Packed real tracker npm/native Bun catalog/show/diff/validate/export and all seven merge/replace applications pass; scratch removed. GitHub preview zero cases, no issue writes or scheduling. CI/reviews pending."
+dependencies[1]{id,kind,created_at,author,source_kind,author_source}:
+  pm-yatu,blocked_by,"2026-10-04T12:07:03.357Z",codex-sol,"cli:update:blocked_by",detected
+comments[4]{created_at,author,text}:
+  "2026-10-04T11:54:54.797Z",codex-sol,Certification worktree based on origin/main 050df6c. No open 2026.10 certification exists; pm-weky owns blocked version-specific 2026.9.28 evidence. Consolidate Dependabot #111 #112 #114 #115 and exact published pins. Security alerts zero; SDK floor stays 2026.9.30. Full audit measured separately; preserve 100% line/branch/function thresholds and report statements as unmeasured.
+  "2026-10-04T12:00:15.093Z",codex-sol,"Both production and full npm audits are clean: zero vulnerabilities; pm-ops 2026.10.4 has no fast-glob dependency. Removed my uncommitted provisional audit finding after measuring the actual graph. Initial full gate: 158/159 tests pass, zero skips, 100% lines/branches/functions; replace-mode SDK mutation preserves an omitted governance leftover key. Preserve the assertion and investigate audited API semantics."
+  "2026-10-04T12:05:26.879Z",codex-sol,"Independent disposable SDK-only reproduction confirmed complete-next-tree mutation cannot remove unknown owned-subtree keys: callback and preview omit the key, persistence retains true. Searched duplicates, filed upstream pm-cli#1394; no upstream source edits. Preserve replace assertion and audit lock/history boundary; certification NOT READY while upstream capability is blocked."
+  "2026-10-04T12:10:16.978Z",codex-sol,"Real-tracker tarball npm and native Bun acceptance passed: list/validate/show/diff/dry-run apply/export plus all seven presets in merge and replace modes; catalog equality and exported JSON parsed. Scratch deleted. Remaining independent release steps pass, audits clean, health strict exit0. Preserve blocked SDK replacement assertion; docs include exact receipts. CI restores managed pm-github artifacts before health."
+files[12]{path,scope}:
+  .agents/pm/extensions/.managed-extensions.json,project
+  .github/workflows/ci.yml,project
+  .github/workflows/codeql.yml,project
+  .gitignore,project
+  CHANGELOG.md,project
+  docs/certification-2026.10.4.md,project
+  docs/SDK-1394-repro.mjs,project
+  package-lock.json,project
+  package.json,project
+  scripts/install-pm-github.sh,project
+  scripts/prepare-merge-driver.ts,project
+  tests/prepare-merge-driver.test.ts,project
+tests[1]{command,scope,timeout_seconds,pm_context_mode,workspace_context_mode,provenance{author,created_at,source_kind,source_ref}}:
+  "env -u PM_PATH npm run release:check",project,2400,tracker,source,codex-sol,"2026-10-04T11:54:56.959Z",local_mutation,chore/pm-presets-pm-cli-2026-10-4
+docs[1]{path,scope}:
+  docs/certification-2026.10.4.md,project
+body: ""

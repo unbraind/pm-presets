@@ -18,3 +18,7 @@ coverage/
 # one turns the health gate red; the journal has no value once the transaction
 # has landed. Deliberately outside any `pm-cli:` fence, which the CLI rewrites.
 .agents/pm/transactions/
+
+# Reconstruct managed package artifacts from their tracked registry.
+.agents/pm/extensions/*
+!.agents/pm/extensions/.managed-extensions.json
