@@ -6,13 +6,14 @@ status: in_progress
 priority: 2
 tags[3]: automation,ci,dependencies
 created_at: "2026-10-04T16:27:57.340Z"
-updated_at: "2026-10-04T16:29:01.887Z"
+updated_at: "2026-10-04T16:46:09.921Z"
 assignee: claude-orchestrator
 claim_principal: claude-orchestrator
 author: claude-orchestrator
 acceptance_criteria: dependabot.yml checks npm daily with pm-toolchain and dependencies groups; dependabot-auto-merge.yml enables squash auto-merge only for Dependabot non-major updates with least-privilege permissions; repository allows auto-merge; required checks still gate every merge
-comments[1]{created_at,author,text}:
+comments[2]{created_at,author,text}:
   "2026-10-04T16:29:01.887Z",claude-orchestrator,"Pilot of the fleet-wide rule 'version bumps are automated' (companion pm-cli-website docs/fleet-operating-rules.md). release:check passes locally (158 tests, gates ok)."
+  "2026-10-04T16:46:09.921Z",claude-orchestrator,"Review round 1 (CodeRabbit: keep majors out of pm-toolchain): pm is calendar-versioned, so the 2026->2027 rollover is a semver major for every pm package; filtering the group to minor/patch would stall every January bump. Instead the group stays unfiltered and the workflow auto-merges pm-toolchain regardless of update type, while any other major still waits for a person. Required checks gate both."
 files[2]{path,scope,note}:
   .github/dependabot.yml,project,daily npm with pm-toolchain group
   .github/workflows/dependabot-auto-merge.yml,project,auto-merge non-major Dependabot PRs
