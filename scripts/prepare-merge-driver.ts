@@ -10,8 +10,8 @@
  * the entry, or a `pm-ops` directory whose package.json is gone) and any
  * installer failure fail the install.
  *
- * Canonical copy: `pm-ops/templates/prepare-merge-driver.ts`. Copy it
- * unchanged to `scripts/prepare-merge-driver.ts`.
+ * The installed pm-ops export owns installer behavior. This local launcher
+ * keeps the absence and failure contract independently of template revisions.
  */
 
 import { spawnSync } from "node:child_process";
@@ -40,7 +40,14 @@ try {
     packagePresent =
       !(probe instanceof Error && "code" in probe && probe.code === "MODULE_NOT_FOUND") ||
       resolver.resolve.paths("pm-ops/package.json")!.some(
-        (directory) => lstatSync(join(directory, "pm-ops"), { throwIfNoEntry: false }) !== undefined,
+        (directory) => {
+          try {
+            return lstatSync(join(directory, "pm-ops"), { throwIfNoEntry: false }) !== undefined;
+          } catch {
+            // An inconclusive presence probe must retain the resolution error.
+            return true;
+          }
+        },
       );
   }
   if (packagePresent) throw error;

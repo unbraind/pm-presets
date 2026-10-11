@@ -1,0 +1,39 @@
+id: pm-0czt
+title: Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior
+description: "Dependabot manifests must pass unchanged gates without manual version edits. Preserve exact pins, compatible floors, lock and installed metadata consistency, audited settings history, template force behavior, and installer failure safety."
+type: Issue
+status: in_progress
+priority: 1
+tags[3]: dependabot,regression,toolchain
+created_at: "2026-10-11T05:00:48.113Z"
+updated_at: "2026-10-11T05:53:45.387Z"
+author: codex-sol
+acceptance_criteria: Current and actual Dependabot manifests pass npm and Bun release gates; behavioral regressions fail with changed functions reverted; tracker evidence committed.
+comments[9]{created_at,author,text}:
+  "2026-10-11T05:01:28.305Z",codex-sol,"Read the complete failing CI log and PR checks: 156 of 158 tests passed; template equality and replace-mode stale-key removal failed. Plan: derive pin consistency from manifests and installed metadata, keep floors as minima, enforce replacement through the audited host callback, and verify launcher behavior rather than upstream template bytes."
+  "2026-10-11T05:05:03.781Z",codex-sol,"The newer host callback normalizes recognized settings and the serializer intentionally retains unknown source fields. Replace regression now uses recognized require_close_reason, workflow_enforcement and testing overrides; named policy is checked through effective SDK settings. Fixed dry-run template plans to obey force exactly like application. Installer contract now covers export delegation without a template and preserves the original error on malformed lookup paths."
+  "2026-10-11T05:06:45.014Z",codex-agent,"Orchestrator review: replacement must remain inside the audited host settings capability. The newer SDK normalizes known policy fields and preserves unknown persisted fields, so integration assertions must verify effective recognized settings. Existing template preview skips also need to match real application without force."
+  "2026-10-11T05:10:07.693Z",codex-sol,"Focused regressions and tracker-linked tests pass 29/29 on the actual Dependabot manifests; TypeScript checks pass. Reverting only the changed production files while keeping regressions produced 2/2 assertion failures: existing-template preview ignored force and malformed lookup replaced MODULE_NOT_FOUND with ENOTDIR. Restored production code. Tests import TypeScript sources, so revert proof needs no dist rebuild. Raw logs retained outside the repository."
+  "2026-10-11T05:28:37.356Z",codex-sol,"Actual grouped dependency-bump manifests passed both full npm run release:check and bun run release:check: each 162 tests passed, zero failed/skipped, 16 configured source files at 100 percent lines/branches/functions, 38 files and 95 documented declarations, zero production audit vulnerabilities, 62 packed files, changelog and release attestation/date checks passed. Restoring the original manifest pair and reinstalling before current-manifest and isolated Git identity acceptance."
+  "2026-10-11T05:48:03.211Z",codex-agent,"Independent orchestrator verification passed 4 of 4 focused tests with the pinned package CLI on PATH: lock and installed pin consistency, rejection of drift, preserved installer resolution failure, and force-aware template preview without writes. Coverage configuration and peer floor still match the base branch; added tracker text contains no absolute paths."
+  "2026-10-11T05:48:52.450Z",codex-sol,"All four full release runs passed: original manifests under npm with an empty HOME and global/system Git configuration disabled, original manifests under Bun, and unchanged actual dependency-bump manifests under both npm and Bun. Every run passed 162/162 tests with zero failures/skips, 100 percent lines/branches/functions across the configured 16 files, 95 documented declarations in 38 files, zero production audit vulnerabilities, 62 package files, and all changelog/attestation/date checks. Original manifests restored byte for byte and npm ci completed. Revert proof remains 2/2 expected failures; restored focused and tracker-linked acceptance passed 29/29. Implementation and evidence are ready for branch review; keep this item open for orchestrator verification."
+  "2026-10-11T05:49:52.996Z",codex-agent,"The orchestrator tracker-linked verification now passes 4 of 4 assertions, exit 0, after correcting quotation of the test-name regular expression in the linked command. Direct and linked executions agree. All four full release gates passed 162 of 162 tests on the original and automated dependency manifests, including isolated Git identity for the original npm gate."
+  "2026-10-11T05:53:45.387Z",codex-sol,Final history verification passed with matching item and history hashes; regenerated changelog is unchanged and checked. Ambient strict health correctly refused a global pm-github host-version mismatch (repo CLI 2026.10.3 versus global extension metadata 2026.10.11). Repeating strict health with an empty HOME and global/system Git configuration disabled passed with required merge drivers. This environment boundary is reported to the orchestrator; no global extension or dependency configuration was changed.
+files[9]{path,scope}:
+  dist/presets/shared.d.ts,project
+  dist/presets/shared.d.ts.map,project
+  dist/presets/shared.js,project
+  dist/presets/shared.js.map,project
+  scripts/prepare-merge-driver.ts,project
+  src/presets/shared.ts,project
+  tests/compatibility-floor.test.ts,project
+  tests/prepare-merge-driver.test.ts,project
+  tests/shared.test.ts,project
+tests[4]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test tests/compatibility-floor.test.ts tests/prepare-merge-driver.test.ts tests/shared.test.ts,project,codex-sol,"2026-10-11T05:07:19.641Z",local_mutation,fix/self-syncing-toolchain-pin
+  "npm run release:check",project,codex-sol,"2026-10-11T05:48:32.532Z",local_mutation,fix/self-syncing-toolchain-pin
+  "bun run release:check",project,codex-sol,"2026-10-11T05:48:44.242Z",local_mutation,fix/self-syncing-toolchain-pin
+  "node --test --test-name-pattern=\"toolchain|pin.consistency|preview.respects|inconclusive\" tests/compatibility-floor.test.ts tests/shared.test.ts tests/prepare-merge-driver.test.ts",project,codex-agent,"2026-10-11T05:49:06.787Z",local_mutation,fix/self-syncing-toolchain-pin
+docs[1]{path,scope}:
+  README.md,project
+body: ""

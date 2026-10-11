@@ -1,7 +1,7 @@
 /**
  * Tests for the npm `prepare` hook `scripts/prepare-merge-driver.ts`.
  *
- * The hook must stay the canonical pm-ops launcher byte for byte, and it is
+ * The hook delegates to the installed pm-ops export and is
  * exercised the way npm runs it: as the entry point of a child process whose
  * working directory is a consumer checkout. Every checkout is a fresh
  * `git init` with its own local config, so the drivers this repository's own
@@ -89,9 +89,26 @@ function registeredDrivers(cwd: string): string[] {
   return config.stdout.split("\n").filter(Boolean).map((key) => key.split(".")[1]).sort();
 }
 
-test("the prepare launcher is the unmodified pm-ops template", () => {
-  const canonical = readFileSync(join(root, "node_modules", "pm-ops", "templates", "prepare-merge-driver.ts"), "utf8");
-  assert.equal(readFileSync(launcher, "utf8"), canonical);
+test("the prepare launcher delegates to the installed export without a template file", () => {
+  const directory = checkout("export-contract", "absent");
+  const packageDirectory = join(directory, "node_modules", "pm-ops");
+  mkdirSync(packageDirectory, { recursive: true });
+  writeFileSync(join(packageDirectory, "package.json"), JSON.stringify({ name: "pm-ops", type: "module", exports: { "./merge-driver/prepare": "./installer.js" } }));
+  writeFileSync(join(packageDirectory, "installer.js"), 'console.log("installed export invoked");\n');
+  const result = prepare(directory, hostPath);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "installed export invoked\n");
+  assert.equal(result.stderr, "");
+});
+
+test("an inconclusive package presence probe preserves the original resolution failure", () => {
+  const directory = checkout("invalid-lookup", "absent");
+  writeFileSync(join(directory, "node_modules"), "malformed lookup directory");
+  const result = prepare(directory, hostPath);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MODULE_NOT_FOUND/);
+  assert.doesNotMatch(result.stderr, /ENOTDIR|skipping merge-driver install/);
+  assert.deepEqual(registeredDrivers(directory), []);
 });
 
 test("a full install registers every merge driver .gitattributes declares", posixOnly, () => {
