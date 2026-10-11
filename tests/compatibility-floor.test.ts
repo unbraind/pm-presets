@@ -10,6 +10,11 @@ interface PackageManifest {
   readonly peerDependencies?: Record<string, string>;
 }
 
+/** Lock entries needed to bind declared toolchain pins to the installed packages. */
+interface ToolchainLock {
+  readonly packages: Record<string, { readonly version?: string; readonly devDependencies?: Record<string, string> }>;
+}
+
 interface ExtensionManifest {
   /**
    * Declared as `unknown` deliberately: `manifest.json` is untrusted JSON, and
@@ -30,6 +35,42 @@ const extensionManifest = JSON.parse(
 
 const CLI = "@unbrained/pm-cli";
 const EXACT_VERSION = /^\d+\.\d+\.\d+$/;
+
+/** Reject ranged pins and disagreement between manifest, lock root, lock entry and installation. */
+function assertToolchainPins(manifest: PackageManifest, lock: ToolchainLock, installed: Record<string, string>): void {
+  for (const name of [CLI, "pm-ops", "pm-changelog"]) {
+    const pin = manifest.devDependencies?.[name];
+    assert.ok(pin, `missing development pin: ${name}`);
+    assert.match(pin, EXACT_VERSION, `${name} must use an exact pin`);
+    assert.equal(lock.packages[""]?.devDependencies?.[name], pin, `${name} lock root disagrees with manifest`);
+    assert.equal(lock.packages[`node_modules/${name}`]?.version, pin, `${name} lock entry disagrees with manifest`);
+    assert.equal(installed[name], pin, `${name} installed metadata disagrees with manifest`);
+  }
+}
+
+test("toolchain exact pins agree with both lock declarations and installed metadata", () => {
+  const lock = JSON.parse(readFileSync(resolve(repoRoot, "package-lock.json"), "utf8")) as ToolchainLock;
+  const installed: Record<string, string> = {};
+  for (const name of [CLI, "pm-ops", "pm-changelog"]) {
+    const metadata = JSON.parse(readFileSync(resolve(repoRoot, "node_modules", name, "package.json"), "utf8")) as { version: string };
+    installed[name] = metadata.version;
+  }
+  assertToolchainPins(packageJson, lock, installed);
+});
+
+test("pin consistency rejects ranges and every independently drifted version source", () => {
+  const names = [CLI, "pm-ops", "pm-changelog"];
+  const pins = Object.fromEntries(names.map((name) => [name, "2030.1.2"]));
+  const manifest = { devDependencies: pins };
+  const lock: ToolchainLock = { packages: { "": { devDependencies: pins }, ...Object.fromEntries(names.map((name) => [`node_modules/${name}`, { version: pins[name] }])) } };
+  assertToolchainPins(manifest, lock, pins);
+  for (const name of names) {
+    assert.throws(() => assertToolchainPins({ devDependencies: { ...pins, [name]: `^${pins[name]}` } }, lock, pins), /exact pin/);
+    assert.throws(() => assertToolchainPins(manifest, { packages: { ...lock.packages, "": { devDependencies: { ...pins, [name]: "2030.1.1" } } } }, pins), /lock root/);
+    assert.throws(() => assertToolchainPins(manifest, { packages: { ...lock.packages, [`node_modules/${name}`]: { version: "2030.1.1" } } }, pins), /lock entry/);
+    assert.throws(() => assertToolchainPins(manifest, lock, { ...pins, [name]: "2030.1.1" }), /installed metadata/);
+  }
+});
 
 /**
  * Two independent systems enforce the pm CLI compatibility floor, and each reads
@@ -119,11 +160,7 @@ test("the development dependency is an exact pin at or above the declared floor"
 });
 
 test("the version comparison orders YYYY.M.D numerically, not lexicographically", () => {
-  // In the repository as it stands the pin equals the floor, so the
-  // greater-than branch of atOrAbove is never reached by the assertion above.
-  // A comparison whose ordering branch is never executed is not verified by
-  // the suite passing — V8 does not even report a branch it never reaches —
-  // so the ordering is exercised here directly.
+  // Exercise equality and ordering independently of this checkout's version.
   assert.ok(atOrAbove("2026.8.15", "2026.8.15"), "an equal pin satisfies the floor");
   assert.ok(atOrAbove("2026.8.15", "2026.8.7"), "a later day satisfies an earlier floor");
   assert.ok(!atOrAbove("2026.8.14", "2026.8.15"), "an earlier day must not satisfy a later floor");

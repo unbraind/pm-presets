@@ -83,8 +83,9 @@ export type PresetTemplateMap = Record<string, StoredCreateTemplateDocument>;
  * The settings fragment a preset layers onto a workspace's `settings.json`.
  *
  * The governance / validation / testing trees are owned by the preset and are
- * either deep-merged over the existing settings or, under `--replace`, swapped
- * out wholesale so stale keys a preset no longer sets are dropped.
+ * either deep-merged over the existing settings or, under `--replace`, reset
+ * to the patch and host defaults. The host owns canonical storage and the
+ * preservation of unrecognized stored fields.
  */
 export type PresetSettingsPatch = Pick<PmSettings, "id_prefix"> & {
   /** Named governance presets own their derived knobs; custom presets specify overrides. */
@@ -385,7 +386,7 @@ export async function applyPreset(
   }
 
   for (const { template, templatePath } of templates) {
-    if (!dryRun && fs.existsSync(templatePath) && !force) {
+    if (fs.existsSync(templatePath) && !force) {
       console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
       continue;
     }

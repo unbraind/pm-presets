@@ -273,7 +273,7 @@ export async function applyPreset(context, input) {
         fs.mkdirSync(templatesDir, { recursive: true });
     }
     for (const { template, templatePath } of templates) {
-        if (!dryRun && fs.existsSync(templatePath) && !force) {
+        if (fs.existsSync(templatePath) && !force) {
             console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
             continue;
         }

@@ -115,15 +115,17 @@ plus:
 
 **Idempotency & safety.** `apply` is safe to re-run:
 
-- Requires host pm CLI **2026.9.30 or newer**. Settings changes use the host-bound
+- Requires the host pm CLI minimum declared in `manifest.json` and the package
+  peer dependency. Settings changes use the host-bound
   SDK audit lock and workspace history. Application awaits that commit before
   writing templates or creating seeds; an unavailable audit capability fails closed.
 - `settings.json` is **deep-merged** by default — the preset's keys are layered
   over your existing settings, so unrelated config (telemetry, locks, etc.) is
   preserved.
 - `--replace` instead **swaps the `governance` / `validation` / `testing` trees
-  wholesale** with the preset's exact trees — dropping any keys the preset no
-  longer sets, for a clean reset. Unrelated top-level settings (`id_prefix`,
+  wholesale** with the preset's trees — resetting omitted keys to host defaults
+  and deriving named governance policies, for a clean reset. The host serializer
+  retains unrecognized stored fields. Unrelated top-level settings (`id_prefix`,
   `telemetry`, `locks`, …) are still preserved in both modes.
 - Templates are **skipped if a file with that name already exists**; pass
   `--force` to overwrite them.
@@ -318,10 +320,10 @@ This repo tracks its project management in `.agents/pm/` and ships a committed `
 that maps those tracker artifacts to pm-cli's field-aware Git merge drivers, so concurrent-branch
 tracker edits merge cleanly instead of hard-conflicting. Generated extension assets are excluded
 from semantic merging, while their managed manifest retains key-level JSON merging. The driver
-**definitions** live in per-clone Git config; `npm install` / `npm ci` wires them automatically via the `prepare` script, `scripts/prepare-merge-driver.ts`: the launcher template pm-ops ships, copied unchanged, which a test compares byte for byte with the pinned template. It runs pm-ops's installer, which calls `pm merge install` when the `pm` CLI is on `PATH` and skips with a notice when it is not. A production install of a clone (`npm ci --omit=dev`) has no `pm-ops`, so the launcher skips with one notice, while a stale or broken `pm-ops` fails the install. Registry installs of this package never run `prepare`. Being Node-based, it behaves identically on POSIX shells and Windows `cmd.exe`. To (re)run manually: `npm run merge:install`.
+**definitions** live in per-clone Git config; `npm install` / `npm ci` wires them automatically via the `prepare` script, `scripts/prepare-merge-driver.ts`: a local launcher that delegates to the installed pm-ops export and is tested against an installer behavior contract. It runs pm-ops's installer, which calls `pm merge install` when the `pm` CLI is on `PATH` and skips with a notice when it is not. A production install of a clone (`npm ci --omit=dev`) has no `pm-ops`, so the launcher skips with one notice, while a stale or broken `pm-ops` fails the install. Registry installs of this package never run `prepare`. Being Node-based, it behaves identically on POSIX shells and Windows `cmd.exe`. To (re)run manually: `npm run merge:install`.
 
 After merging a branch that touched `.agents/pm/`, reconcile any residual history-hash drift with
-**`pm merge reconcile`** (pm-cli ≥ 2026.7.22): preview with `pm merge reconcile --dry-run`, apply with
+**`pm merge reconcile`**: preview with `pm merge reconcile --dry-run`, apply with
 `pm merge reconcile --message "post-merge reconcile"`, then confirm with `pm validate`, which scans the
 whole tracker and flags remaining history drift across **every** affected item (`pm merge reconcile`
 itself lists each affected stream in its output; `pm history --verify <id>` spot-checks one item). The field-aware driver already unions every author's

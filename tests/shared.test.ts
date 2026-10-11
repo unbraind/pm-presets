@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import { createExtensionCommandSdk, PmClient, type CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+import { createExtensionCommandSdk, PmClient, readSettings, type CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
 import {
   runAgentWorkflowSetup,
@@ -154,7 +154,7 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
   const pmDir = await workspace(t);
   writeFileSync(
     join(pmDir, "settings.json"),
-    JSON.stringify({ ...JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")), governance: { preset: "default", leftover: true }, testing: { record_results_to_items: false } }, null, 2),
+    JSON.stringify({ ...JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")), governance: { preset: "custom", require_close_reason: false, workflow_enforcement: "strict" }, testing: { record_results_to_items: true } }, null, 2),
   );
   const warns: string[] = [];
   t.mock.method(console, "log", () => {});
@@ -169,11 +169,14 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
     nextSteps: ["first"],
   });
   const afterReplace = JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")) as {
-    governance?: { leftover?: boolean; preset?: string };
+    governance?: { require_close_reason?: boolean; workflow_enforcement?: string; preset?: string };
     testing?: unknown;
   };
   assert.strictEqual(afterReplace.governance?.preset, "minimal");
-  assert.equal(afterReplace.governance?.leftover, undefined);
+  // Named policy defaults may be materialized by the SDK rather than omitted.
+  const effective = await readSettings(pmDir);
+  assert.equal(effective.governance.require_close_reason, true);
+  assert.equal(effective.governance.workflow_enforcement, undefined);
   assert.equal((afterReplace.testing as { record_results_to_items: boolean }).record_results_to_items, false);
 
   await applyPreset(context(pmDir), {
@@ -200,6 +203,29 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
   };
   assert.strictEqual(overwritten.options.priority, "9");
   assert.ok(warns.some((line) => line.includes("Strict governance is active.")));
+});
+
+test("applyPreset preview respects existing templates and force without writes", async (t) => {
+  const pmDir = await workspace(t);
+  const templatesDir = join(pmDir, "templates");
+  mkdirSync(templatesDir, { recursive: true });
+  const templatePath = join(templatesDir, "idea.json");
+  const original = JSON.stringify(storedTemplate("idea", { type: "Task", priority: "1" }));
+  writeFileSync(templatePath, original);
+  const before = readFileSync(join(pmDir, "settings.json"), "utf8");
+  const lines: string[] = [];
+  const warnings: string[] = [];
+  t.mock.method(console, "log", (...args: unknown[]) => { lines.push(args.map(String).join(" ")); });
+  t.mock.method(console, "warn", (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); });
+  const input = { label: "Preview", settings: { id_prefix: "preview-" }, templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) }, nextSteps: [] };
+  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), input);
+  assert.ok(warnings.some((line) => line.includes("Skipped existing template")));
+  assert.ok(!lines.some((line) => line.includes("Would write template")));
+  lines.length = 0;
+  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true, force: true } }), input);
+  assert.ok(lines.some((line) => line.includes("Would write template")));
+  assert.equal(readFileSync(templatePath, "utf8"), original);
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), before);
 });
 
 test("applyPreset rejects a template map key that does not match the document name", async (t) => {
