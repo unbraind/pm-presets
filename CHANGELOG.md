@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior ([pm-0czt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-0czt.toon))
+
 ## 2026.10.5 - 2026-10-05
 
 ### Other

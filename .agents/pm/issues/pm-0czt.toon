@@ -2,13 +2,18 @@ id: pm-0czt
 title: Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior
 description: "Dependabot manifests must pass unchanged gates without manual version edits. Preserve exact pins, compatible floors, lock and installed metadata consistency, audited settings history, template force behavior, and installer failure safety."
 type: Issue
-status: in_progress
+status: closed
 priority: 1
 tags[3]: dependabot,regression,toolchain
 created_at: "2026-10-11T05:00:48.113Z"
-updated_at: "2026-10-11T05:53:45.387Z"
+updated_at: "2026-10-11T23:31:01.505Z"
+closed_at: "2026-10-11T23:31:01.497Z"
+completed_at: "2026-10-11T23:31:01.497Z"
 author: codex-sol
 acceptance_criteria: Current and actual Dependabot manifests pass npm and Bun release gates; behavioral regressions fail with changed functions reverted; tracker evidence committed.
+resolution: "Implemented and merged in https://github.com/unbraind/pm-presets/pull/127: weekly toolchain bumps stay compatible with audited preset and installer behavior"
+expected_result: The acceptance criteria recorded on pm-0czt are met on main.
+actual_result: "Merged in https://github.com/unbraind/pm-presets/pull/127 after its full CI, an isolated release gate and a CodeRabbit full review with every finding resolved; weekly toolchain bumps stay compatible with audited preset and installer behavior"
 comments[9]{created_at,author,text}:
   "2026-10-11T05:01:28.305Z",codex-sol,"Read the complete failing CI log and PR checks: 156 of 158 tests passed; template equality and replace-mode stale-key removal failed. Plan: derive pin consistency from manifests and installed metadata, keep floors as minima, enforce replacement through the audited host callback, and verify launcher behavior rather than upstream template bytes."
   "2026-10-11T05:05:03.781Z",codex-sol,"The newer host callback normalizes recognized settings and the serializer intentionally retains unknown source fields. Replace regression now uses recognized require_close_reason, workflow_enforcement and testing overrides; named policy is checked through effective SDK settings. Fixed dry-run template plans to obey force exactly like application. Installer contract now covers export delegation without a template and preserves the original error on malformed lookup paths."
@@ -36,4 +41,5 @@ tests[4]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   "node --test --test-name-pattern=\"toolchain|pin.consistency|preview.respects|inconclusive\" tests/compatibility-floor.test.ts tests/shared.test.ts tests/prepare-merge-driver.test.ts",project,codex-agent,"2026-10-11T05:49:06.787Z",local_mutation,fix/self-syncing-toolchain-pin
 docs[1]{path,scope}:
   README.md,project
+close_reason: "Delivered by https://github.com/unbraind/pm-presets/pull/127 (merged); weekly toolchain bumps stay compatible with audited preset and installer behavior"
 body: ""
