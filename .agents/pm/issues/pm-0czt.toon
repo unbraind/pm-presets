@@ -2,19 +2,14 @@ id: pm-0czt
 title: Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior
 description: "Dependabot manifests must pass unchanged gates without manual version edits. Preserve exact pins, compatible floors, lock and installed metadata consistency, audited settings history, template force behavior, and installer failure safety."
 type: Issue
-status: closed
+status: in_progress
 priority: 1
 tags[3]: dependabot,regression,toolchain
 created_at: "2026-10-11T05:00:48.113Z"
-updated_at: "2026-10-12T00:58:02.015Z"
-closed_at: "2026-10-11T23:31:01.497Z"
-completed_at: "2026-10-11T23:31:01.497Z"
+updated_at: "2026-10-20T07:45:49.527Z"
 author: codex-sol
 acceptance_criteria: Current and actual Dependabot manifests pass npm and Bun release gates; behavioral regressions fail with changed functions reverted; tracker evidence committed.
-resolution: "Implemented and merged in https://github.com/unbraind/pm-presets/pull/127: weekly toolchain bumps stay compatible with audited preset and installer behavior"
-expected_result: "Meets its recorded acceptance criteria: Current and actual Dependabot manifests pass npm and Bun release gates; behavioral regressions fail with changed functions reverted; tracker evidence committed."
-actual_result: "Merged in https://github.com/unbraind/pm-presets/pull/127 with green required CI checks and a completed CodeRabbit full review with every finding resolved; weekly toolchain bumps stay compatible with audited preset and installer behavior"
-comments[9]{created_at,author,text}:
+comments[13]{created_at,author,text}:
   "2026-10-11T05:01:28.305Z",codex-sol,"Read the complete failing CI log and PR checks: 156 of 158 tests passed; template equality and replace-mode stale-key removal failed. Plan: derive pin consistency from manifests and installed metadata, keep floors as minima, enforce replacement through the audited host callback, and verify launcher behavior rather than upstream template bytes."
   "2026-10-11T05:05:03.781Z",codex-sol,"The newer host callback normalizes recognized settings and the serializer intentionally retains unknown source fields. Replace regression now uses recognized require_close_reason, workflow_enforcement and testing overrides; named policy is checked through effective SDK settings. Fixed dry-run template plans to obey force exactly like application. Installer contract now covers export delegation without a template and preserves the original error on malformed lookup paths."
   "2026-10-11T05:06:45.014Z",codex-agent,"Orchestrator review: replacement must remain inside the audited host settings capability. The newer SDK normalizes known policy fields and preserves unknown persisted fields, so integration assertions must verify effective recognized settings. Existing template preview skips also need to match real application without force."
@@ -24,7 +19,13 @@ comments[9]{created_at,author,text}:
   "2026-10-11T05:48:52.450Z",codex-sol,"All four full release runs passed: original manifests under npm with an empty HOME and global/system Git configuration disabled, original manifests under Bun, and unchanged actual dependency-bump manifests under both npm and Bun. Every run passed 162/162 tests with zero failures/skips, 100 percent lines/branches/functions across the configured 16 files, 95 documented declarations in 38 files, zero production audit vulnerabilities, 62 package files, and all changelog/attestation/date checks. Original manifests restored byte for byte and npm ci completed. Revert proof remains 2/2 expected failures; restored focused and tracker-linked acceptance passed 29/29. Implementation and evidence are ready for branch review; keep this item open for orchestrator verification."
   "2026-10-11T05:49:52.996Z",codex-agent,"The orchestrator tracker-linked verification now passes 4 of 4 assertions, exit 0, after correcting quotation of the test-name regular expression in the linked command. Direct and linked executions agree. All four full release gates passed 162 of 162 tests on the original and automated dependency manifests, including isolated Git identity for the original npm gate."
   "2026-10-11T05:53:45.387Z",codex-sol,Final history verification passed with matching item and history hashes; regenerated changelog is unchanged and checked. Ambient strict health correctly refused a global pm-github host-version mismatch (repo CLI 2026.10.3 versus global extension metadata 2026.10.11). Repeating strict health with an empty HOME and global/system Git configuration disabled passed with required merge drivers. This environment boundary is reported to the orchestrator; no global extension or dependency configuration was changed.
-files[9]{path,scope}:
+  "2026-10-20T07:32:40.357Z",codex-agent,"Reopened for Dependabot PR 142 after searching the tracker: retain its exact dependency bump and diagnose the new host/changelog behavior without weakening assertions. Reuse this existing weekly toolchain compatibility item. The branch is current with main; npm ci regenerates the documented native text merge attribute. Hold the PR as draft with auto-merge disabled while validating the repair."
+  "2026-10-20T07:34:15.048Z",codex-agent,"Root cause confirmed from the failed CI job: the sole failure is prepare-merge-driver.test.ts strict equality, not the nearby generator test. pm-cli now writes merge=text for extension assets (intended GH-1460 change, documented in 2026.10.14). Git supplies text internally, so no merge.text.driver belongs in local config. Our test helper incorrectly treated every named attribute as a custom driver. Keep the strict equality and distinguish native drivers; add real Git merge coverage proving text works without registration and required pm drivers remain registered. Also regenerate the changelog with the bumped generator, retaining shipped historical entries for this reopened item."
+  "2026-10-20T07:37:13.497Z",codex-agent,"Regression and behavioral revert proof: node --test --test-reporter=tap tests/prepare-merge-driver.test.ts passes 10/10, including a real divergent-branch Git merge of extension text with no registered text driver. Reverting only customMergeDrivers to the original all-named-driver parsing behavior makes node --test --test-reporter=tap --test-name-pattern=\"native driver inventory\" tests/prepare-merge-driver.test.ts fail 1/1, exit 1; fix restored. The original strict deepEqual registration assertion is unchanged. The bumped pm-changelog full regeneration is byte-identical, including the prior shipped entry for this reopened item. No undocumented pm-cli/SDK behavior found in the failure; GH-1460 documents native extension-asset merging."
+  "2026-10-20T07:45:45.812Z",codex-agent,"Final gates on the exact Dependabot pins: env HOME=$(mktemp -d) GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 npm run release:check and the same isolated identity with bun run release:check both exit 0. Each passes 164/164 tests with zero failed/cancelled/skipped/todo tests; unchanged coverage scope has 16 sources at 100% lines, branches and functions (statements are not separately measured by this reporter). Docstrings: 38 files, 95 declarations; production audit: zero vulnerabilities; package dry run: 62 files. Linked prepare regression: 10/10 pass. Production dist rebuilt and byte-identical. Full changelog regeneration and check pass with the bumped generator. Reopened existing pm-jau2 as an open, deferred follow-up for overbroad reconciliation claims; no history repair or rewrite was performed. Main repair remains in progress for orchestrator verification and is released unclaimed."
+files[11]{path,scope}:
+  .gitattributes,project
+  CHANGELOG.md,project
   dist/presets/shared.d.ts,project
   dist/presets/shared.d.ts.map,project
   dist/presets/shared.js,project
@@ -34,12 +35,43 @@ files[9]{path,scope}:
   tests/compatibility-floor.test.ts,project
   tests/prepare-merge-driver.test.ts,project
   tests/shared.test.ts,project
-tests[4]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
-  node --test tests/compatibility-floor.test.ts tests/prepare-merge-driver.test.ts tests/shared.test.ts,project,codex-sol,"2026-10-11T05:07:19.641Z",local_mutation,fix/self-syncing-toolchain-pin
-  "npm run release:check",project,codex-sol,"2026-10-11T05:48:32.532Z",local_mutation,fix/self-syncing-toolchain-pin
-  "bun run release:check",project,codex-sol,"2026-10-11T05:48:44.242Z",local_mutation,fix/self-syncing-toolchain-pin
-  "node --test --test-name-pattern=\"toolchain|pin.consistency|preview.respects|inconclusive\" tests/compatibility-floor.test.ts tests/shared.test.ts tests/prepare-merge-driver.test.ts",project,codex-agent,"2026-10-11T05:49:06.787Z",local_mutation,fix/self-syncing-toolchain-pin
+tests[5]:
+  - command: node --test tests/compatibility-floor.test.ts tests/prepare-merge-driver.test.ts tests/shared.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-11T05:07:19.641Z"
+      source_kind: local_mutation
+      source_ref: fix/self-syncing-toolchain-pin
+  - command: "npm run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-11T05:48:32.532Z"
+      source_kind: local_mutation
+      source_ref: fix/self-syncing-toolchain-pin
+  - command: "bun run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-11T05:48:44.242Z"
+      source_kind: local_mutation
+      source_ref: fix/self-syncing-toolchain-pin
+  - command: "node --test --test-name-pattern=\"toolchain|pin.consistency|preview.respects|inconclusive\" tests/compatibility-floor.test.ts tests/shared.test.ts tests/prepare-merge-driver.test.ts"
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-11T05:49:06.787Z"
+      source_kind: local_mutation
+      source_ref: fix/self-syncing-toolchain-pin
+  - command: node --test --test-reporter=tap tests/prepare-merge-driver.test.ts
+    scope: project
+    timeout_seconds: 180
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-20T07:35:51.809Z"
+      source_kind: local_mutation
+      source_ref: dependabot/npm_and_yarn/pm-toolchain-ae58a87a51
 docs[1]{path,scope}:
   README.md,project
-close_reason: "Delivered by https://github.com/unbraind/pm-presets/pull/127 (merged); weekly toolchain bumps stay compatible with audited preset and installer behavior"
 body: ""

@@ -1,16 +1,20 @@
 id: pm-jau2
-title: Recommend pm merge reconcile (2026.7.22) over raw history-repair in Multi-agent merge safety docs
-description: "pm-cli 2026.7.22 shipped GH-623 pm merge reconcile, a purpose-built audited post-merge reconciliation that previews affected streams (dry-run), applies field-aware repair, and leaves pm history --verify plus pm validate green in one command. Verified end-to-end on a 2-branch concurrent edit: the field-aware driver unions notes and scalar fields with zero conflicts, then reconcile re-greens the hash chain with zero data loss (both authors content and attribution preserved). The Multi-agent merge safety README section (added in the 5cx1 rollout) previously recommended the blunt history-repair all-items primitive; this updates it to the dry-run then apply then verify reconcile workflow and links the authoritative upstream MERGE_SAFETY guide. Fleet fan-out from canary pm-beads#42."
+title: Clarify reconciliation evidence limits in merge-safety documentation
+description: The README overstates lossless-merge guarantees and advertises raw history repair. Bring it into alignment with the CI workflow distinction between durable tracker health and evidence that every source value survived a merge. This follow-up is deferred from dependency PR 142.
 type: Issue
-status: closed
+status: open
 priority: 2
 tags[3]: agent-ux,docs,multi-agent
 created_at: "2026-07-22T19:46:00.288Z"
-updated_at: "2026-07-22T19:46:01.204Z"
-closed_at: "2026-07-22T19:46:01.202Z"
+updated_at: "2026-10-20T07:45:41.540Z"
 author: claude-opus-20260722
-acceptance_criteria: "README Multi-agent merge safety section recommends pm merge reconcile with a dry-run preview, apply, and pm history --verify plus pm validate confirmation; links upstream MERGE_SAFETY.md; CI green; PR reviewed by bots."
+acceptance_criteria: Document current audited reconciliation semantics; remove unconditional no-data-loss and raw-repair guidance; require independent source and receipt verification; keep health and lossless-merge claims separate.
+comments[1]{created_at,author,text}:
+  "2026-10-20T07:38:58.805Z",codex-agent,"Follow-up discovered while repairing PR 142: the current README generalizes a successful historical merge experiment into an unconditional no-data-loss claim, describes reconciliation as re-greening hashes, and still advertises raw history repair. The CI workflow correctly distinguishes strict health from lossless-merge evidence. Review the README against current audited reconciliation semantics and require source/evidence verification rather than treating green health as proof of losslessness. Deferred from the dependency repair; no history rewrite or repair was performed."
 notes[1]{created_at,author,text}:
   "2026-07-22T19:46:00.661Z",claude-opus-20260722,Fan-out from canary unbraind/pm-beads#42. README Multi-agent merge safety section closing recommendation migrated to the pm merge reconcile dry-run->apply->verify workflow; links upstream docs/MERGE_SAFETY.md; keeps history-repair --all as a lower-level primitive.
-close_reason: Docs updated to recommend the 2026.7.22 pm merge reconcile workflow (fleet fan-out from pm-beads#42).
+files[1]{path,scope}:
+  .github/workflows/ci.yml,project
+docs[1]{path,scope}:
+  README.md,project
 body: ""

@@ -24,10 +24,14 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 // The fixtures use POSIX stub executables and directory symlinks, like pm-ops's own launcher suite.
 const posixOnly = { skip: process.platform === "win32" };
 
-/** Every merge driver `.gitattributes` asks Git to use, e.g. `pm-history` from `merge=pm-history`. */
-const declaredDrivers = [
-  ...new Set([...readFileSync(join(root, ".gitattributes"), "utf8").matchAll(/\bmerge=([\w-]+)/g)].map((match) => match[1])),
-].sort();
+/** Custom attribute drivers require local registration; Git supplies text, binary and union internally. */
+function customMergeDrivers(attributes: string): string[] {
+  return [...new Set([...attributes.matchAll(/\bmerge=([\w-]+)/g)].map((match) => match[1]))]
+    .filter((driver) => !["text", "binary", "union"].includes(driver)).sort();
+}
+
+/** Exact custom driver inventory required by this package's tracked attributes. */
+const declaredDrivers = customMergeDrivers(readFileSync(join(root, ".gitattributes"), "utf8"));
 
 /**
  * Create a consumer checkout: a fresh Git repository carrying this
@@ -111,7 +115,7 @@ test("an inconclusive package presence probe preserves the original resolution f
   assert.deepEqual(registeredDrivers(directory), []);
 });
 
-test("a full install registers every merge driver .gitattributes declares", posixOnly, () => {
+test("a full install registers every custom merge driver .gitattributes declares", posixOnly, () => {
   const directory = checkout("full", "pinned");
   assert.deepEqual(registeredDrivers(directory), []);
   const result = prepare(directory, hostPath);
@@ -154,4 +158,41 @@ test("an installer killed by a signal fails the install instead of reporting suc
   // The stub's parent is the pm-ops installer process the launcher spawned.
   const result = prepare(checkout("killed", "pinned"), stubPm("killed", 0, "kill -9 $PPID"));
   assert.equal(result.status, 1, result.stderr);
+});
+
+
+test("native driver inventory excludes only Git builtins and retains every custom requirement", () => {
+  const attributes = ["*.txt merge=text", "*.bin merge=binary", "*.log merge=union", "*.json merge=project-json", "*.toon merge=pm-item-toon", "*.again merge=project-json", "*.custom merge=textual"];
+  assert.deepEqual(customMergeDrivers(attributes.join("\n")), ["pm-item-toon", "project-json", "textual"]);
+});
+
+test("native text merging works for extension assets without a registered text driver", posixOnly, () => {
+  const directory = checkout("native-text", "pinned");
+  const installed = prepare(directory, hostPath);
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.deepEqual(registeredDrivers(directory), declaredDrivers);
+  assert.ok(!registeredDrivers(directory).includes("text"));
+  /** Run real Git operations with a synthetic identity independent of host configuration. */
+  const git = (...args: string[]): string => {
+    const result = spawnSync("git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgSign=false", ...args], { cwd: directory, encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+  };
+  const asset = ".agents/pm/extensions/native.txt";
+  assert.match(git("check-attr", "merge", "--", asset), /: merge: text/);
+  mkdirSync(join(directory, ".agents/pm/extensions"), { recursive: true });
+  const base = "first\n2\n3\n4\n5\n6\n7\n8\n9\nlast\n";
+  writeFileSync(join(directory, asset), base);
+  git("checkout", "-b", "native-base");
+  git("add", ".gitattributes", asset);
+  git("commit", "-m", "Synthetic native merge baseline");
+  git("checkout", "-b", "native-left");
+  writeFileSync(join(directory, asset), base.replace("first", "left"));
+  git("commit", "-am", "Synthetic first-line change");
+  git("checkout", "-b", "native-right", "native-base");
+  writeFileSync(join(directory, asset), base.replace("last", "right"));
+  git("commit", "-am", "Synthetic last-line change");
+  git("merge", "--no-edit", "native-left");
+  assert.equal(readFileSync(join(directory, asset), "utf8"), base.replace("first", "left").replace("last", "right"));
+  assert.deepEqual(registeredDrivers(directory), declaredDrivers);
 });
