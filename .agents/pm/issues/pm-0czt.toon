@@ -2,14 +2,16 @@ id: pm-0czt
 title: Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior
 description: "Dependabot manifests must pass unchanged gates without manual version edits. Preserve exact pins, compatible floors, lock and installed metadata consistency, audited settings history, template force behavior, and installer failure safety."
 type: Issue
-status: in_progress
+status: closed
 priority: 1
 tags[3]: dependabot,regression,toolchain
 created_at: "2026-10-11T05:00:48.113Z"
-updated_at: "2026-10-20T07:45:49.527Z"
+updated_at: "2026-10-21T18:43:30.397Z"
+closed_at: "2026-10-21T18:43:25.300Z"
+completed_at: "2026-10-21T18:43:25.300Z"
 author: codex-sol
 acceptance_criteria: Current and actual Dependabot manifests pass npm and Bun release gates; behavioral regressions fail with changed functions reverted; tracker evidence committed.
-comments[13]{created_at,author,text}:
+comments[14]{created_at,author,text}:
   "2026-10-11T05:01:28.305Z",codex-sol,"Read the complete failing CI log and PR checks: 156 of 158 tests passed; template equality and replace-mode stale-key removal failed. Plan: derive pin consistency from manifests and installed metadata, keep floors as minima, enforce replacement through the audited host callback, and verify launcher behavior rather than upstream template bytes."
   "2026-10-11T05:05:03.781Z",codex-sol,"The newer host callback normalizes recognized settings and the serializer intentionally retains unknown source fields. Replace regression now uses recognized require_close_reason, workflow_enforcement and testing overrides; named policy is checked through effective SDK settings. Fixed dry-run template plans to obey force exactly like application. Installer contract now covers export delegation without a template and preserves the original error on malformed lookup paths."
   "2026-10-11T05:06:45.014Z",codex-agent,"Orchestrator review: replacement must remain inside the audited host settings capability. The newer SDK normalizes known policy fields and preserves unknown persisted fields, so integration assertions must verify effective recognized settings. Existing template preview skips also need to match real application without force."
@@ -23,6 +25,7 @@ comments[13]{created_at,author,text}:
   "2026-10-20T07:34:15.048Z",codex-agent,"Root cause confirmed from the failed CI job: the sole failure is prepare-merge-driver.test.ts strict equality, not the nearby generator test. pm-cli now writes merge=text for extension assets (intended GH-1460 change, documented in 2026.10.14). Git supplies text internally, so no merge.text.driver belongs in local config. Our test helper incorrectly treated every named attribute as a custom driver. Keep the strict equality and distinguish native drivers; add real Git merge coverage proving text works without registration and required pm drivers remain registered. Also regenerate the changelog with the bumped generator, retaining shipped historical entries for this reopened item."
   "2026-10-20T07:37:13.497Z",codex-agent,"Regression and behavioral revert proof: node --test --test-reporter=tap tests/prepare-merge-driver.test.ts passes 10/10, including a real divergent-branch Git merge of extension text with no registered text driver. Reverting only customMergeDrivers to the original all-named-driver parsing behavior makes node --test --test-reporter=tap --test-name-pattern=\"native driver inventory\" tests/prepare-merge-driver.test.ts fail 1/1, exit 1; fix restored. The original strict deepEqual registration assertion is unchanged. The bumped pm-changelog full regeneration is byte-identical, including the prior shipped entry for this reopened item. No undocumented pm-cli/SDK behavior found in the failure; GH-1460 documents native extension-asset merging."
   "2026-10-20T07:45:45.812Z",codex-agent,"Final gates on the exact Dependabot pins: env HOME=$(mktemp -d) GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 npm run release:check and the same isolated identity with bun run release:check both exit 0. Each passes 164/164 tests with zero failed/cancelled/skipped/todo tests; unchanged coverage scope has 16 sources at 100% lines, branches and functions (statements are not separately measured by this reporter). Docstrings: 38 files, 95 declarations; production audit: zero vulnerabilities; package dry run: 62 files. Linked prepare regression: 10/10 pass. Production dist rebuilt and byte-identical. Full changelog regeneration and check pass with the bumped generator. Reopened existing pm-jau2 as an open, deferred follow-up for overbroad reconciliation claims; no history repair or rewrite was performed. Main repair remains in progress for orchestrator verification and is released unclaimed."
+  "2026-10-21T18:42:32.196Z",codex-agent,"Authorized tracker reconciliation, audit 2026-10-21. Owner-authorized takeover of any historical assignment for this verified terminal transition. Reverified current main 2f13c43f7323: merged #127 (36ede3b); source tree exactly matches the audited snapshot. **Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior.** [PR #127](https://github.com/unbraind/pm-presets/pull/127) (36ede3b) delivers self-syncing toolchain/prepare acceptance; #142 retains those tests through later dependency changes."
 files[11]{path,scope}:
   .gitattributes,project
   CHANGELOG.md,project
@@ -74,4 +77,5 @@ tests[5]:
       source_ref: dependabot/npm_and_yarn/pm-toolchain-ae58a87a51
 docs[1]{path,scope}:
   README.md,project
+close_reason: "Reverified current main 2f13c43f7323: merged #127 (36ede3b); source tree exactly matches the audited snapshot. **Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior.** [PR #127](https://github.com/unbraind/pm-presets/pull/127) (36ede3b) delivers self-syncing toolchain/prepare acceptance; #142 retains those tests through later dependency changes."
 body: ""

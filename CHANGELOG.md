@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Enable the gated GitHub issue sync ([pm-1631](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-1631.toon))
+- Adopt pm-github 2026.10.16: default-branch-safe gated sync and daily gated closeout PRs ([pm-1ugy](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-1ugy.toon))
+
+### Fixed
+
+- Propagate the docstring gate entry guard fix ([pm-wqll](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-wqll.toon))
+- Fix release publish ordering before protected main push ([pm-g33z](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-g33z.toon))
+- The publish-attestation gate misses a publish routed through an unquoted shell variable ([pm-mzg9](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-mzg9.toon))
+- Preset apply bypasses workspace settings history and leaves strict health failing ([pm-1vx6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-1vx6.toon))
+- Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior ([pm-0czt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-0czt.toon))
+- The release job authenticated with a stored npm token that expired, so publishing stopped while every other gate stayed green ([pm-6e1a](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-6e1a.toon))
+- A release run bumped and committed a new version every night while publishing was impossible, because the only externally-failable step runs last ([pm-nhcz](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-nhcz.toon))
+
+### Other
+
+- Certify pm-presets on PM CLI SDK 2026.9.28 and current published release helpers ([pm-weky](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-weky.toon))
+
 ## 2026.10.12 - 2026-10-12
 
 ### Fixed
