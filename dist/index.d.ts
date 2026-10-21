@@ -29,4 +29,6 @@ declare const _default: {
 export default _default;
 export { PRESET_REGISTRY } from "./registry.ts";
 export type { PresetDescriptor } from "./registry.ts";
+export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
+export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
 //# sourceMappingURL=index.d.ts.map

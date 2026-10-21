@@ -101,6 +101,28 @@ jobs:
       - name: Verify Bun can install the package graph
         run: bun install --no-save
 
+  simulation-release-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Full npm release gate
+        run: npm run release:check
+      - name: Full Bun release gate
+        run: bun run release:check
+
   windows-prepare-lifecycle:
     runs-on: windows-latest
     steps:
