@@ -35,6 +35,7 @@ import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, ru
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
 import { PRESET_REGISTRY } from "./registry.ts";
+import { registerUpgradeCommands } from "./upgrade-command.ts";
 import {
   buildListRows,
   requirePresetDefinition,
@@ -199,6 +200,7 @@ const defineExtension = <TModule extends ExtensionModule>(module: TModule): TMod
 
 export default defineExtension({
   activate(api: ExtensionApi) {
+    registerUpgradeCommands(api);
     // ── bug-triage ──────────────────────────────────────────────────────────
     api.registerCommand({
       name: "triage-setup",
@@ -601,3 +603,6 @@ export type { PresetDescriptor } from "./registry.ts";
 
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
 export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
+
+export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.ts";
+export type { VersionedPreset, UpgradeSettings, UpgradeValue, UpgradeDecisions, UpgradeChange, PresetUpgradeReceipt, PresetUpgradeSummary, PresetUpgradeResult, UpgradeRefusalCode } from "./upgrade.ts";
