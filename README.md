@@ -386,4 +386,19 @@ as a substitute for reconciliation. See the authoritative
 Preset listing, inspection, diff, validation, export, application, templates and
 simulation work in plain directories as well as repositories. Simulation always
 uses a disposable non-git tracker, with no git executable on its PATH. None of
-these commands requires a Git repository.
+these commands requires a Git repository. Upgrade planning, applying, retries and
+rollback also work without git; they use the host SDK settings lock and history.
+
+## Versioned preset upgrades
+
+`pm presets upgrade plan --from vendor-v1.json --to vendor-v2.json --receipt upgrade.private.json`
+compares two `{id, version, settings}` vendor patches with the current workspace.
+It preserves local-only edits and requires explicit JSON-pointer decisions when
+vendor and local changes conflict. `presets upgrade apply <receipt>` and
+`presets upgrade rollback <receipt>` use the host's audited settings API, including
+idempotent retries and stale-settings checks. Plans and command results use
+compact TOON or `--json`; complete recovery settings remain in a private receipt.
+Requires canonical SDK previews (host 2026.10.17+).
+
+See the [complete upgrade example](docs/upgrade-example.md) for decisions,
+recovery, typed SDK usage, refusal remedies and migration boundaries.

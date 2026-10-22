@@ -31,6 +31,7 @@ import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, ru
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 import { PRESET_REGISTRY } from "./registry.js";
+import { registerUpgradeCommands } from "./upgrade-command.js";
 import { buildListRows, requirePresetDefinition, requireValidPresets, validateAllPresets, } from "./catalog.js";
 import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
@@ -173,6 +174,7 @@ const PRESETS_FLAGS = [
 const defineExtension = (module) => module;
 export default defineExtension({
     activate(api) {
+        registerUpgradeCommands(api);
         // ── bug-triage ──────────────────────────────────────────────────────────
         api.registerCommand({
             name: "triage-setup",
@@ -507,4 +509,5 @@ export default defineExtension({
 // Re-export public API
 export { PRESET_REGISTRY } from "./registry.js";
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.js";
+export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 //# sourceMappingURL=index.js.map
