@@ -28,7 +28,8 @@
     "manifest.json",
     "README.md",
     "CHANGELOG.md",
-    "presets.json"
+    "presets.json",
+    "docs/simulation-example.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -123,10 +124,12 @@
     },
     "docs": [
       "README.md",
-      "CHANGELOG.md"
+      "CHANGELOG.md",
+      "docs/simulation-example.md"
     ],
     "examples": [
-      "README.md"
+      "README.md",
+      "docs/simulation-example.md"
     ]
   },
   "publishConfig": {

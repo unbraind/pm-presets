@@ -300,6 +300,51 @@ host resets to defaults or preset policy, without printing their old values.
 Templates are separate filesystem writes after the audited settings commit;
 a later filesystem failure does not roll back that committed settings event.
 
+## Simulate before applying
+
+Run representative agent workflows before changing your workspace:
+
+```bash
+pm presets simulate bug-triage
+pm presets simulate indie-dev --json
+pm presets simulate software-sprint --scenarios create-task,claim-start --json
+```
+
+Suite version 1 applies the same bundled setup handler as `presets apply`, then
+executes four workflows with the real local pm SDK:
+
+| Scenario | Declared result |
+| --- | --- |
+| `create-task` | Task exists and is open |
+| `claim-start` | Claimed Task is in progress |
+| `close-without-evidence` | Refused for bug-triage; closed for other bundled presets |
+| `close-with-evidence` | Closed with resolution, expected and actual result |
+
+Expected governance refusals count as passing observations. Every report includes
+expected and actual states, pass counts, omitted scenario IDs in `coverageGaps`,
+and scope limitations. Selecting a subset does **not** establish full coverage.
+Exit 4 means a mismatch or coverage gap; the report is printed before the error.
+Unknown presets/scenarios and duplicate selections produce typed usage refusals
+(exit 2) with remedies. Missing SDK support or worker failure uses exit 1.
+
+The simulator accepts bundled IDs and scenario IDs only. It creates a new tracker
+and home directory in a separate process, disables extension loading and telemetry,
+and supplies no tracker paths, credentials, scripts or caller configuration to it.
+It never installs into, reads, or writes the caller's tracker. Scratch files are
+removed after success or failure. The CLI host may perform its normal runtime
+bookkeeping before invoking an extension command.
+
+Reports are reproducible for the same package, suite and supported host version:
+random item IDs, timestamps, paths, durations and free-form SDK diagnostics are
+excluded. Scenarios run in canonical order and each creates its own Task.
+The bounded suite checks built-in Task lifecycle behavior; installed templates,
+custom types, external integrations and real agent inference remain explicit
+limitations. A passing simulation is not approval to apply a preset or a forecast
+of your workspace's existing policies.
+
+See [the SDK example](docs/simulation-example.md), including partial coverage and
+handling typed refusals.
+
 ## Programmatic API
 
 ```typescript
@@ -329,7 +374,16 @@ After merging a branch that touched `.agents/pm/`, reconcile any residual histor
 **`pm merge reconcile`**: preview with `pm merge reconcile --dry-run`, apply with
 `pm merge reconcile --message "post-merge reconcile"`, then confirm with `pm validate`, which scans the
 whole tracker and flags remaining history drift across **every** affected item (`pm merge reconcile`
-itself lists each affected stream in its output; `pm history --verify <id>` spot-checks one item). The field-aware driver already unions every author's
-content, so `reconcile` only re-greens the hash chain (no data loss) — see the authoritative
-[pm-cli merge-safety guide](https://github.com/unbraind/pm-cli/blob/main/docs/MERGE_SAFETY.md). The
-older blunt `pm history-repair --all` remains available as a lower-level primitive.
+itself lists each affected stream in its output; `pm history --verify <id>` spot-checks one item).
+Reconciliation repairs receipts and history consistency; a successful validation does not
+prove that every concurrent edit survived. Inspect the merged item values and merge receipts
+before accepting the result. Keep existing history append-only; do not use history rewriting
+as a substitute for reconciliation. See the authoritative
+[pm-cli merge-safety guide](https://github.com/unbraind/pm-cli/blob/main/docs/MERGE_SAFETY.md).
+
+## Without git
+
+Preset listing, inspection, diff, validation, export, application, templates and
+simulation work in plain directories as well as repositories. Simulation always
+uses a disposable non-git tracker, with no git executable on its PATH. None of
+these commands requires a Git repository.

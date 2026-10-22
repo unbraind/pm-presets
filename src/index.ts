@@ -34,7 +34,7 @@ import { runOpenSourceSetup } from "./presets/open-source/index.ts";
 import { resolvePmDir, readBooleanOption, readStringOption, runTemplatesList, runTemplatesShow } from "./presets/shared.ts";
 import { runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
-import { PRESET_REGISTRY, type PresetId } from "./registry.ts";
+import { PRESET_REGISTRY } from "./registry.ts";
 import {
   buildListRows,
   requirePresetDefinition,
@@ -49,6 +49,8 @@ import {
 } from "./export.ts";
 import { runPresetSeeds } from "./seeds.ts";
 import * as fs from "node:fs";
+import { PRESET_HANDLERS } from "./setup.ts";
+import { simulatePreset, type PresetScenarioId } from "./simulation.ts";
 
 // Drift exit code for `presets diff --strict`. Distinct from GENERIC(1)/
 // USAGE(2)/NOT_FOUND(3) so CI can tell "drifted" from "command failed".
@@ -70,24 +72,6 @@ class PresetError extends Error {
     this.exitCode = exitCode;
   }
 }
-
-// Dispatch table: preset id -> its setup handler. Powers `presets apply <id>`
-// and keeps the individual *-setup commands as thin aliases.
-//
-// Keyed on the closed `PresetId` union rather than `string`, so a preset added
-// to the registry without a handler here — or a handler for an id that does not
-// exist — fails the build instead of surfacing as a runtime "unknown preset".
-// The handlers apply settings and templates for their side effects and return
-// nothing, so the value type is `void`, not `unknown`.
-const PRESET_HANDLERS: Record<PresetId, (ctx: CommandHandlerContext) => Promise<void>> = {
-  "bug-triage": runBugTriageSetup,
-  "indie-dev": runIndieDevSetup,
-  "open-source": runOpenSourceSetup,
-  "software-sprint": runSoftwareSprintSetup,
-  "startup-roadmap": runStartupRoadmapSetup,
-  "kanban": runKanbanSetup,
-  "agent-workflow": runAgentWorkflowSetup,
-};
 
 // pm-cli's loose-option matcher (extension-command-options.ts) only recognizes
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
@@ -525,6 +509,27 @@ export default defineExtension({
     });
 
     api.registerCommand({
+      name: "presets simulate",
+      action: "presets-simulate",
+      description: "Execute reproducible agent workflows in an isolated synthetic tracker before applying a preset.",
+      examples: ["pm presets simulate bug-triage", "pm presets simulate indie-dev --json"],
+      arguments: [{ name: "preset", required: true, description: "Bundled preset id." }],
+      flags: [{ long: "--scenarios", value_name: "<ids>", value_type: "string", description: "Comma-separated scenario ids; omitted workflows are explicit coverage gaps." }],
+      run: (ctx: CommandHandlerContext) => {
+        const selection = ctx.options?.["scenarios"];
+        const report = simulatePreset({
+          preset: ctx.args?.[0] ?? "",
+          scenarios: typeof selection === "string" ? selection.split(",").map((id) => id.trim()).filter(Boolean) as PresetScenarioId[] : undefined,
+        });
+        if (!report.ok) {
+          console.log(JSON.stringify(report));
+          throw new PresetError("Simulation has mismatches or coverage gaps; run the complete suite and inspect the observations.", 4);
+        }
+        return report;
+      },
+    });
+
+    api.registerCommand({
       name: "presets apply",
       action: "presets-apply",
       description:
@@ -593,3 +598,6 @@ export default defineExtension({
 // Re-export public API
 export { PRESET_REGISTRY } from "./registry.ts";
 export type { PresetDescriptor } from "./registry.ts";
+
+export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
+export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
