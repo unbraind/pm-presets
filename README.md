@@ -359,6 +359,28 @@ for (const preset of PRESET_REGISTRY) {
 
 MIT
 
+## Multi-agent merge safety
+
+This repo tracks its project management in `.agents/pm/` and ships a committed `.gitattributes`
+that maps those tracker artifacts to pm-cli's field-aware Git merge drivers, so concurrent-branch
+tracker edits merge cleanly instead of hard-conflicting. Generated extension assets are excluded
+from semantic merging, while their managed manifest retains key-level JSON merging.
+Extension assets use Git's native `merge=text` attribute. Native `text`, `binary`, and
+`union` drivers need no `merge.<name>.driver` registration; the prepare checks require
+registration for every custom driver and verify native extension text merging in a real checkout.
+The custom driver **definitions** live in per-clone Git config; `npm install` / `npm ci` wires them automatically via the `prepare` script, `scripts/prepare-merge-driver.ts`: a local launcher that delegates to the installed pm-ops export and is tested against an installer behavior contract. It runs pm-ops's installer, which calls `pm merge install` when the `pm` CLI is on `PATH` and skips with a notice when it is not. A production install of a clone (`npm ci --omit=dev`) has no `pm-ops`, so the launcher skips with one notice, while a stale or broken `pm-ops` fails the install. Registry installs of this package never run `prepare`. Being Node-based, it behaves identically on POSIX shells and Windows `cmd.exe`. To (re)run manually: `npm run merge:install`.
+
+After merging a branch that touched `.agents/pm/`, reconcile any residual history-hash drift with
+**`pm merge reconcile`**: preview with `pm merge reconcile --dry-run`, apply with
+`pm merge reconcile --message "post-merge reconcile"`, then confirm with `pm validate`, which scans the
+whole tracker and flags remaining history drift across **every** affected item (`pm merge reconcile`
+itself lists each affected stream in its output; `pm history --verify <id>` spot-checks one item).
+Reconciliation repairs receipts and history consistency; a successful validation does not
+prove that every concurrent edit survived. Inspect the merged item values and merge receipts
+before accepting the result. Keep existing history append-only; do not use history rewriting
+as a substitute for reconciliation. See the authoritative
+[pm-cli merge-safety guide](https://github.com/unbraind/pm-cli/blob/main/docs/MERGE_SAFETY.md).
+
 ## Without git
 
 Preset listing, inspection, diff, validation, export, application, templates and

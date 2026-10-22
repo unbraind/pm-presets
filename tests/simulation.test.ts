@@ -134,12 +134,25 @@ test("failed worker startup refuses and removes its disposable workspace", (t) =
   }
 });
 
-test("CLI command returns compact results and refuses incomplete coverage with exit 4", async () => {
+test("CLI command returns compact results and refuses incomplete coverage with exit 4", async (t) => {
   const harness = await createExtensionTestHarness(mod, { name: "pm-presets", capabilities: ["commands", "schema"] });
   const complete = await harness.runCommand({ command: "presets simulate", args: ["indie-dev"] });
   assert.equal((complete.result as { ok: boolean }).ok, true);
-  await assert.rejects(() => harness.runCommand({ command: "presets simulate", args: ["indie-dev"], options: { scenarios: "create-task" } }), { exitCode: 4 });
-  await assert.rejects(() => harness.runCommand({ command: "presets simulate", args: ["indie-dev"], options: { scenarios: "" } }), { exitCode: 4 });
+  const output = t.mock.method(console, "log");
+  for (const selected of [["create-task"], []]) {
+    output.mock.resetCalls();
+    await assert.rejects(() => harness.runCommand({ command: "presets simulate", args: ["indie-dev"], options: { scenarios: selected.join(",") } }), { exitCode: 4 });
+    assert.equal(output.mock.callCount(), 1);
+    const report = JSON.parse(output.mock.calls[0].arguments[0]) as {
+      ok: boolean; checked: number; passed: number; coverageGaps: string[]; scenarios: { id: string }[];
+    };
+    assert.equal(report.ok, false);
+    assert.equal(report.checked, selected.length);
+    assert.equal(report.passed, selected.length);
+    assert.deepEqual(report.coverageGaps, PRESET_SCENARIOS.filter((id) => !selected.includes(id)));
+    assert.deepEqual(report.scenarios.map((row) => row.id), selected);
+  }
+  output.mock.restore();
   await assert.rejects(() => harness.runCommand({ command: "presets simulate" }), { code: "unknown_preset" });
 });
 
