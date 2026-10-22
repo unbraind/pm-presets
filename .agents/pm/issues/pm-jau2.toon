@@ -2,19 +2,41 @@ id: pm-jau2
 title: Clarify reconciliation evidence limits in merge-safety documentation
 description: The README overstates lossless-merge guarantees and advertises raw history repair. Bring it into alignment with the CI workflow distinction between durable tracker health and evidence that every source value survived a merge. This follow-up is deferred from dependency PR 142.
 type: Issue
-status: open
+status: in_progress
 priority: 2
 tags[3]: agent-ux,docs,multi-agent
 created_at: "2026-07-22T19:46:00.288Z"
-updated_at: "2026-10-20T07:45:41.540Z"
+updated_at: "2026-10-22T11:57:34.932Z"
 author: claude-opus-20260722
 acceptance_criteria: Document current audited reconciliation semantics; remove unconditional no-data-loss and raw-repair guidance; require independent source and receipt verification; keep health and lossless-merge claims separate.
-comments[1]{created_at,author,text}:
-  "2026-10-20T07:38:58.805Z",codex-agent,"Follow-up discovered while repairing PR 142: the current README generalizes a successful historical merge experiment into an unconditional no-data-loss claim, describes reconciliation as re-greening hashes, and still advertises raw history repair. The CI workflow correctly distinguishes strict health from lossless-merge evidence. Review the README against current audited reconciliation semantics and require source/evidence verification rather than treating green health as proof of losslessness. Deferred from the dependency repair; no history rewrite or repair was performed."
+comments[5]:
+  - created_at: "2026-10-20T07:38:58.805Z"
+    author: codex-agent
+    text: "Follow-up discovered while repairing PR 142: the current README generalizes a successful historical merge experiment into an unconditional no-data-loss claim, describes reconciliation as re-greening hashes, and still advertises raw history repair. The CI workflow correctly distinguishes strict health from lossless-merge evidence. Review the README against current audited reconciliation semantics and require source/evidence verification rather than treating green health as proof of losslessness. Deferred from the dependency repair; no history rewrite or repair was performed."
+  - created_at: "2026-10-21T18:54:14.058Z"
+    author: codex-agent
+    text: "The 2026-10-21 cancellation verdict is withdrawn after PR 147 review. Main 2f13c43f732381cb0aef43156a631e46b4244636 retains the README no-data-loss claim and raw history-repair guidance, so the documented correction remains outstanding. Non-git support does not show that the documentation problem was delivered or superseded. Keep this item active until a correction is merged into main. PR 148 proposes corrected guidance at b4f343d08535056b0b490da35f5304c6d57dcd8e; an unmerged proposal is not completion. This audited comment correction supersedes the prior cancellation rationale while preserving its existing history event."
+    edited_at: "2026-10-22T11:56:39.261Z"
+  - created_at: "2026-10-22T11:52:08.227Z"
+    author: codex-agent
+    text: "PR 147 review round: npm ci passed; remote branch pulled and origin/main fetched, no missing main commits. Both unresolved threads and every comment read; latest CodeRabbit review has no outside-diff findings. PRRT_kwDOSp_1PM6vDUqd is valid: main 2f13c43f732381cb0aef43156a631e46b4244636 still contains the README no-data-loss claim and raw history-repair recommendation. Reopened this item before claiming it; non-git support does not retire an outstanding documentation correction. PR 148 contains a proposed correction at b4f343d08535056b0b490da35f5304c6d57dcd8e, but it is not merged and is not delivery on main. PRRT_kwDOSp_1PM6vDUqg is valid: the release guard exists at tests/release-workflow.test.ts; the singular-directory reference is absent. Plan: append audited corrections to close reason and file links, record main evidence and whole-PR verification, run tracker-only gates, release claim without closing."
+  - created_at: "2026-10-22T11:55:17.315Z"
+    author: codex-agent
+    text: "Tracker evidence/revert proof for both review threads: two read-only Node assertion commands decode the item snapshots with the canonical TOON parser, recheck main README and the main release-test path, and validate active correction ownership plus authoritative release links/close reason/comments. Both commands pass with corrected records and fail with AssertionError when reading their original PR-head snapshots instead (2/2 original-state proofs; no tracker rollback). Whole-PR self-review parsed all 11 changed item snapshots: 29 local file/doc links resolve after the one reported path migration; five cited delivery commits are ancestors of main. Both affected history streams retain every original byte as a prefix. The existing closed release item retains both completion timestamps. Corrected both prior reconciliation comments via pm comment --edit, which appends audit events and preserves existing history bytes. No other invalid linked path or newly canceled correction found. PM CLI UX gap: complex linked commands with commas/quotes are rejected by CSV --add input; documented Markdown --add stdin successfully preserves those commands. No issue filed."
+  - created_at: "2026-10-22T11:57:32.049Z"
+    author: codex-agent
+    text: "PR 147 final review receipt: both valid unresolved findings are addressed in tracker-only changes. PRRT_kwDOSp_1PM6vDUqd: correction active in_progress, prior cancellation rationale corrected by an audited comment edit, proposed PR 148 fix remains unmerged. PRRT_kwDOSp_1PM6vDUqg: correct release-test link, close reason and both reconciliation comments; existing closed/completed timestamps preserved. Two linked read-only evidence commands passed 2/2 via pm test pm-jau2 --run --timeout 600 --progress, and both fail against original PR snapshots (2/2 proofs). Final self-review verifies all 11 changed snapshots and 33 current local file/doc links; five cited delivery commits are ancestors of main; both original history streams remain byte-for-byte prefixes. npm ci passed with zero vulnerabilities; npm run changelog:full and npm run changelog:check passed; git diff --check and new-line privacy checks passed. Fresh-home pm health reports ok:true, all 10 checks okay, with a telemetry-queue advisory; normal-home health retains only the pre-existing global extension/SDK version mismatch. No source, workflow, dependency pin or dist changes; tracker-only gate exception applies. Latest full thread/comment reread shows only the same two threads and no newer CodeRabbit/outside-diff findings. No refusals, thread replies/resolution, merge or release. Releasing the claim for orchestrator verification without closing this item. After this final tracker write, regenerate/check changelog and repeat health before committing."
 notes[1]{created_at,author,text}:
   "2026-07-22T19:46:00.661Z",claude-opus-20260722,Fan-out from canary unbraind/pm-beads#42. README Multi-agent merge safety section closing recommendation migrated to the pm merge reconcile dry-run->apply->verify workflow; links upstream docs/MERGE_SAFETY.md; keeps history-repair --all as a lower-level primitive.
-files[1]{path,scope}:
+files[4]{path,scope}:
+  .agents/pm/issues/pm-jau2.toon,project
+  .agents/pm/issues/pm-nhcz.toon,project
   .github/workflows/ci.yml,project
-docs[1]{path,scope}:
+  tests/release-workflow.test.ts,project
+tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  "node --input-type=module -e 'import assert from \"node:assert/strict\"; import {readFileSync} from \"node:fs\"; import {execFileSync} from \"node:child_process\"; import {decode} from \"@toon-format/toon\"; const item=decode(readFileSync(\".agents/pm/issues/pm-jau2.toon\",\"utf8\")); assert.ok([\"open\",\"in_progress\"].includes(item.status), \"documentation correction must stay active until delivered on main\"); const main=execFileSync(\"git\",[\"show\",\"origin/main:README.md\"],{encoding:\"utf8\"}); assert.ok(main.includes(\"no data loss\") && main.includes(\"pm history-repair\"), \"recheck outstanding main guidance\"); console.log(\"pm-jau2 main evidence passed\");'",project,codex-agent,"2026-10-22T11:54:41.196Z",local_mutation,chore/reconcile-tracker-1021
+  "node --input-type=module -e 'import assert from \"node:assert/strict\"; import {readFileSync} from \"node:fs\"; import {execFileSync} from \"node:child_process\"; import {decode} from \"@toon-format/toon\"; const item=decode(readFileSync(\".agents/pm/issues/pm-nhcz.toon\",\"utf8\")); assert.equal(item.status,\"closed\"); assert.ok(item.files.some(row=>row.path===\"tests/release-workflow.test.ts\"), \"release guard link must resolve\"); assert.ok(!item.files.some(row=>row.path===\"test/release-workflow.test.ts\")); assert.ok(!item.close_reason.includes(\"test/release-workflow.test.ts\"), \"close reason must cite the real guard\"); assert.ok(!item.comments.some(row=>row.text.includes(\"test/release-workflow.test.ts\")), \"current comments must cite the real release guard\"); execFileSync(\"git\",[\"cat-file\",\"-e\",\"origin/main:tests/release-workflow.test.ts\"]); console.log(\"pm-nhcz main evidence passed\");'",project,codex-agent,"2026-10-22T11:54:57.736Z",local_mutation,chore/reconcile-tracker-1021
+docs[2]{path,scope}:
+  CHANGELOG.md,project
   README.md,project
 body: ""
