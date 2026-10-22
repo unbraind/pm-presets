@@ -31,4 +31,6 @@ export { PRESET_REGISTRY } from "./registry.ts";
 export type { PresetDescriptor } from "./registry.ts";
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
 export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
+export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.ts";
+export type { VersionedPreset, UpgradeSettings, UpgradeValue, UpgradeDecisions, UpgradeChange, PresetUpgradeReceipt, PresetUpgradeSummary, PresetUpgradeResult, UpgradeRefusalCode } from "./upgrade.ts";
 //# sourceMappingURL=index.d.ts.map
