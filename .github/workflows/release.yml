@@ -32,13 +32,13 @@ jobs:
       RELEASE_TIMEZONE: Europe/Vienna
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -67,7 +67,7 @@ jobs:
           echo "npm $active can exchange an OIDC token for a registry credential."
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2.2.0
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
       - name: Install dependencies
         run: npm ci
