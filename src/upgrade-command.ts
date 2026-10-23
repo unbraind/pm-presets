@@ -6,7 +6,7 @@ import { executePresetUpgrade, parseUpgradeReceipt, planPresetUpgrade, summarize
 import type { UpgradeDecisions, VersionedPreset } from "./upgrade.ts";
 
 /** Read one bounded JSON artifact, suppressing filesystem paths and private parser diagnostics. */
-function artifact(file: string | undefined): unknown {
+export function readPresetArtifact(file: string | undefined): unknown {
   if (!file) throw new UpgradeRefusal("invalid_input", "Provide the required JSON artifact flags; see pm presets upgrade plan --help.");
   try {
     const fd = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
@@ -46,8 +46,8 @@ export function registerUpgradeCommands(api: ExtensionApi): void {
       const output = readStringOption(ctx.options, "receipt");
       if (!output) throw new UpgradeRefusal("invalid_input", "Provide --receipt with a new private file to retain recovery settings before applying.");
       const decisionFile = readStringOption(ctx.options, "decisions");
-      const receipt = await planPresetUpgrade(ctx.sdk!, artifact(readStringOption(ctx.options, "from")) as VersionedPreset,
-        artifact(readStringOption(ctx.options, "to")) as VersionedPreset, decisionFile ? artifact(decisionFile) as UpgradeDecisions : {}, readStringOption(ctx.options, "generation"));
+      const receipt = await planPresetUpgrade(ctx.sdk!, readPresetArtifact(readStringOption(ctx.options, "from")) as VersionedPreset,
+        readPresetArtifact(readStringOption(ctx.options, "to")) as VersionedPreset, decisionFile ? readPresetArtifact(decisionFile) as UpgradeDecisions : {}, readStringOption(ctx.options, "generation"));
       try {
         const serialized = JSON.stringify(receipt) + "\n";
         if (Buffer.byteLength(serialized) > 1024 * 1024) throw new Error("receipt too large");
@@ -64,7 +64,7 @@ export function registerUpgradeCommands(api: ExtensionApi): void {
       description: `${direction === "apply" ? "Apply" : "Roll back"} a resolved preset migration through audited SDK settings mutations.`,
       arguments: [{ name: "receipt", required: true, description: "Private JSON receipt saved by presets upgrade plan." }],
       examples: [`pm presets upgrade ${direction} upgrade.private.json --json`],
-      run: async (ctx: CommandHandlerContext) => executePresetUpgrade(ctx.sdk!, parseUpgradeReceipt(artifact(ctx.args?.[0])), direction),
+      run: async (ctx: CommandHandlerContext) => executePresetUpgrade(ctx.sdk!, parseUpgradeReceipt(readPresetArtifact(ctx.args?.[0])), direction),
     });
   }
 }

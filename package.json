@@ -30,7 +30,8 @@
     "CHANGELOG.md",
     "presets.json",
     "docs/simulation-example.md",
-    "docs/upgrade-example.md"
+    "docs/upgrade-example.md",
+    "docs/plan-example.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -127,12 +128,14 @@
       "README.md",
       "CHANGELOG.md",
       "docs/simulation-example.md",
-      "docs/upgrade-example.md"
+      "docs/upgrade-example.md",
+      "docs/plan-example.md"
     ],
     "examples": [
       "README.md",
       "docs/simulation-example.md",
-      "docs/upgrade-example.md"
+      "docs/upgrade-example.md",
+      "docs/plan-example.md"
     ]
   },
   "publishConfig": {
