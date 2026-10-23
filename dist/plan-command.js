@@ -2,7 +2,7 @@
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { resolveSimulationSdk } from "./simulation.js";
+import { resolveSimulationSdk } from "./sdk-loader.js";
 import { readBooleanOption, readStringOption, resolvePmDir } from "./presets/shared.js";
 import { readWorkspaceSettings } from "./export.js";
 import { readPresetArtifact } from "./upgrade-command.js";

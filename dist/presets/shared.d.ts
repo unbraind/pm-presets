@@ -11,6 +11,7 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
+import type * as PmSdk from "@unbrained/pm-cli/sdk";
 import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
 /**
  * Numeric exit codes mirroring the pm-cli SDK contract.
@@ -73,22 +74,7 @@ export type PresetSettingsPatch = Pick<PmSettings, "id_prefix"> & {
     /** Test execution and evidence settings accepted by the installed SDK. */
     testing?: Partial<PmSettings["testing"]>;
 };
-/** Sorted template inventory after user templates shadow builtin names. */
-export interface TemplatesListResult {
-    templates: string[];
-    count: number;
-    builtin_templates: string[];
-    user_templates: string[];
-}
-/** Template provenance, on-disk location and create options returned by show. */
-export interface TemplatesShowResult {
-    name: string;
-    source: "builtin" | "user";
-    created_at: string;
-    updated_at: string;
-    path: string;
-    options: CreateTemplateOptions;
-}
+export type { TemplatesListResult, TemplatesShowResult } from "@unbrained/pm-cli/sdk";
 /** Resolve the `.agents/pm` storage directory for the active workspace. */
 export declare function resolvePmDir(context: CommandHandlerContext): string;
 /** Read a boolean flag, tolerating both camelCase and kebab-case keys. */
@@ -142,22 +128,10 @@ export declare function applyPreset(context: CommandHandlerContext, input: {
     nextSteps: string[];
     warning?: string;
 }): Promise<void>;
-/**
- * List every template available to the workspace, builtin and user.
- *
- * A user template with the same name as a builtin shadows it, so the builtin is
- * omitted from the builtin list; both lists are sorted, and the combined
- * `templates` is the de-duplicated union.
- */
-export declare function runTemplatesList(context: CommandHandlerContext): TemplatesListResult;
-/**
- * Resolve one template by name, preferring a user file over the builtin.
- *
- * Requires a non-empty name argument (else `USAGE`), then looks on disk first;
- * a user file is reported with `source: "user"` and its real path, a matching
- * builtin with `source: "builtin"` and a `builtin:` path. A name found nowhere
- * throws `NOT_FOUND`.
- */
-export declare function runTemplatesShow(context: CommandHandlerContext): TemplatesShowResult;
-export {};
+/** Resolve template reads through the existing package-or-host SDK loader. */
+export declare function loadTemplateSdk(): Pick<typeof PmSdk, "runTemplatesList" | "runTemplatesShow" | "loadCreateTemplateOptions">;
+/** List SDK templates with invocation globals and the active tracker taking precedence. */
+export declare function runTemplatesList(context: CommandHandlerContext): Promise<PmSdk.TemplatesListResult>;
+/** Show an SDK template without wrapping its expected-error refusal. */
+export declare function runTemplatesShow(context: CommandHandlerContext): Promise<PmSdk.TemplatesShowResult>;
 //# sourceMappingURL=shared.d.ts.map

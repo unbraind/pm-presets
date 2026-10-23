@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import { createExtensionCommandSdk, PmClient, readSettings, type CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+import { createExtensionCommandSdk, isPmCliExpectedError, PmClient, readSettings, type CommandHandlerContext } from "@unbrained/pm-cli/sdk";
 
 import {
   runAgentWorkflowSetup,
@@ -302,7 +302,7 @@ test("runTemplatesList shadows builtins with user files and ignores stray names"
   writeFileSync(join(pmDir, "templates", "bug.json"), "{\"name\":\"bug\",\"options\":{}}\n");
   writeFileSync(join(pmDir, "templates", "notes.txt"), "ignore");
   writeFileSync(join(pmDir, "templates", "not valid.json"), "{}\n");
-  const result = runTemplatesList(context(pmDir));
+  const result = await runTemplatesList(context(pmDir));
   assert.deepStrictEqual(result.user_templates, ["bug", "zebra"]);
   assert.ok(!result.builtin_templates.includes("bug"));
   assert.ok(result.builtin_templates.includes("feature"));
@@ -314,15 +314,15 @@ test("runTemplatesList requires an initialized tracker and tolerates a missing t
   const root = mkdtempSync(join(tmpdir(), "pm-presets-uninit-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   try {
-    runTemplatesList(context(join(root, ".agents", "pm")));
+    await runTemplatesList(context(join(root, ".agents", "pm")));
     assert.fail("expected throw");
   } catch (error) {
-    assert.ok(error instanceof CommandError);
+    assert.ok(isPmCliExpectedError(error));
     assert.strictEqual(error.exitCode, EXIT_CODE.NOT_FOUND);
   }
 
   const pmDir = await workspace(t);
-  const listed = runTemplatesList(context(pmDir));
+  const listed = await runTemplatesList(context(pmDir));
   assert.ok(listed.builtin_templates.includes("spike"));
   assert.deepStrictEqual(listed.user_templates, []);
 });
@@ -330,21 +330,21 @@ test("runTemplatesList requires an initialized tracker and tolerates a missing t
 test("runTemplatesShow prefers user files, then builtins, and rejects bad input", async (t) => {
   const pmDir = await workspace(t);
   try {
-    runTemplatesShow(context(pmDir, { args: [] }));
+    await runTemplatesShow(context(pmDir, { args: [] }));
     assert.fail("expected throw");
   } catch (error) {
-    assert.ok(error instanceof CommandError);
+    assert.ok(isPmCliExpectedError(error));
     assert.strictEqual(error.exitCode, EXIT_CODE.USAGE);
   }
   try {
-    runTemplatesShow(context(pmDir, { args: ["   "] }));
+    await runTemplatesShow(context(pmDir, { args: ["   "] }));
     assert.fail("expected throw");
   } catch (error) {
-    assert.ok(error instanceof CommandError);
+    assert.ok(isPmCliExpectedError(error));
     assert.strictEqual(error.exitCode, EXIT_CODE.USAGE);
   }
 
-  const builtin = runTemplatesShow(context(pmDir, { args: ["feature"] }));
+  const builtin = await runTemplatesShow(context(pmDir, { args: ["feature"] }));
   assert.strictEqual(builtin.source, "builtin");
   assert.strictEqual(builtin.path, "builtin:feature");
   assert.strictEqual(builtin.options.type, "Feature");
@@ -359,16 +359,16 @@ test("runTemplatesShow prefers user files, then builtins, and rejects bad input"
       options: { type: "Feature", tags: ["user"] },
     }),
   );
-  const user = runTemplatesShow(context(pmDir, { args: ["feature"] }));
+  const user = await runTemplatesShow(context(pmDir, { args: ["feature"] }));
   assert.strictEqual(user.source, "user");
   assert.deepStrictEqual(user.options.tags, ["user"]);
   assert.strictEqual(user.created_at, "2026-01-01T00:00:00.000Z");
 
   try {
-    runTemplatesShow(context(pmDir, { args: ["missing-template"] }));
+    await runTemplatesShow(context(pmDir, { args: ["missing-template"] }));
     assert.fail("expected throw");
   } catch (error) {
-    assert.ok(error instanceof CommandError);
+    assert.ok(isPmCliExpectedError(error));
     assert.strictEqual(error.exitCode, EXIT_CODE.NOT_FOUND);
   }
 });
@@ -378,23 +378,23 @@ test("runTemplatesShow recovers incomplete documents and rejects invalid ones", 
   mkdirSync(join(pmDir, "templates"));
 
   writeFileSync(join(pmDir, "templates", "bare.json"), "{\"options\":{\"type\":\"Task\",\"tags\":[\"a\"]}}\n");
-  const bare = runTemplatesShow(context(pmDir, { args: ["bare"] }));
+  const bare = await runTemplatesShow(context(pmDir, { args: ["bare"] }));
   assert.strictEqual(bare.name, "bare");
-  assert.strictEqual(bare.created_at, "1970-01-01T00:00:00.000Z");
+  assert.ok(Number.isFinite(Date.parse(bare.created_at)));
   assert.deepStrictEqual(bare.options.tags, ["a"]);
 
   writeFileSync(join(pmDir, "templates", "badjson.json"), "{not json");
-  assert.throws(() => runTemplatesShow(context(pmDir, { args: ["badjson"] })), /invalid JSON/);
+  await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["badjson"] })), /invalid JSON/);
 
   writeFileSync(join(pmDir, "templates", "array.json"), "[1]\n");
-  assert.throws(() => runTemplatesShow(context(pmDir, { args: ["array"] })), /invalid document shape/);
+  await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["array"] })), /invalid document shape/);
 
   writeFileSync(join(pmDir, "templates", "noopts.json"), "{\"name\":\"noopts\"}\n");
-  assert.throws(() => runTemplatesShow(context(pmDir, { args: ["noopts"] })), /invalid options payload/);
+  await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["noopts"] })), /invalid options payload/);
 
   writeFileSync(join(pmDir, "templates", "emptykey.json"), "{\"name\":\"emptykey\",\"options\":{\"\":\"x\"}}\n");
-  assert.throws(() => runTemplatesShow(context(pmDir, { args: ["emptykey"] })), /empty option key/);
+  await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["emptykey"] })), /empty option key/);
 
   writeFileSync(join(pmDir, "templates", "badval.json"), "{\"name\":\"badval\",\"options\":{\"type\":1}}\n");
-  assert.throws(() => runTemplatesShow(context(pmDir, { args: ["badval"] })), /invalid value for option "type"/);
+  await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["badval"] })), /invalid value for option "type"/);
 });

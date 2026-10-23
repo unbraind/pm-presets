@@ -1,20 +1,8 @@
+export { resolveSimulationSdk, SimulationRefusal, type SimulationRefusalCode } from "./sdk-loader.ts";
 /** Versioned, bounded probes; arbitrary commands and caller workspaces are never accepted. */
 export declare const PRESET_SCENARIOS: readonly ["create-task", "claim-start", "close-without-evidence", "close-with-evidence"];
 /** Identifies a built-in agent workflow, rather than executable user input. */
 export type PresetScenarioId = typeof PRESET_SCENARIOS[number];
-/** Failure categories agents can branch on before retrying. */
-export type SimulationRefusalCode = "unknown_preset" | "unknown_scenario" | "duplicate_scenario" | "sdk_unavailable" | "simulation_failed";
-/** Actionable refusal; internal paths and raw child diagnostics never escape. */
-export declare class SimulationRefusal extends Error {
-    /** Stable machine-readable category. */
-    readonly code: SimulationRefusalCode;
-    /** A concrete next action for the caller. */
-    readonly remedy: string;
-    /** Usage failures are distinct from execution failures. */
-    readonly exitCode: number;
-    /** Construct a refusal without exposing the caller's configuration or filesystem. */
-    constructor(code: SimulationRefusalCode, remedy: string, exitCode?: number);
-}
 /** Select a subset to inspect; omissions remain visible as coverage gaps. */
 export interface PresetSimulationOptions {
     /** Bundled preset id (same names accepted by presets apply). */
@@ -56,8 +44,6 @@ export interface PresetSimulationReport {
     /** Results in canonical suite order, independent of selection order. */
     readonly scenarios: readonly PresetScenarioResult[];
 }
-/** Resolve the peer from the package or the CLI host, including standalone extension copies. */
-export declare function resolveSimulationSdk(anchors: readonly string[]): string;
 /** Apply settings and execute real SDK operations; called only inside the isolated process. */
 export declare function executeSyntheticScenarios(root: string, preset: string, scenarios: readonly PresetScenarioId[], sdkPath: string): Promise<PresetSimulationReport>;
 /** Simulate before installing: no caller tracker is read, copied, installed into, or mutated. */

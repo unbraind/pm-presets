@@ -1,0 +1,34 @@
+id: pm-bzvf
+title: Preserve SDK refusal identity when loading create templates
+description: "Verify F12 against main and delegate template listing, showing and create-option loading to the public SDK while retaining preset definitions and template writes."
+type: Task
+status: in_progress
+priority: 2
+tags[3]: fixed,sdk,templates
+created_at: "2026-10-23T21:19:52.018Z"
+updated_at: "2026-10-23T21:46:34.180Z"
+author: codex-agent
+acceptance_criteria: "F12: list and show match the SDK for builtin and user-shadowed names, malformed numeric priority produces a source-safe SDK expected error, all seven presets retain usable templates in a non-git tracker, and npm plus bun release gates pass at unchanged coverage thresholds."
+comments[6]{created_at,author,text}:
+  "2026-10-23T21:20:06.693Z",codex-agent,"Verified F12 against origin/main e011580edfd95fef5b008218b9726746e0d01164: shared.ts owns duplicate builtin inventory, list/show resolution, and stored-document validation. The pinned SDK 2026.10.20 exports all three named replacements. Plan: reuse the existing host SDK resolver, delegate reads with invocation globals and the explicit tracker path, retain preset-owned writes, and prove malformed numeric priority retains SDK expected-error identity in a non-git tracker."
+  "2026-10-23T21:24:19.977Z",codex-agent,"F12 confirmed and implemented. SDK template exports are already present at the declared 2026.9.30 floor and pinned 2026.10.20 SDK, so dependency ranges and manifest remain unchanged. Reused the existing package-or-host resolver by extracting it into sdk-loader.ts to avoid a module initialization cycle. Template exports now use SDK inventory and loadCreateTemplateOptions, refusing malformed options instead of silently exporting them. Builtin content, fallback timestamps and filename-based export names follow SDK behavior."
+  "2026-10-23T21:25:03.479Z",codex-agent,"Behavioral revert proofs: restoring only legacy list/show implementations and their removed private inventory/parser dependencies made node --test --test-name-pattern=\"^SDK template refusal\" tests/templates-sdk.test.ts fail 0/1 with malformed template must retain SDK expected-error identity. Restoring only readWorkspaceTemplates made node --test --test-name-pattern=\"^SDK template export-refusal\" tests/templates-sdk.test.ts fail 0/1 with Missing expected rejection. Both changes restored afterward; all four non-git SDK scenarios pass, including all seven preset installations, builtin parity and user shadowing."
+  "2026-10-23T21:27:51.577Z",codex-agent,"Linked regression execution passed: pm test pm-bzvf --run --progress --pm-context none --override-linked-pm-context --workspace-context snapshot --override-linked-workspace-context ran node --test tests/templates-sdk.test.ts, 4 tests passed, zero failures or skips. PM runner requires snapshot or isolated workspace with context none. CLI UX observed: combining --add with a run-only context flag persisted the link before returning its usage error; no upstream issue filed under task rules."
+  "2026-10-23T21:31:34.092Z",codex-agent,"Full-gate compatibility correction: asynchronous export initially made the unified presets handler reject invalid arguments asynchronously, violating its existing synchronous validation test. Kept argument validation synchronous and returned the SDK-read promise only for export. node --test tests/commands.test.ts now passes 10/10. The known-failed initial release run was stopped; rerunning full gates against the corrected implementation."
+  "2026-10-23T21:46:27.770Z",codex-agent,"Final corrected gates passed: npm run release:check and bun run release:check each executed 194 tests, 194 passed, zero failures/canceled/skipped/todo. Both measured 23 source files at 100% lines, 100% branches and 100% functions with unchanged thresholds. Typecheck, 134-declaration docstring gate, production audit, package dry-run, changelog check, publish attestation and version-derived changelog-date checks passed. Runs used an isolated home and disabled global Git configuration. Strict CI-style tracker health also exited 0 in an isolated home. Focused linked non-git SDK regressions passed 4/4 and existing command compatibility tests passed 10/10. Source and diagnostic parity, both revert proofs, and all seven preset template inventories are covered. Remaining deliberate behavior change: export refuses malformed templates and uses loadable filename names; README documents this. Ready for PR CI and orchestrator verification; do not close this item."
+files[10]{path,scope,note}:
+  src/export.ts,project,SDK template read delegation and shared host resolution
+  src/index.ts,project,SDK template read delegation and shared host resolution
+  src/plan-command.ts,project,SDK template read delegation and shared host resolution
+  src/presets/shared.ts,project,SDK template read delegation and shared host resolution
+  src/sdk-loader.ts,project,SDK template read delegation and shared host resolution
+  src/simulation.ts,project,SDK template read delegation and shared host resolution
+  tests/export.test.ts,project,SDK parity and malformed template regressions
+  tests/fixtures/templates-sdk.ts,project,Real SDK fixture with no git on PATH
+  tests/shared.test.ts,project,SDK parity and malformed template regressions
+  tests/templates-sdk.test.ts,project,SDK parity and malformed template regressions
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test tests/templates-sdk.test.ts,project,codex-agent,"2026-10-23T21:24:46.680Z",local_mutation,refactor/sdk-template-loading
+docs[1]{path,scope,note}:
+  README.md,project,Without git and SDK template behavior
+body: ""
