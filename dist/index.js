@@ -299,21 +299,22 @@ export default defineExtension({
                 if (!settings) {
                     throw new PresetError("No readable settings.json in " + pmDir + ". Run 'pm init' (and apply a preset) first.", EXIT_CODE_NOT_FOUND);
                 }
-                const templates = readWorkspaceTemplates(pmDir);
-                const exported = buildExportedPreset({
-                    name: name.trim(),
-                    displayName: readStringOption(options, "displayName", "display-name"),
-                    settings,
-                    templates,
+                return readWorkspaceTemplates(pmDir).then((templates) => {
+                    const exported = buildExportedPreset({
+                        name: name.trim(),
+                        displayName: readStringOption(options, "displayName", "display-name"),
+                        settings,
+                        templates,
+                    });
+                    const output = readStringOption(options, "output");
+                    if (output) {
+                        const serialized = JSON.stringify(exported, null, 2) + "\n";
+                        fs.writeFileSync(output, serialized, "utf8");
+                        console.log("Exported preset '" + exported.id + "' (" + exported.templates.length + " template(s)) to " + output);
+                        return undefined;
+                    }
+                    return exported;
                 });
-                const output = readStringOption(options, "output");
-                if (output) {
-                    const serialized = JSON.stringify(exported, null, 2) + "\n";
-                    fs.writeFileSync(output, serialized, "utf8");
-                    console.log("Exported preset '" + exported.id + "' (" + exported.templates.length + " template(s)) to " + output);
-                    return undefined;
-                }
-                return exported;
             },
         });
         // ── unified presets list / show / diff / validate / apply ────────────────
@@ -401,24 +402,25 @@ export default defineExtension({
                 if (!settings) {
                     throw new PresetError(`No readable settings.json in ${pmDir}. Run \`pm init\` (and apply a preset) first.`, 3);
                 }
-                const templates = readWorkspaceTemplates(pmDir);
-                const exported = buildExportedPreset({
-                    name: name.trim(),
-                    displayName: readStringOption(ctx.options, "displayName", "display-name"),
-                    settings,
-                    templates,
+                return readWorkspaceTemplates(pmDir).then((templates) => {
+                    const exported = buildExportedPreset({
+                        name: name.trim(),
+                        displayName: readStringOption(ctx.options, "displayName", "display-name"),
+                        settings,
+                        templates,
+                    });
+                    const output = readStringOption(ctx.options, "output");
+                    if (output) {
+                        const serialized = `${JSON.stringify(exported, null, 2)}\n`;
+                        fs.writeFileSync(output, serialized, "utf8");
+                        console.log(`Exported preset '${exported.id}' (${exported.templates.length} template(s)) to ${output}`);
+                        return undefined;
+                    }
+                    // No --output: return the definition so pm renders it as the command
+                    // result. With `--json` pm emits clean, pipeable JSON (no trailing
+                    // result block); use `--output` for a verbatim file on disk.
+                    return exported;
                 });
-                const output = readStringOption(ctx.options, "output");
-                if (output) {
-                    const serialized = `${JSON.stringify(exported, null, 2)}\n`;
-                    fs.writeFileSync(output, serialized, "utf8");
-                    console.log(`Exported preset '${exported.id}' (${exported.templates.length} template(s)) to ${output}`);
-                    return undefined;
-                }
-                // No --output: return the definition so pm renders it as the command
-                // result. With `--json` pm emits clean, pipeable JSON (no trailing
-                // result block); use `--output` for a verbatim file on disk.
-                return exported;
             },
         });
         api.registerCommand({

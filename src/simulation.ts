@@ -8,30 +8,13 @@ import { pathToFileURL } from "node:url";
 import type { PmClient as Client, createExtensionCommandSdk, readSettings } from "@unbrained/pm-cli/sdk";
 import { findPresetDefinition, requirePresetDefinition } from "./catalog.ts";
 import { PRESET_HANDLERS } from "./setup.ts";
+import { resolveSimulationSdk, SimulationRefusal } from "./sdk-loader.ts";
+export { resolveSimulationSdk, SimulationRefusal, type SimulationRefusalCode } from "./sdk-loader.ts";
 
 /** Versioned, bounded probes; arbitrary commands and caller workspaces are never accepted. */
 export const PRESET_SCENARIOS = Object.freeze(["create-task", "claim-start", "close-without-evidence", "close-with-evidence"] as const);
 /** Identifies a built-in agent workflow, rather than executable user input. */
 export type PresetScenarioId = typeof PRESET_SCENARIOS[number];
-/** Failure categories agents can branch on before retrying. */
-export type SimulationRefusalCode = "unknown_preset" | "unknown_scenario" | "duplicate_scenario" | "sdk_unavailable" | "simulation_failed";
-/** Actionable refusal; internal paths and raw child diagnostics never escape. */
-export class SimulationRefusal extends Error {
-  /** Stable machine-readable category. */
-  readonly code: SimulationRefusalCode;
-  /** A concrete next action for the caller. */
-  readonly remedy: string;
-  /** Usage failures are distinct from execution failures. */
-  readonly exitCode: number;
-  /** Construct a refusal without exposing the caller's configuration or filesystem. */
-  constructor(code: SimulationRefusalCode, remedy: string, exitCode = 2) {
-    super(`${code}: ${remedy}`);
-    this.name = "SimulationRefusal";
-    this.code = code;
-    this.remedy = remedy;
-    this.exitCode = exitCode;
-  }
-}
 /** Select a subset to inspect; omissions remain visible as coverage gaps. */
 export interface PresetSimulationOptions {
   /** Bundled preset id (same names accepted by presets apply). */
@@ -72,18 +55,6 @@ export interface PresetSimulationReport {
   readonly limitations: readonly string[];
   /** Results in canonical suite order, independent of selection order. */
   readonly scenarios: readonly PresetScenarioResult[];
-}
-
-/** Resolve the peer from the package or the CLI host, including standalone extension copies. */
-export function resolveSimulationSdk(anchors: readonly string[]): string {
-  for (const anchor of anchors) {
-    try {
-      return createRequire(anchor).resolve("@unbrained/pm-cli/sdk");
-    } catch {
-      // The extension copy may have no node_modules; try the host next.
-    }
-  }
-  throw new SimulationRefusal("sdk_unavailable", "Run with a pm CLI host >=2026.9.30 or install the declared peer dependency.", 1);
 }
 
 /** Apply settings and execute real SDK operations; called only inside the isolated process. */

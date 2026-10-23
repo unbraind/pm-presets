@@ -22,6 +22,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { loadTemplateSdk } from "./presets/shared.ts";
 import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
 
 /**
@@ -90,37 +91,14 @@ export function buildExportedPreset(input: {
   };
 }
 
-/** Read every user template document from the workspace `templates/` directory. */
-export function readWorkspaceTemplates(pmDir: string): ExportedTemplate[] {
-  const templatesDir = path.join(pmDir, "templates");
-  if (!fs.existsSync(templatesDir)) {
-    return [];
-  }
-  const out: ExportedTemplate[] = [];
-  for (const entry of fs.readdirSync(templatesDir)) {
-    if (!entry.toLowerCase().endsWith(".json")) {
-      continue;
-    }
-    const filePath = path.join(templatesDir, entry);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
-    } catch {
-      continue;
-    }
-    if (!isJsonObject(parsed)) {
-      continue;
-    }
-    const name =
-      typeof parsed.name === "string" && parsed.name.trim().length > 0
-        ? parsed.name
-        : entry.slice(0, -".json".length);
-    const options = isJsonObject(parsed.options)
-      ? (parsed.options as CreateTemplateOptions)
-      : ({} as CreateTemplateOptions);
-    out.push({ name, options });
-  }
-  return out;
+/** Read validated user create options through the SDK's inventory and loader. */
+export async function readWorkspaceTemplates(pmDir: string): Promise<ExportedTemplate[]> {
+  const sdk = loadTemplateSdk();
+  const inventory = await sdk.runTemplatesList({ path: pmDir, noExtensions: true });
+  return Promise.all(inventory.user_templates.map(async (name) => ({
+    name,
+    options: await sdk.loadCreateTemplateOptions(pmDir, name),
+  })));
 }
 
 /** Read the workspace settings.json (or `undefined` if absent/unreadable). */

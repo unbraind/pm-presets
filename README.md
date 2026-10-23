@@ -394,6 +394,11 @@ Capability plans also work without Git. Database hosts can compile plans from
 their provider snapshots without a local tracker. Git-based release changelog
 generation requires a repository and release tags.
 
+Template listing, inspection and export use the host SDK's template inventory
+and loader. User files shadow builtin names; invalid stored options refuse with
+the SDK's expected error and a diagnostic that identifies the template and option
+without echoing document contents. Export uses the loadable filename as its name.
+
 ## Versioned preset upgrades
 
 `pm presets upgrade plan --from vendor-v1.json --to vendor-v2.json --receipt upgrade.private.json`

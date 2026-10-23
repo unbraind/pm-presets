@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import type { getWorkspaceContracts } from "@unbrained/pm-cli/sdk";
 import type { CommandHandlerContext, ExtensionApi } from "@unbrained/pm-cli/sdk/authoring";
-import { resolveSimulationSdk } from "./simulation.ts";
+import { resolveSimulationSdk } from "./sdk-loader.ts";
 import { readBooleanOption, readStringOption, resolvePmDir } from "./presets/shared.ts";
 import { readWorkspaceSettings } from "./export.ts";
 import { readPresetArtifact } from "./upgrade-command.ts";

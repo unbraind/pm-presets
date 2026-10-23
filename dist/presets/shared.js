@@ -11,6 +11,8 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
+import { createRequire } from "node:module";
+import { resolveSimulationSdk } from "../sdk-loader.js";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -53,44 +55,9 @@ export class CommandError extends Error {
         this.exitCode = exitCode;
     }
 }
-const TEMPLATE_DIRECTORY_NAME = "templates";
 const TEMPLATE_FILE_EXTENSION = ".json";
 const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const BUILTIN_TEMPLATE_TIMESTAMP = "1970-01-01T00:00:00.000Z";
-const BUILTIN_TEMPLATES = {
-    bug: {
-        type: "Issue",
-        priority: "1",
-        tags: "bug",
-        acceptanceCriteria: "Bug no longer reproduces with the steps below and a regression test guards it.",
-        expectedResult: "Describe the correct behavior.",
-        actualResult: "Describe the observed behavior.",
-        body: "## Repro steps\n1. \n2. \n3. \n\n## Expected\n\n## Actual\n",
-    },
-    feature: {
-        type: "Feature",
-        priority: "2",
-        tags: "feature",
-        acceptanceCriteria: "Feature is shipped behind agreed scope with tests and docs updated.",
-        whyNow: "Explain impact, urgency, and why this is worth doing now.",
-        body: "## Goal\n\n## Why now\n\n## Out of scope\n",
-    },
-    spike: {
-        type: "Task",
-        priority: "2",
-        tags: "spike",
-        estimatedMinutes: "120",
-        acceptanceCriteria: "Timeboxed investigation complete; findings and a recommendation are recorded.",
-        body: "## Question to answer\n\n## Timebox\n2h\n\n## Findings\n\n## Recommendation\n",
-    },
-    chore: {
-        type: "Chore",
-        priority: "3",
-        tags: "chore",
-        acceptanceCriteria: "Maintenance task done with no behavior change and green checks.",
-        body: "## What\n\n## Why\n",
-    },
-};
 /** Resolve the `.agents/pm` storage directory for the active workspace. */
 export function resolvePmDir(context) {
     const pmRoot = context.pm_root?.trim();
@@ -202,7 +169,7 @@ export async function applyPreset(context, input) {
     const { options } = context;
     const pmDir = resolvePmDir(context);
     const settingsPath = path.join(pmDir, "settings.json");
-    const templatesDir = templatesDirectory(pmDir);
+    const templatesDir = path.join(pmDir, "templates");
     const dryRun = readBooleanOption(options, "dryRun", "dry-run");
     const force = readBooleanOption(options, "force");
     const replace = readBooleanOption(options, "replace");
@@ -294,167 +261,18 @@ export async function applyPreset(context, input) {
         console.warn(input.warning);
     }
 }
-/**
- * List every template available to the workspace, builtin and user.
- *
- * A user template with the same name as a builtin shadows it, so the builtin is
- * omitted from the builtin list; both lists are sorted, and the combined
- * `templates` is the de-duplicated union.
- */
+/** Resolve template reads through the existing package-or-host SDK loader. */
+export function loadTemplateSdk() {
+    const sdkPath = resolveSimulationSdk([import.meta.url, path.join(process.cwd(), "package.json"), process.argv[1]]);
+    return createRequire(import.meta.url)(sdkPath);
+}
+/** List SDK templates with invocation globals and the active tracker taking precedence. */
 export function runTemplatesList(context) {
-    const pmDir = resolvePmDir(context);
-    ensureTrackerInitialized(pmDir);
-    const userTemplates = readUserTemplateNames(pmDir);
-    const userTemplateSet = new Set(userTemplates);
-    const builtinTemplates = Object.keys(BUILTIN_TEMPLATES).filter((name) => !userTemplateSet.has(name));
-    const sortedUser = [...userTemplates].sort((left, right) => left.localeCompare(right));
-    const sortedBuiltin = [...builtinTemplates].sort((left, right) => left.localeCompare(right));
-    const templates = [...new Set([...sortedUser, ...sortedBuiltin])].sort((left, right) => left.localeCompare(right));
-    return {
-        templates,
-        count: templates.length,
-        builtin_templates: sortedBuiltin,
-        user_templates: sortedUser,
-    };
+    return loadTemplateSdk().runTemplatesList({ ...context.global, path: resolvePmDir(context) });
 }
-/**
- * Resolve one template by name, preferring a user file over the builtin.
- *
- * Requires a non-empty name argument (else `USAGE`), then looks on disk first;
- * a user file is reported with `source: "user"` and its real path, a matching
- * builtin with `source: "builtin"` and a `builtin:` path. A name found nowhere
- * throws `NOT_FOUND`.
- */
+/** Show an SDK template without wrapping its expected-error refusal. */
 export function runTemplatesShow(context) {
-    const pmDir = resolvePmDir(context);
-    ensureTrackerInitialized(pmDir);
-    const rawTemplateName = context.args[0];
-    if (typeof rawTemplateName !== "string" || rawTemplateName.trim().length === 0) {
-        throw new CommandError("templates show requires a template name argument.", EXIT_CODE.USAGE);
-    }
-    const name = normalizeTemplateName(rawTemplateName);
-    const templatePath = path.join(templatesDirectory(pmDir), `${name}${TEMPLATE_FILE_EXTENSION}`);
-    if (fs.existsSync(templatePath)) {
-        const document = parseStoredTemplateDocument(fs.readFileSync(templatePath, "utf8"), name);
-        return {
-            name: document.name,
-            source: "user",
-            created_at: document.created_at,
-            updated_at: document.updated_at,
-            path: templatePath,
-            options: document.options,
-        };
-    }
-    const builtinOptions = BUILTIN_TEMPLATES[name];
-    if (builtinOptions) {
-        const document = storedTemplate(name, builtinOptions);
-        return {
-            name: document.name,
-            source: "builtin",
-            created_at: document.created_at,
-            updated_at: document.updated_at,
-            path: `builtin:${name}`,
-            options: document.options,
-        };
-    }
-    throw new CommandError(`Template "${name}" not found.`, EXIT_CODE.NOT_FOUND);
-}
-function templatesDirectory(pmRoot) {
-    return path.join(pmRoot, TEMPLATE_DIRECTORY_NAME);
-}
-/**
- * Guard that the pm tracker is initialized before a template command runs.
- *
- * Only the presence of `settings.json` is checked (created by `pm init`); its
- * absence throws `NOT_FOUND` naming the root, so the operator is told to init
- * rather than seeing a confusing ENOENT deeper in the stack.
- */
-function ensureTrackerInitialized(pmRoot) {
-    const settingsPath = path.join(pmRoot, "settings.json");
-    if (!fs.existsSync(settingsPath)) {
-        throw new CommandError(`Tracker is not initialized at ${pmRoot}. Run pm init first.`, EXIT_CODE.NOT_FOUND);
-    }
-}
-/**
- * Read user template names from the workspace's templates directory.
- *
- * Returns an empty array when the directory does not exist (a workspace need
- * not have added any templates), and filters both by the `.json` extension and
- * by the template-name grammar so a stray non-template file is ignored.
- */
-function readUserTemplateNames(pmRoot) {
-    const dirPath = templatesDirectory(pmRoot);
-    if (!fs.existsSync(dirPath)) {
-        return [];
-    }
-    return fs
-        .readdirSync(dirPath)
-        .filter((entry) => entry.toLowerCase().endsWith(TEMPLATE_FILE_EXTENSION))
-        .map((entry) => entry.slice(0, -TEMPLATE_FILE_EXTENSION.length))
-        .filter((entry) => TEMPLATE_NAME_PATTERN.test(entry));
-}
-/**
- * Parse and validate one stored template file into a document.
- *
- * A JSON parse failure or a non-object shape throws a {@link CommandError}
- * naming the template. Missing or non-string fields fall back to the
- * `normalizedName` and the builtin sentinel timestamps rather than failing, so
- * a hand-edited file missing metadata still loads.
- */
-function parseStoredTemplateDocument(raw, normalizedName) {
-    let parsed;
-    try {
-        parsed = JSON.parse(raw);
-    }
-    catch {
-        throw new CommandError(`Template "${normalizedName}" contains invalid JSON.`);
-    }
-    if (!isJsonObject(parsed)) {
-        throw new CommandError(`Template "${normalizedName}" has invalid document shape.`);
-    }
-    const options = parseStoredTemplateOptions(parsed.options, normalizedName);
-    return {
-        name: typeof parsed.name === "string" && parsed.name.trim().length > 0
-            ? normalizeTemplateName(parsed.name)
-            : normalizedName,
-        created_at: typeof parsed.created_at === "string"
-            ? parsed.created_at
-            : BUILTIN_TEMPLATE_TIMESTAMP,
-        updated_at: typeof parsed.updated_at === "string"
-            ? parsed.updated_at
-            : BUILTIN_TEMPLATE_TIMESTAMP,
-        options,
-    };
-}
-/**
- * Validate and normalize a template's option map.
- *
- * Each key is trimmed (an empty key throws) and each value must be a string or
- * an all-string array; anything else throws a {@link CommandError} naming the
- * offending option. Arrays are copied so the returned document does not alias
- * the parsed input, and the result is sorted by key for a stable file layout.
- */
-function parseStoredTemplateOptions(rawOptions, templateName) {
-    if (!isJsonObject(rawOptions)) {
-        throw new CommandError(`Template "${templateName}" has invalid options payload.`);
-    }
-    const normalized = {};
-    for (const [key, value] of Object.entries(rawOptions)) {
-        const normalizedKey = key.trim();
-        if (normalizedKey.length === 0) {
-            throw new CommandError(`Template "${templateName}" contains an empty option key.`);
-        }
-        if (typeof value === "string") {
-            normalized[normalizedKey] = value;
-            continue;
-        }
-        if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
-            normalized[normalizedKey] = [...value];
-            continue;
-        }
-        throw new CommandError(`Template "${templateName}" contains invalid value for option "${normalizedKey}".`);
-    }
-    return sortTemplateOptions(normalized);
+    return loadTemplateSdk().runTemplatesShow(context.args[0] ?? "", { ...context.global, path: resolvePmDir(context) });
 }
 /**
  * Read and parse a JSON file that must be a JSON object.

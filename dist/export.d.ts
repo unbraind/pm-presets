@@ -53,8 +53,8 @@ export declare function buildExportedPreset(input: {
     templates: ExportedTemplate[];
     now?: Date;
 }): ExportedPreset;
-/** Read every user template document from the workspace `templates/` directory. */
-export declare function readWorkspaceTemplates(pmDir: string): ExportedTemplate[];
+/** Read validated user create options through the SDK's inventory and loader. */
+export declare function readWorkspaceTemplates(pmDir: string): Promise<ExportedTemplate[]>;
 /** Read the workspace settings.json (or `undefined` if absent/unreadable). */
 export declare function readWorkspaceSettings(pmDir: string): Record<string, unknown> | undefined;
 export type { StoredCreateTemplateDocument };

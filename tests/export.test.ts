@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { PmClient, isPmCliExpectedError } from "@unbrained/pm-cli/sdk";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates } from "../src/export.ts";
 
 const NOW = new Date("2026-06-04T00:00:00.000Z");
@@ -109,32 +110,21 @@ test("readWorkspaceSettings returns undefined for missing, unreadable, or non-ob
   assert.deepStrictEqual(readWorkspaceSettings(pmDir), { id_prefix: "x-" });
 });
 
-test("readWorkspaceTemplates skips junk and recovers names from files", (t) => {
-  const pmDir = mkdtempSync(join(tmpdir(), "pm-presets-templates-"));
-  t.after(() => rmSync(pmDir, { recursive: true, force: true }));
-  assert.deepStrictEqual(readWorkspaceTemplates(pmDir), []);
-
+test("readWorkspaceTemplates uses SDK names and refuses malformed stored options", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-templates-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const pmDir = join(root, ".agents", "pm");
+  await new PmClient({ cwd: root, pmRoot: pmDir, noExtensions: true }).init();
+  assert.deepStrictEqual(await readWorkspaceTemplates(pmDir), []);
   const templatesDir = join(pmDir, "templates");
   mkdirSync(templatesDir);
   writeFileSync(join(templatesDir, "notes.txt"), "ignore");
-  writeFileSync(join(templatesDir, "broken.json"), "{not json");
-  writeFileSync(join(templatesDir, "list.json"), "[]\n");
-  writeFileSync(join(templatesDir, "unnamed.json"), "{\"options\":{\"type\":\"Task\"}}\n");
-  writeFileSync(join(templatesDir, "blank-name.json"), "{\"name\":\"  \",\"options\":[]}\n");
-  writeFileSync(
-    join(templatesDir, "named.json"),
-    '{"name":"named","options":{"type":"Issue","tags":["a"]}}\n',
-  );
-
-  const templates = readWorkspaceTemplates(pmDir).sort((left, right) => left.name.localeCompare(right.name));
-  assert.deepStrictEqual(
-    templates.map((template) => template.name),
-    ["blank-name", "named", "unnamed"],
-  );
-  const named = templates.find((template) => template.name === "named");
-  assert.deepStrictEqual(named?.options, { type: "Issue", tags: ["a"] });
-  const unnamed = templates.find((template) => template.name === "unnamed");
-  assert.deepStrictEqual(unnamed?.options, { type: "Task" });
-  const blank = templates.find((template) => template.name === "blank-name");
-  assert.deepStrictEqual(blank?.options, {});
+  writeFileSync(join(templatesDir, "unnamed.json"), '{"options":{"type":"Task"}}');
+  writeFileSync(join(templatesDir, "named.json"), '{"name":"display-alias","options":{"type":"Issue","tags":["a"]}}');
+  assert.deepEqual(await readWorkspaceTemplates(pmDir), [
+    { name: "named", options: { tags: ["a"], type: "Issue" } },
+    { name: "unnamed", options: { type: "Task" } },
+  ]);
+  writeFileSync(join(templatesDir, "bad.json"), '{"options":{"priority":1}}');
+  await assert.rejects(() => readWorkspaceTemplates(pmDir), isPmCliExpectedError);
 });
