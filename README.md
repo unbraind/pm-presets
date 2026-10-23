@@ -64,6 +64,7 @@ management surface plus a generic `apply`:
 | `pm presets list` | Enumerate every bundled preset and what it configures (governance, built-in + custom item types, templates). |
 | `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
 | `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. Add `--strict` to exit non-zero on drift (CI/compliance). |
+| `pm presets plan <id>` | Negotiate operational prerequisites before mutation; use `--composition` and `--target` for composed/provider plans. Missing required contracts exit 2. |
 | `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
 | `pm presets apply <id>` | Scaffold a preset into the current workspace (the generic form of the `*-setup` commands). Add `--replace` for a clean reset of the owned settings trees. |
 | `pm presets export <name>` | Snapshot the **current** workspace's settings + templates as a reusable preset definition (JSON), to stdout or a file. |
@@ -389,6 +390,10 @@ uses a disposable non-git tracker, with no git executable on its PATH. None of
 these commands requires a Git repository. Upgrade planning, applying, retries and
 rollback also work without git; they use the host SDK settings lock and history.
 
+Capability plans also work without Git. Database hosts can compile plans from
+their provider snapshots without a local tracker. Git-based release changelog
+generation requires a repository and release tags.
+
 ## Versioned preset upgrades
 
 `pm presets upgrade plan --from vendor-v1.json --to vendor-v2.json --receipt upgrade.private.json`
@@ -402,3 +407,29 @@ Requires canonical SDK previews (host 2026.10.17+).
 
 See the [complete upgrade example](docs/upgrade-example.md) for decisions,
 recovery, typed SDK usage, refusal remedies and migration boundaries.
+
+## Capability-negotiated plans
+
+Run `pm presets plan kanban --with-seeds --json` before applying a preset.
+The read-only planner checks the selected provider's operations and the SDK's
+live workspace contracts. Required gaps produce exit status 2, stable
+`missing_capability` codes and remedies; optional features are omitted as a
+whole. A refused plan never authorizes partial application. No settings, items
+or history are written by the planner.
+
+Use `--composition composition.json` for a composed preset with atomic features
+and `--target target.json` for the selected directory or database provider's
+capability and workspace-contract snapshot. The same compiler evaluates both
+backends. Database hosts supply their actual contracts; the backend label alone
+never implies support. A snapshot is a planning input, not a connectivity,
+authorization, schema-validity or transaction guarantee. Replan after provider
+or extension changes. Existing apply/diff/export and audited replacement remain
+the execution primitives; this command does not execute composed features.
+
+SDK consumers import `compilePresetPlan`, `bundledPresetComposition`,
+`summarizePresetPlan`, `PlanRefusal` and their types from `pm-presets`. The full
+SDK plan includes every gap. CLI reports retain complete counts and at most
+12 gaps within a 4 KiB detail budget, with `omittedGaps` showing truncation;
+host output budgets/projection may reduce output further. Plans contain only
+contract identifiers and decisions, never settings values or tracker content.
+See [the composed preset example](docs/plan-example.md).

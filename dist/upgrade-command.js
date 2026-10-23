@@ -3,7 +3,7 @@ import { closeSync, constants, fstatSync, openSync, readSync, writeFileSync } fr
 import { readStringOption } from "./presets/shared.js";
 import { executePresetUpgrade, parseUpgradeReceipt, planPresetUpgrade, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 /** Read one bounded JSON artifact, suppressing filesystem paths and private parser diagnostics. */
-function artifact(file) {
+export function readPresetArtifact(file) {
     if (!file)
         throw new UpgradeRefusal("invalid_input", "Provide the required JSON artifact flags; see pm presets upgrade plan --help.");
     try {
@@ -50,7 +50,7 @@ export function registerUpgradeCommands(api) {
             if (!output)
                 throw new UpgradeRefusal("invalid_input", "Provide --receipt with a new private file to retain recovery settings before applying.");
             const decisionFile = readStringOption(ctx.options, "decisions");
-            const receipt = await planPresetUpgrade(ctx.sdk, artifact(readStringOption(ctx.options, "from")), artifact(readStringOption(ctx.options, "to")), decisionFile ? artifact(decisionFile) : {}, readStringOption(ctx.options, "generation"));
+            const receipt = await planPresetUpgrade(ctx.sdk, readPresetArtifact(readStringOption(ctx.options, "from")), readPresetArtifact(readStringOption(ctx.options, "to")), decisionFile ? readPresetArtifact(decisionFile) : {}, readStringOption(ctx.options, "generation"));
             try {
                 const serialized = JSON.stringify(receipt) + "\n";
                 if (Buffer.byteLength(serialized) > 1024 * 1024)
@@ -69,7 +69,7 @@ export function registerUpgradeCommands(api) {
             description: `${direction === "apply" ? "Apply" : "Roll back"} a resolved preset migration through audited SDK settings mutations.`,
             arguments: [{ name: "receipt", required: true, description: "Private JSON receipt saved by presets upgrade plan." }],
             examples: [`pm presets upgrade ${direction} upgrade.private.json --json`],
-            run: async (ctx) => executePresetUpgrade(ctx.sdk, parseUpgradeReceipt(artifact(ctx.args?.[0])), direction),
+            run: async (ctx) => executePresetUpgrade(ctx.sdk, parseUpgradeReceipt(readPresetArtifact(ctx.args?.[0])), direction),
         });
     }
 }

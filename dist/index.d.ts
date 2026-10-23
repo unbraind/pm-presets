@@ -33,4 +33,6 @@ export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulatio
 export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.ts";
 export type { VersionedPreset, UpgradeSettings, UpgradeValue, UpgradeDecisions, UpgradeChange, PresetUpgradeReceipt, PresetUpgradeSummary, PresetUpgradeResult, UpgradeRefusalCode } from "./upgrade.ts";
+export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.ts";
+export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPlanTarget, PresetPlanGap, PresetPlan, PlanRefusalCode } from "./plan.ts";
 //# sourceMappingURL=index.d.ts.map

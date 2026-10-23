@@ -1,0 +1,31 @@
+id: pm-8dq2
+title: Negotiate preset prerequisites before settings changes
+description: "Compile composed preset features against selected backend capabilities and activated extension contracts, without settings mutation."
+type: Feature
+status: in_progress
+priority: 2
+tags[3]: added,capabilities,presets
+created_at: "2026-10-23T19:37:41.711Z"
+updated_at: "2026-10-23T19:48:20.861Z"
+author: codex-agent
+acceptance_criteria: "Missing capabilities produce precise typed refusals or explicit optional omissions with remedies. Plain-directory and database plans use identical negotiation semantics. Publish typed SDK, CLI, compact TOON/JSON, documentation, non-git real-data validation, behavioural revert proof and passing npm/Bun CI release gates."
+comments[5]{created_at,author,text}:
+  "2026-10-23T19:38:01.840Z",codex-agent,"Overlap recheck: host SDK getWorkspaceContracts owns runtime types, fields and activated extension commands; core schema owns field validation; audited mutateWorkspaceSettings owns locked settings writes. pm-presets apply/diff/export, simulation and versioned upgrades remain primitives. pm-web maintenance provider discovery checks installed command ownership for maintenance actions, not composed preset prerequisites. New work compiles required/optional preset feature prerequisites against an explicit backend contract and live host workspace contracts; it does not implement settings storage or schema validation. Published CLI verified as 2026.10.23; repo-pinned SDK remains 2026.10.20."
+  "2026-10-23T19:43:50.372Z",codex-agent,"Implementation: one pure compilePresetPlan algorithm consumes provider-supplied directory/database capability and WorkspaceContracts snapshots. Atomic features have required/optional prerequisites; missing required features refuse the whole plan, optional features are omitted explicitly. Built-in settings/templates/seeds prerequisites reuse the preset catalog. CLI resolves real activated workspace contracts via the existing standalone SDK loader or accepts an explicit provider snapshot. It uses host structured exit_code and read_output metadata for bounded TOON/JSON rather than a custom renderer. No new apply/storage/schema engine. Targeted ESLint using the canonical pm-ops policy passes."
+  "2026-10-23T19:46:15.379Z",codex-agent,"Behavioural revert proof: replacing only compilePresetPlan prerequisite matching with an empty missing-requirements list made node --test tests/plan.test.ts fail 5 of 6 regressions (required refusal, optional omission, live contracts, bounded gap report, CLI structured failure). Restored the exact function immediately. Targeted coverage with tests/plan.test.ts and tests/commands.test.ts passes 16/16 and both new source modules measure 100% lines/branches/functions. Installed CLI with empty PATH and Git ceiling passes seven bundled presets, optional database omissions and required refusals with settings/items/history byte-identical."
+  "2026-10-23T19:46:16.747Z",codex-agent,"Read-only public-data validation: node scripts/validate-plan-public.ts origin/main archived public main commit 470c2b2a367c36dbf19513b4db2f84fa979a057c into a non-git scratch directory, made its contents read-only, and read 76 items with the SDK complete-list primitive. Snapshot: 158 files, 1178594 bytes, SHA-256 5f0af99364f9dbbf3d0b11ac3805098c632f2f0d2f0c469d15dfd07c48bfe02b. All 42 plans matched expectations: 14 ready, 14 required refusals, 14 optional omissions; seven directory/database pairs have identical decisions. Largest JSON summary 389 bytes; compile loop 22.71 ms. All source-copy bytes unchanged. Database evidence uses explicit provider contract snapshots, not a live database service."
+  "2026-10-23T19:48:19.760Z",codex-agent,"Final local validation: linked command node --test tests/plan.test.ts tests/plan-cli.test.ts tests/commands.test.ts tests/upgrade.test.ts tests/upgrade-cli.test.ts passes 26/26, with zero failures/skips. npm run typecheck, npm run build:test, npm run docstring and targeted canonical pm-ops ESLint pass. Both planner modules have 100% targeted lines/branches/functions coverage. Seed prerequisites also reuse seedsForPreset to check actual seed types. Gap reports project only declared contract keys, excluding unrecognized private properties. Repeated public-data validation still passes all 42 plans with the same immutable snapshot; compile timing varies with load (3.19-22.71 ms observed). The full npm and Bun release gates are delegated to the existing CI release-gate job because the host CPU is saturated. Provider capability discovery is not exported by the pinned SDK, so database hosts must supply explicit capability and WorkspaceContracts snapshots; no live database or hosted data was accessed. Linked-test result tracking is disabled by existing project policy, so exact counts are recorded here."
+files[7]{path,scope}:
+  scripts/validate-plan-public.ts,project
+  src/index.ts,project
+  src/plan-command.ts,project
+  src/plan.ts,project
+  src/upgrade-command.ts,project
+  tests/plan-cli.test.ts,project
+  tests/plan.test.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test tests/plan.test.ts tests/plan-cli.test.ts tests/commands.test.ts tests/upgrade.test.ts tests/upgrade-cli.test.ts,project,codex-agent,"2026-10-23T19:46:14.222Z",local_mutation,feat/capability-negotiated-plans
+docs[2]{path,scope}:
+  docs/plan-example.md,project
+  README.md,project
+body: ""
