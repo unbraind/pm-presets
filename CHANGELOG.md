@@ -4,14 +4,14 @@
 
 ### Added
 
-- Simulate preset agent workflows before workspace installation ([pm-ygsu](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-ygsu.toon))
-- Preserve local settings through versioned preset upgrades ([pm-qgje](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-qgje.toon))
 - Negotiate preset prerequisites before settings changes ([pm-8dq2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-8dq2.toon))
+- Preserve local settings through versioned preset upgrades ([pm-qgje](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-qgje.toon))
+- Simulate preset agent workflows before workspace installation ([pm-ygsu](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-ygsu.toon))
 
 ### Fixed
 
-- Clarify reconciliation evidence limits in merge-safety documentation ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
 - Preserve SDK refusal identity when loading create templates ([pm-bzvf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-bzvf.toon))
+- Clarify reconciliation evidence limits in merge-safety documentation ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
 
 ## 2026.10.23 - 2026-10-23
 

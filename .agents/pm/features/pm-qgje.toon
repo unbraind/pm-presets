@@ -6,9 +6,9 @@ status: closed
 priority: 2
 tags[3]: added,migration,presets
 created_at: "2026-10-22T19:19:40.561Z"
-updated_at: "2026-10-24T21:47:28.439Z"
+updated_at: "2026-10-24T23:12:50.508Z"
 closed_at: "2026-10-24T21:47:28.426Z"
-completed_at: "2026-10-24T21:47:28.426Z"
+completed_at: "2026-10-22T20:16:03.000Z"
 author: codex-agent
 acceptance_criteria: "Conflicting local edits require explicit decisions; retries are idempotent; rollback uses audited SDK mutations; typed SDK and CLI with compact TOON/JSON, actionable refusals, docs and non-git real-tracker validation."
 resolution: "Versioned upgrades preserve local settings, require explicit conflict decisions, retry idempotently and roll back through audited SDK mutations."

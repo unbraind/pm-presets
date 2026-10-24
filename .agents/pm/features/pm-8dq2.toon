@@ -6,9 +6,9 @@ status: closed
 priority: 2
 tags[3]: added,capabilities,presets
 created_at: "2026-10-23T19:37:41.711Z"
-updated_at: "2026-10-24T21:47:28.382Z"
+updated_at: "2026-10-24T23:12:49.493Z"
 closed_at: "2026-10-24T21:47:28.368Z"
-completed_at: "2026-10-24T21:47:28.368Z"
+completed_at: "2026-10-23T19:57:41.000Z"
 author: codex-agent
 acceptance_criteria: "Missing capabilities produce precise typed refusals or explicit optional omissions with remedies. Plain-directory and database plans use identical negotiation semantics. Publish typed SDK, CLI, compact TOON/JSON, documentation, non-git real-data validation, behavioural revert proof and passing npm/Bun CI release gates."
 resolution: Prerequisite negotiation returns typed remedies or explicit optional omissions before settings changes with equivalent directory/database semantics and documented no-git SDK/CLI.

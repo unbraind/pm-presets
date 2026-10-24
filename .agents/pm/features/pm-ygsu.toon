@@ -6,9 +6,9 @@ status: closed
 priority: 2
 tags[3]: added,presets,simulation
 created_at: "2026-10-21T20:12:31.685Z"
-updated_at: "2026-10-24T21:47:28.572Z"
+updated_at: "2026-10-24T23:12:52.010Z"
 closed_at: "2026-10-24T21:47:28.559Z"
-completed_at: "2026-10-24T21:47:28.559Z"
+completed_at: "2026-10-22T13:39:37.000Z"
 author: codex-agent
 acceptance_criteria: Declared scenario outputs are reproducible; no external tracker reads or writes occur; missing scenarios are explicit coverage gaps.
 resolution: "Declared preset scenarios simulate reproducibly without external tracker I/O, and missing scenarios remain explicit coverage gaps."
