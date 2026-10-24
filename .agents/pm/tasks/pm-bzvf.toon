@@ -2,13 +2,18 @@ id: pm-bzvf
 title: Preserve SDK refusal identity when loading create templates
 description: "Verify F12 against main and delegate template listing, showing and create-option loading to the public SDK while retaining preset definitions and template writes."
 type: Task
-status: in_progress
+status: closed
 priority: 2
 tags[3]: fixed,sdk,templates
 created_at: "2026-10-23T21:19:52.018Z"
-updated_at: "2026-10-23T21:46:34.180Z"
+updated_at: "2026-10-24T23:12:48.545Z"
+closed_at: "2026-10-24T21:47:28.216Z"
+completed_at: "2026-10-23T21:53:51.000Z"
 author: codex-agent
 acceptance_criteria: "F12: list and show match the SDK for builtin and user-shadowed names, malformed numeric priority produces a source-safe SDK expected error, all seven presets retain usable templates in a non-git tracker, and npm plus bun release gates pass at unchanged coverage thresholds."
+resolution: Template list/show retain SDK builtin/shadow semantics and expected-error identity for malformed priority; all seven presets remain usable without Git and release gates pass.
+expected_result: "F12: list and show match the SDK for builtin and user-shadowed names, malformed numeric priority produces a source-safe SDK expected error, all seven presets retain usable templates in a non-git tracker, and npm plus bun release gates pass at unchanged coverage thresholds."
+actual_result: "https://github.com/unbraind/pm-presets/pull/156, merged 2026-10-23T21:53:51Z, merge f0ea0d4ffc33e9e066beb428ce9ebfbe576f99ba: Template list/show retain SDK builtin/shadow semantics and expected-error identity for malformed priority; all seven presets remain usable without Git and release gates pass."
 comments[6]{created_at,author,text}:
   "2026-10-23T21:20:06.693Z",codex-agent,"Verified F12 against origin/main e011580edfd95fef5b008218b9726746e0d01164: shared.ts owns duplicate builtin inventory, list/show resolution, and stored-document validation. The pinned SDK 2026.10.20 exports all three named replacements. Plan: reuse the existing host SDK resolver, delegate reads with invocation globals and the explicit tracker path, retain preset-owned writes, and prove malformed numeric priority retains SDK expected-error identity in a non-git tracker."
   "2026-10-23T21:24:19.977Z",codex-agent,"F12 confirmed and implemented. SDK template exports are already present at the declared 2026.9.30 floor and pinned 2026.10.20 SDK, so dependency ranges and manifest remain unchanged. Reused the existing package-or-host resolver by extracting it into sdk-loader.ts to avoid a module initialization cycle. Template exports now use SDK inventory and loadCreateTemplateOptions, refusing malformed options instead of silently exporting them. Builtin content, fallback timestamps and filename-based export names follow SDK behavior."
@@ -31,4 +36,5 @@ tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test tests/templates-sdk.test.ts,project,codex-agent,"2026-10-23T21:24:46.680Z",local_mutation,refactor/sdk-template-loading
 docs[1]{path,scope,note}:
   README.md,project,Without git and SDK template behavior
+close_reason: "https://github.com/unbraind/pm-presets/pull/156, merged 2026-10-23T21:53:51Z, merge f0ea0d4ffc33e9e066beb428ce9ebfbe576f99ba: Template list/show retain SDK builtin/shadow semantics and expected-error identity for malformed priority; all seven presets remain usable without Git and release gates pass."
 body: ""

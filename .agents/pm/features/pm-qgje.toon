@@ -2,13 +2,18 @@ id: pm-qgje
 title: Preserve local settings through versioned preset upgrades
 description: Add vendor-preset version evolution receipts using three-way settings comparison and the audited settings SDK; distinct from configuration diff and VCS reconciliation.
 type: Feature
-status: in_progress
+status: closed
 priority: 2
 tags[3]: added,migration,presets
 created_at: "2026-10-22T19:19:40.561Z"
-updated_at: "2026-10-22T19:38:36.108Z"
+updated_at: "2026-10-24T23:12:50.508Z"
+closed_at: "2026-10-24T21:47:28.426Z"
+completed_at: "2026-10-22T20:16:03.000Z"
 author: codex-agent
 acceptance_criteria: "Conflicting local edits require explicit decisions; retries are idempotent; rollback uses audited SDK mutations; typed SDK and CLI with compact TOON/JSON, actionable refusals, docs and non-git real-tracker validation."
+resolution: "Versioned upgrades preserve local settings, require explicit conflict decisions, retry idempotently and roll back through audited SDK mutations."
+expected_result: "Conflicting local edits require explicit decisions; retries are idempotent; rollback uses audited SDK mutations; typed SDK and CLI with compact TOON/JSON, actionable refusals, docs and non-git real-tracker validation."
+actual_result: "https://github.com/unbraind/pm-presets/pull/153, merged 2026-10-22T20:16:03Z, merge 0ca9e2a6e7bdde9b069691c22424cf14a3e6ef7d: Versioned upgrades preserve local settings, require explicit conflict decisions, retry idempotently and roll back through audited SDK mutations."
 comments[4]{created_at,author,text}:
   "2026-10-22T19:20:17.916Z",codex-agent,"Overlap recheck: src/diff.ts compares one preset with current configuration; core SDK config/history provides audited mutations and history reads; core package migrations run extension lifecycle migrations; pm-vcs provides general three-way file/record reconciliation; pm-ops provides operational gates. None models vendor preset versions plus intervening local settings choices. Use mutateWorkspaceSettings locking, includePreview canonical settings, replacement subtrees and operationId replay. New scope: versioned settings-only receipts, explicit local/vendor conflict choices, stale-state guards and audited rollback; no Git required. Keep dependency pin unchanged (2026.10.17); registry currently reports CLI 2026.10.22."
   "2026-10-22T19:32:48.316Z",codex-agent,"Implemented versioned settings-only three-way comparison, private digest-bound recovery receipts, explicit JSON-pointer conflict choices, canonical host previews, audited apply/rollback, stable retries, explicit new generations after rollback, stale-state guards and bounded agent reports. Behavioral revert proof: removing the conflict guard fails the expected refusal; changing stable operation identity to a fresh timestamp fails replay assertion; replacing the settings mutation with a no-op fails the lifecycle regression. Each isolated reversion exited 1; original implementation restored. Real public origin/main tracker validation: certified 75 items, 156 copied files, 76 history streams, 568 history entries; one conflict and one automatic vendor change, repeated resolved plans identical, zero copied file changes. Permission-restricted data required a writable transient locks directory: pinned SDK dry-run acquires workspace-history lock. This host constraint is documented; source checkout was not mutated. Test result tracking is disabled by existing project policy, so linked run evidence is recorded here without changing policy."
@@ -27,4 +32,5 @@ tests[2]{command,scope,timeout_seconds,provenance{author,created_at,source_kind,
 docs[2]{path,scope}:
   docs/upgrade-example.md,project
   README.md,project
+close_reason: "https://github.com/unbraind/pm-presets/pull/153, merged 2026-10-22T20:16:03Z, merge 0ca9e2a6e7bdde9b069691c22424cf14a3e6ef7d: Versioned upgrades preserve local settings, require explicit conflict decisions, retry idempotently and roll back through audited SDK mutations."
 body: ""

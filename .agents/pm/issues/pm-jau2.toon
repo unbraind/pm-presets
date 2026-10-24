@@ -2,13 +2,18 @@ id: pm-jau2
 title: Clarify reconciliation evidence limits in merge-safety documentation
 description: The README overstates lossless-merge guarantees and advertises raw history repair. Bring it into alignment with the CI workflow distinction between durable tracker health and evidence that every source value survived a merge. This follow-up is deferred from dependency PR 142.
 type: Issue
-status: in_progress
+status: closed
 priority: 2
 tags[3]: agent-ux,docs,multi-agent
 created_at: "2026-07-22T19:46:00.288Z"
-updated_at: "2026-10-22T11:57:34.932Z"
+updated_at: "2026-10-24T23:12:51.284Z"
+closed_at: "2026-10-24T21:47:28.481Z"
+completed_at: "2026-10-22T13:39:37.000Z"
 author: claude-opus-20260722
 acceptance_criteria: Document current audited reconciliation semantics; remove unconditional no-data-loss and raw-repair guidance; require independent source and receipt verification; keep health and lossless-merge claims separate.
+resolution: "Latest implementing PR replaces unconditional no-data-loss/raw-history-repair guidance with audited reconciliation, independent source/receipt inspection and append-only history; PR 147 only corrected audit records."
+expected_result: Document current audited reconciliation semantics; remove unconditional no-data-loss and raw-repair guidance; require independent source and receipt verification; keep health and lossless-merge claims separate.
+actual_result: "https://github.com/unbraind/pm-presets/pull/148, merged 2026-10-22T13:39:37Z, merge 4d56b30ab1348909af8f9f18a132b3af56b43016: Latest implementing PR replaces unconditional no-data-loss/raw-history-repair guidance with audited reconciliation, independent source/receipt inspection and append-only history; PR 147 only corrected audit records."
 comments[5]:
   - created_at: "2026-10-20T07:38:58.805Z"
     author: codex-agent
@@ -39,4 +44,5 @@ tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
 docs[2]{path,scope}:
   CHANGELOG.md,project
   README.md,project
+close_reason: "https://github.com/unbraind/pm-presets/pull/148, merged 2026-10-22T13:39:37Z, merge 4d56b30ab1348909af8f9f18a132b3af56b43016: Latest implementing PR replaces unconditional no-data-loss/raw-history-repair guidance with audited reconciliation, independent source/receipt inspection and append-only history; PR 147 only corrected audit records."
 body: ""

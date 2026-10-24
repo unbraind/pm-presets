@@ -2,13 +2,18 @@ id: pm-8dq2
 title: Negotiate preset prerequisites before settings changes
 description: "Compile composed preset features against selected backend capabilities and activated extension contracts, without settings mutation."
 type: Feature
-status: in_progress
+status: closed
 priority: 2
 tags[3]: added,capabilities,presets
 created_at: "2026-10-23T19:37:41.711Z"
-updated_at: "2026-10-23T19:51:32.967Z"
+updated_at: "2026-10-24T23:12:49.493Z"
+closed_at: "2026-10-24T21:47:28.368Z"
+completed_at: "2026-10-23T19:57:41.000Z"
 author: codex-agent
 acceptance_criteria: "Missing capabilities produce precise typed refusals or explicit optional omissions with remedies. Plain-directory and database plans use identical negotiation semantics. Publish typed SDK, CLI, compact TOON/JSON, documentation, non-git real-data validation, behavioural revert proof and passing npm/Bun CI release gates."
+resolution: Prerequisite negotiation returns typed remedies or explicit optional omissions before settings changes with equivalent directory/database semantics and documented no-git SDK/CLI.
+expected_result: "Missing capabilities produce precise typed refusals or explicit optional omissions with remedies. Plain-directory and database plans use identical negotiation semantics. Publish typed SDK, CLI, compact TOON/JSON, documentation, non-git real-data validation, behavioural revert proof and passing npm/Bun CI release gates."
+actual_result: "https://github.com/unbraind/pm-presets/pull/155, merged 2026-10-23T19:57:41Z, merge e011580edfd95fef5b008218b9726746e0d01164: Prerequisite negotiation returns typed remedies or explicit optional omissions before settings changes with equivalent directory/database semantics and documented no-git SDK/CLI."
 comments[6]{created_at,author,text}:
   "2026-10-23T19:38:01.840Z",codex-agent,"Overlap recheck: host SDK getWorkspaceContracts owns runtime types, fields and activated extension commands; core schema owns field validation; audited mutateWorkspaceSettings owns locked settings writes. pm-presets apply/diff/export, simulation and versioned upgrades remain primitives. pm-web maintenance provider discovery checks installed command ownership for maintenance actions, not composed preset prerequisites. New work compiles required/optional preset feature prerequisites against an explicit backend contract and live host workspace contracts; it does not implement settings storage or schema validation. Published CLI verified as 2026.10.23; repo-pinned SDK remains 2026.10.20."
   "2026-10-23T19:43:50.372Z",codex-agent,"Implementation: one pure compilePresetPlan algorithm consumes provider-supplied directory/database capability and WorkspaceContracts snapshots. Atomic features have required/optional prerequisites; missing required features refuse the whole plan, optional features are omitted explicitly. Built-in settings/templates/seeds prerequisites reuse the preset catalog. CLI resolves real activated workspace contracts via the existing standalone SDK loader or accepts an explicit provider snapshot. It uses host structured exit_code and read_output metadata for bounded TOON/JSON rather than a custom renderer. No new apply/storage/schema engine. Targeted ESLint using the canonical pm-ops policy passes."
@@ -29,4 +34,5 @@ tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
 docs[2]{path,scope}:
   docs/plan-example.md,project
   README.md,project
+close_reason: "https://github.com/unbraind/pm-presets/pull/155, merged 2026-10-23T19:57:41Z, merge e011580edfd95fef5b008218b9726746e0d01164: Prerequisite negotiation returns typed remedies or explicit optional omissions before settings changes with equivalent directory/database semantics and documented no-git SDK/CLI."
 body: ""
