@@ -4,11 +4,13 @@
  * lines an author edits.
  */
 
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { PmClient } from "@unbrained/pm-cli/sdk";
 
 import {
   PRESET_SEEDS,
@@ -84,105 +86,83 @@ test("unknown preset id yields no seeds", () => {
   assert.deepStrictEqual(planSeeds("/ws", "nope"), []);
 });
 
-/** Write an executable fake `pm` script and return its path. */
-function writeFakePm(script: string): string {
-  const directory = mkdtempSync(join(tmpdir(), "pm-presets-seed-bin-"));
-  const bin = join(directory, "pm-fake");
-  writeFileSync(bin, `#!/bin/sh\n${script}\n`);
-  chmodSync(bin, 0o755);
-  return bin;
+/** Initialize a real tracker outside a git repository. */
+async function workspace(t: TestContext): Promise<PmClient> {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-seeds-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const client = new PmClient({ cwd: root, pmRoot: join(root, ".agents", "pm"), noExtensions: true, author: "seed-test" });
+  await client.init();
+  return client;
 }
 
-test("seedPresetItems counts successes and failures from the pm binary", (t) => {
-  const okBin = writeFakePm("exit 0");
-  const failBin = writeFakePm('echo "nope" >&2; exit 1');
-  const stdoutBin = writeFakePm('echo "out only"; exit 2');
-  t.after(() => {
-    rmSync(join(okBin, ".."), { recursive: true, force: true });
-    rmSync(join(failBin, ".."), { recursive: true, force: true });
-    rmSync(join(stdoutBin, ".."), { recursive: true, force: true });
-  });
-
-  const ok = seedPresetItems("/ws", "indie-dev", okBin);
-  assert.strictEqual(ok.created, 1);
-  assert.strictEqual(ok.failed, 0);
-  assert.deepStrictEqual(ok.details, [{ title: "Set up project skeleton", ok: true }]);
-
-  const failed = seedPresetItems("/ws", "indie-dev", failBin);
-  assert.strictEqual(failed.created, 0);
-  assert.strictEqual(failed.failed, 1);
-  assert.strictEqual(failed.details[0].ok, false);
-  assert.strictEqual(failed.details[0].message, "nope");
-
-  const stdout = seedPresetItems("/ws", "indie-dev", stdoutBin);
-  assert.strictEqual(stdout.details[0].message, "out only");
-
-  const missing = seedPresetItems("/ws", "indie-dev", join(tmpdir(), "pm-presets-no-such-pm"));
-  assert.strictEqual(missing.created, 0);
-  assert.strictEqual(missing.failed, 1);
-  assert.equal(missing.details[0].ok, false);
-  assert.ok((missing.details[0].message ?? "").length > 0);
+test("SDK seeds preserve author and ordered partial results without rolling back successes", async (t) => {
+  const client = await workspace(t);
+  PRESET_SEEDS["partial-test"] = [
+    { type: "UnknownSeedType", title: "Refused seed" },
+    { type: "Task", title: "Retained seed", tags: "starter,test", priority: "1", body: "Seed body" },
+  ];
+  t.after(() => { delete PRESET_SEEDS["partial-test"]; });
+  const result = await seedPresetItems(client, "partial-test");
+  assert.equal(result.created, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(result.details[0].ok, false);
+  assert.match(result.details[0].message!, /UnknownSeedType/);
+  assert.deepEqual(result.details[1], { title: "Retained seed", ok: true });
+  const items = await client.listAllComplete();
+  assert.equal(items.items.length, 1);
+  assert.equal(items.items[0].title, "Retained seed");
+  assert.equal(items.items[0].author, "seed-test");
+  assert.deepEqual(items.items[0].tags, ["starter", "test"]);
+  assert.equal((await client.get(items.items[0].id, { full: true })).item.body, "Seed body");
+  assert.equal(items.items[0].priority, 1);
+  assert.deepEqual(await seedPresetItems(client, "nope"), { created: 0, failed: 0, details: [] });
 });
 
-test("seedPresetItems reports an empty message when the binary is silent", (t) => {
-  const silent = writeFakePm("exit 1");
-  t.after(() => rmSync(join(silent, ".."), { recursive: true, force: true }));
-  const result = seedPresetItems("/ws", "indie-dev", silent);
-  assert.strictEqual(result.failed, 1);
-  assert.strictEqual(result.details[0].message, "");
+test("SDK seed failures tolerate thrown extension values and empty diagnostics", async (t) => {
+  const client = await workspace(t);
+  // Options are read by the real SDK. A provider's accessor can throw before
+  // native validation; reporting must still finish the remaining seeds.
+  // Keep the title readable for reporting; fail on the optional body accessor.
+  PRESET_SEEDS["accessor-test"] = [
+    { type: "Task", title: "Foreign refusal", get body(): string { throw "provider refusal\nextra detail"; } },
+    { type: "Task", title: "Empty refusal", get body(): string { throw new Error(""); } },
+  ];
+  t.after(() => { delete PRESET_SEEDS["accessor-test"]; });
+  const result = await seedPresetItems(client, "accessor-test");
+  assert.equal(result.failed, 2);
+  assert.deepEqual(result.details.map((entry) => entry.message), ["provider refusal", ""]);
 });
 
-test("runPresetSeeds logs the seedless case, a dry-run plan, successes, and failures", (t) => {
+test("runPresetSeeds logs seedless, preview, success and native failure outcomes", async (t) => {
+  const client = await workspace(t);
   const lines: string[] = [];
-  t.mock.method(console, "log", (...args: unknown[]) => {
-    lines.push(args.map(String).join(" "));
-  });
-  t.mock.method(console, "warn", (...args: unknown[]) => {
-    lines.push(`WARN ${args.map(String).join(" ")}`);
-  });
-
-  runPresetSeeds("/ws", "nope", { dryRun: false });
+  t.mock.method(console, "log", (...args: unknown[]) => { lines.push(args.map(String).join(" ")); });
+  t.mock.method(console, "warn", (...args: unknown[]) => { lines.push(`WARN ${args.map(String).join(" ")}`); });
+  await runPresetSeeds("/ws", "nope", { dryRun: false });
   assert.ok(lines.some((line) => line.includes("No starter seeds defined for 'nope'")));
-
-  lines.length = 0;
-  runPresetSeeds("/ws", "software-sprint", { dryRun: true });
+  lines.splice(0);
+  await runPresetSeeds("/ws", "software-sprint", { dryRun: true });
   assert.ok(lines.some((line) => line.includes("Would seed 2 starter item(s)")));
   assert.ok(lines.some((line) => line.includes("Epic: First sprint epic")));
-
-  const okBin = writeFakePm("exit 0");
-  t.after(() => rmSync(join(okBin, ".."), { recursive: true, force: true }));
-  lines.length = 0;
-  runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: okBin });
+  assert.equal((await client.listAllComplete()).items.length, 0);
+  lines.splice(0);
+  await runPresetSeeds("/ws", "indie-dev", { dryRun: false, client });
   assert.ok(lines.some((line) => line.includes("Created: Set up project skeleton")));
-
-  const failBin = writeFakePm('echo "boom" >&2; exit 1');
-  t.after(() => rmSync(join(failBin, ".."), { recursive: true, force: true }));
-  lines.length = 0;
-  assert.throws(
-    () => runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: failBin }),
-    (error: unknown) => {
-      assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
-      assert.match((error as Error).message, /Seeded 0 item\(s\) but 1 failed/);
-      return true;
-    },
-  );
-  assert.ok(lines.some((line) => line.includes("Failed:  Set up project skeleton (boom)")));
-
-  const silent = writeFakePm("exit 1");
-  t.after(() => rmSync(join(silent, ".."), { recursive: true, force: true }));
-  lines.length = 0;
-  // assert.throws, not try/assert.fail/catch: a bare `catch` accepts the
-  // AssertionError that `assert.fail` itself throws, so if runPresetSeeds
-  // returned normally the test would still pass on the warning check alone.
-  // The throw is the assertion here, so it has to be one the runner can see.
-  assert.throws(
-    () => runPresetSeeds("/ws", "indie-dev", { dryRun: false, pmBin: silent }),
-    (error: unknown) => {
-      assert.strictEqual((error as { exitCode?: number }).exitCode, 1);
-      return true;
-    },
-  );
-  assert.ok(lines.some((line) => line === "WARN   Failed:  Set up project skeleton"));
+  assert.equal((await client.listAllComplete()).items.length, 1);
+  await assert.rejects(() => runPresetSeeds("/ws", "indie-dev", { dryRun: false }), /host SDK client.create/);
+  PRESET_SEEDS["refusal-test"] = [
+    { type: "UnknownSeedType", title: "Invalid seed" },
+    { type: "Task", title: "Empty diagnostic", get body(): string { throw new Error(""); } },
+  ];
+  t.after(() => { delete PRESET_SEEDS["refusal-test"]; });
+  lines.splice(0);
+  await assert.rejects(() => runPresetSeeds("/ws", "refusal-test", { dryRun: false, client }), (error: unknown) => {
+    assert.equal((error as { exitCode: number }).exitCode, 1);
+    assert.match((error as Error).message, /Seeded 0 item\(s\) but 2 failed/);
+    return true;
+  });
+  assert.ok(lines.some((line) => line.includes("Failed:  Invalid seed (") && line.includes("UnknownSeedType")));
+  assert.ok(lines.some((line) => line === "WARN   Failed:  Empty diagnostic"));
 });
 
 test("agent-workflow has a starter AgentRun seed", () => {
