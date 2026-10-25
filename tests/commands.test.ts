@@ -6,7 +6,6 @@
 
 import assert from "node:assert/strict";
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -151,7 +150,7 @@ test("presets --diff and presets diff report drift, including --strict", async (
   );
   assert.ok(jsonLines.some((line) => line.includes('"inSync"')));
 
-  errors.length = 0;
+  errors.splice(0);
   await assert.rejects(
     () =>
       h.runCommand({
@@ -164,7 +163,7 @@ test("presets --diff and presets diff report drift, including --strict", async (
   );
   assert.ok(errors.some((line) => line.includes("setting(s) to add")));
 
-  jsonLines.length = 0;
+  jsonLines.splice(0);
   await assert.rejects(
     () =>
       h.runCommand({
@@ -281,23 +280,15 @@ test("presets apply writes the preset and optionally seeds", async (t) => {
   });
   assert.ok(dryLines.some((line) => line.includes("Would seed 1 starter item(s)")));
 
-  const binDir = mkdtempSync(join(tmpdir(), "pm-presets-path-"));
-  const bin = join(binDir, "pm");
-  writeFileSync(bin, "#!/bin/sh\nexit 0\n");
-  chmodSync(bin, 0o755);
-  const previousPath = process.env.PATH;
-  process.env.PATH = `${binDir}${previousPath ? `:${previousPath}` : ""}`;
-  t.after(() => {
-    if (previousPath === undefined) delete process.env.PATH;
-    else process.env.PATH = previousPath;
-    rmSync(binDir, { recursive: true, force: true });
-  });
   await h.runCommand({
     command: "presets apply",
     args: ["indie-dev"],
     options: { "with-seeds": true, force: true },
     pmRoot: pmDir,
   });
+  const seeded = await new PmClient({ pmRoot: pmDir, noExtensions: true }).listAllComplete();
+  assert.equal(seeded.items.length, 1);
+  assert.equal(seeded.items[0].title, "Set up project skeleton");
 
   await assert.rejects(
     () => h.runCommand({ command: "presets apply", args: ["nope"], pmRoot: pmDir }),

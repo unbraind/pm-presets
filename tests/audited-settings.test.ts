@@ -168,3 +168,21 @@ test("replacement preview uses host defaults for an owned tree omitted by the pr
   assert.equal(readFileSync(settingsPath, "utf8"), before);
   assert.equal(readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8"), historyBefore);
 });
+
+/** A provider callback refusal must stay actionable without mutating audited state. */
+test("audited settings report foreign provider failures before templates or seeds", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pm-presets-provider-refusal-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const pmRoot = join(root, ".agents", "pm");
+  const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
+  await client.init();
+  const sdk = createExtensionCommandSdk(pmRoot, client);
+  const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
+  await assert.rejects(() => applyPreset({ command: "presets apply", args: [], options: {}, global: {}, pm_root: pmRoot, sdk }, {
+    label: "Refused", settings: { id_prefix: "refused-", governance: { get preset(): "minimal" { throw "foreign settings refusal"; } } },
+    templates: { "idea.json": storedTemplate("idea", { type: "Task" }) }, nextSteps: [],
+  }), /Audited preset settings failed: foreign settings refusal/);
+  assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
+  assert.equal(existsSync(join(pmRoot, "templates")), false);
+  assert.equal((await client.listAllComplete()).items.length, 0);
+});

@@ -474,7 +474,8 @@ export default defineExtension({
                 if (!withSeeds) {
                     return;
                 }
-                runPresetSeeds(resolvePmDir(ctx), definition.id, {
+                await runPresetSeeds(resolvePmDir(ctx), definition.id, {
+                    client: ctx.sdk?.client,
                     dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
                 });
             },

@@ -6,11 +6,11 @@
  * therefore set ONLY built-in fields (title, type, priority, tags, body). Any
  * preset-specific context lives in the body text, not in custom options.
  *
- * Seeding shells out to the `pm` binary so item IDs, the toon format, and
- * workspace governance are all handled by pm itself rather than re-implemented
- * here. The seed *definitions* and the dry-run plan are pure and unit-tested;
- * only `seedPresetItems` touches the process.
+ * Seeding uses the invocation-bound SDK client so IDs, storage, schema and
+ * governance stay host-owned. The argv builder below is presentation-only:
+ * existing dry-run consumers can still display a manual create command.
  */
+import type { PmClient } from "@unbrained/pm-cli/sdk";
 /** A single starter item, restricted to built-in create fields. */
 export interface SeedItem {
     type: string;
@@ -29,7 +29,7 @@ export declare const PRESET_SEEDS: Record<string, SeedItem[]>;
  * simply a no-op rather than an error.
  */
 export declare function seedsForPreset(presetId: string): SeedItem[];
-/** Build the `pm create` argv for one seed item (built-in fields only). */
+/** Build a manual command preview only; seed writes never execute these arguments. */
 export declare function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[];
 /**
  * One entry in a seed dry-run plan: the item that would be created and the
@@ -53,19 +53,20 @@ export interface SeedResult {
     }>;
 }
 /**
- * Create the preset's starter items by shelling out to `pm create`.
- * Non-throwing: failures are collected so a partial seed still reports clearly.
+ * Create independent starter items through the invocation-bound SDK client.
+ * Non-throwing: native create failures retain the existing partial-result shape.
+ * There is no batch/replay precondition: an invalid seed must not undo others.
  */
-export declare function seedPresetItems(pmRoot: string, presetId: string, pmBin?: string): SeedResult;
+export declare function seedPresetItems(client: PmClient, presetId: string): Promise<SeedResult>;
 /**
  * Options for {@link runPresetSeeds}: whether to print a plan instead of creating
- * items, and which `pm` binary to invoke.
+ * items, and the host client used for writes.
  */
 export interface RunPresetSeedsOptions {
-    /** When true, print the plan and do not spawn `pm create`. */
+    /** When true, print the plan without creating items. */
     readonly dryRun: boolean;
-    /** `pm` executable used to create items. Defaults to `"pm"` on PATH. */
-    readonly pmBin?: string;
+    /** Invocation-bound client; required only when creating seeds. */
+    readonly client?: PmClient;
 }
 /**
  * Print a dry-run plan or create starter items for an already-applied preset.
@@ -74,5 +75,5 @@ export interface RunPresetSeedsOptions {
  * seeds is an explicit no-op rather than silence. Throws {@link CommandError}
  * when one or more creates fail, after reporting each outcome.
  */
-export declare function runPresetSeeds(pmRoot: string, presetId: string, options: RunPresetSeedsOptions): void;
+export declare function runPresetSeeds(pmRoot: string, presetId: string, options: RunPresetSeedsOptions): Promise<void>;
 //# sourceMappingURL=seeds.d.ts.map

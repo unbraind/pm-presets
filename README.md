@@ -165,6 +165,13 @@ The exported document is `$schema: "pm-presets/exported-preset@1"` and records
 custom scalar fields have no `pm create --<field>` setter today (pm-cli #97),
 so the snapshot reconstructs the preset from settings + templates only.
 
+**Seed creation.** `--with-seeds` uses the host SDK client and the invocation's
+workspace, author and active schema. It needs neither a `pm` executable on PATH
+nor git. Each seed remains independent: native validation failures are reported
+per item, successful seeds stay created, and any failure exits nonzero. Dry runs
+retain the same preview. Failures show the native SDK validation detail instead
+of the subprocess CLI's generic error headline. A missing host `client.create` capability fails clearly.
+
 **Seeds and custom fields.** Starter items created by `--with-seeds` set only
 **built-in** fields (`type`, `title`, `priority`, `tags`, `body`). Custom scalar
 fields registered via `registerItemFields` still have no direct

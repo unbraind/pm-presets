@@ -6,12 +6,10 @@
  * therefore set ONLY built-in fields (title, type, priority, tags, body). Any
  * preset-specific context lives in the body text, not in custom options.
  *
- * Seeding shells out to the `pm` binary so item IDs, the toon format, and
- * workspace governance are all handled by pm itself rather than re-implemented
- * here. The seed *definitions* and the dry-run plan are pure and unit-tested;
- * only `seedPresetItems` touches the process.
+ * Seeding uses the invocation-bound SDK client so IDs, storage, schema and
+ * governance stay host-owned. The argv builder below is presentation-only:
+ * existing dry-run consumers can still display a manual create command.
  */
-import { spawnSync } from "node:child_process";
 import { CommandError } from "./presets/shared.js";
 /** Built-in-only seed items keyed by preset id. */
 export const PRESET_SEEDS = {
@@ -96,7 +94,7 @@ export const PRESET_SEEDS = {
 export function seedsForPreset(presetId) {
     return PRESET_SEEDS[presetId] ?? [];
 }
-/** Build the `pm create` argv for one seed item (built-in fields only). */
+/** Build a manual command preview only; seed writes never execute these arguments. */
 export function buildSeedCreateArgs(pmRoot, seed) {
     const args = ["--path", pmRoot, "create", "--type", seed.type, "--title", seed.title];
     if (seed.priority) {
@@ -119,28 +117,24 @@ export function planSeeds(pmRoot, presetId) {
     }));
 }
 /**
- * Create the preset's starter items by shelling out to `pm create`.
- * Non-throwing: failures are collected so a partial seed still reports clearly.
+ * Create independent starter items through the invocation-bound SDK client.
+ * Non-throwing: native create failures retain the existing partial-result shape.
+ * There is no batch/replay precondition: an invalid seed must not undo others.
  */
-export function seedPresetItems(pmRoot, presetId, pmBin = "pm") {
+export async function seedPresetItems(client, presetId) {
     const seeds = seedsForPreset(presetId);
     const details = [];
     let created = 0;
     let failed = 0;
     for (const seed of seeds) {
-        const result = spawnSync(pmBin, buildSeedCreateArgs(pmRoot, seed), {
-            encoding: "utf8",
-        });
-        if (result.status === 0) {
+        try {
+            await client.create(seed);
             created += 1;
             details.push({ title: seed.title, ok: true });
         }
-        else {
+        catch (error) {
             failed += 1;
-            const message = (result.stderr || result.stdout || result.error?.message || "")
-                .toString()
-                .trim()
-                .split("\n")[0];
+            const message = (error instanceof Error ? error.message : String(error)).trim().split("\n")[0];
             details.push({ title: seed.title, ok: false, message });
         }
     }
@@ -153,7 +147,7 @@ export function seedPresetItems(pmRoot, presetId, pmBin = "pm") {
  * seeds is an explicit no-op rather than silence. Throws {@link CommandError}
  * when one or more creates fail, after reporting each outcome.
  */
-export function runPresetSeeds(pmRoot, presetId, options) {
+export async function runPresetSeeds(pmRoot, presetId, options) {
     const seeds = seedsForPreset(presetId);
     if (seeds.length === 0) {
         console.log(`No starter seeds defined for '${presetId}'.`);
@@ -169,7 +163,10 @@ export function runPresetSeeds(pmRoot, presetId, options) {
     }
     console.log("");
     console.log(`Seeding ${seeds.length} starter item(s)...`);
-    const seedResult = seedPresetItems(pmRoot, presetId, options.pmBin);
+    if (typeof options.client?.create !== "function") {
+        throw new CommandError("Preset seeds require the host SDK client.create capability. Run with a pm CLI host >=2026.9.30.");
+    }
+    const seedResult = await seedPresetItems(options.client, presetId);
     for (const detail of seedResult.details) {
         if (detail.ok) {
             console.log(`  Created: ${detail.title}`);
