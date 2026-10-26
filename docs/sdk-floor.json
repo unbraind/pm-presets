@@ -1,0 +1,348 @@
+{
+  "package": "pm-presets",
+  "auditedMain": "6c792db05bc05eabd75bb373e03feab68b7492aa",
+  "requiredFloor": "2026.9.30",
+  "previousFloors": {
+    "manifest": "2026.9.30",
+    "peer": ">=2026.9.30",
+    "dependency": null
+  },
+  "scope": "Published stable artifact API availability; no package runtime or lifecycle scripts executed. Purely erased types are excluded; function and constructor types used by runtime SDK loaders are included.",
+  "apis": [
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "createExtensionCommandSdk",
+      "uses": [
+        "src/stack.ts:198",
+        "src/simulation.ts:8"
+      ],
+      "first": "2026.8.2",
+      "previous": "2026.8.1",
+      "sha256": "c9f8e516319ba4d6609ea0272e4fa70360668531c379ec54b29df8aa418293e3",
+      "previousSha256": "242013e81ed2c4329a3cb20d3e70fa58f6dbb627d00c2c1e883562e786850f80"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "getWorkspaceContracts",
+      "uses": [
+        "src/plan-command.ts:5"
+      ],
+      "first": "2026.5.24",
+      "previous": "2026.5.18",
+      "sha256": "9d28fff4b06405ea5691ee919ad646c86c0a416a5007ca8104b19251306262af",
+      "previousSha256": "df41d0df1f499a531d6a2cba134defa369870b2fe4b414c0517ef85e7c51db0e"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "loadCreateTemplateOptions",
+      "uses": [
+        "src/stack.ts:187"
+      ],
+      "first": "2026.5.14",
+      "previous": "2026.5.12",
+      "sha256": "7f7e9131afadb891344bf2fb93b15bc157d18c532a5da4ec31677957d37b7260",
+      "previousSha256": "42dcaef84dc441b7792aeffa059bfe10a86ae8b12b1084472229bba03fb29910"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "planProfileApplication",
+      "uses": [
+        "src/stack.ts:210"
+      ],
+      "first": "2026.6.30",
+      "previous": "2026.6.24",
+      "sha256": "d2003d47a54b5df1f2162cb551af5efa4e617f805f9f5fde4e8942e6e221b8c2",
+      "previousSha256": "af33b996524c46bea935e96682ff6486bf0d7db01e21f5264af0d4137a75b209"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "PmClient",
+      "uses": [
+        "src/seeds.ts:14",
+        "src/stack.ts:198",
+        "src/simulation.ts:8"
+      ],
+      "first": "2026.7.6",
+      "previous": "2026.7.5",
+      "sha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158",
+      "previousSha256": "4a6664f68120cace5648faf48d51b08c14e969d9c7e185e592f1a0fceae57274"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "readFileIfExists",
+      "uses": [
+        "src/stack.ts:188"
+      ],
+      "first": "2026.5.14",
+      "previous": "2026.5.12",
+      "sha256": "7f7e9131afadb891344bf2fb93b15bc157d18c532a5da4ec31677957d37b7260",
+      "previousSha256": "42dcaef84dc441b7792aeffa059bfe10a86ae8b12b1084472229bba03fb29910"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "readSettings",
+      "uses": [
+        "src/simulation.ts:8"
+      ],
+      "first": "2026.5.14",
+      "previous": "2026.5.12",
+      "sha256": "7f7e9131afadb891344bf2fb93b15bc157d18c532a5da4ec31677957d37b7260",
+      "previousSha256": "42dcaef84dc441b7792aeffa059bfe10a86ae8b12b1084472229bba03fb29910"
+    },
+    {
+      "kind": "export",
+      "module": "/sdk",
+      "name": "runTemplatesList",
+      "uses": [
+        "src/stack.ts:186"
+      ],
+      "first": "2026.5.14",
+      "previous": "2026.5.12",
+      "sha256": "7f7e9131afadb891344bf2fb93b15bc157d18c532a5da4ec31677957d37b7260",
+      "previousSha256": "42dcaef84dc441b7792aeffa059bfe10a86ae8b12b1084472229bba03fb29910"
+    },
+    {
+      "kind": "member",
+      "module": "CommandHandlerContext",
+      "name": "args",
+      "uses": [
+        "src/presets/shared.ts:374",
+        "src/upgrade-command.ts:67",
+        "src/plan-command.ts:41",
+        "src/plan-command.ts:44",
+        "src/index.ts:409",
+        "src/index.ts:427",
+        "src/index.ts:474",
+        "src/index.ts:529",
+        "src/index.ts:556"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "CommandHandlerContext",
+      "name": "global",
+      "uses": [
+        "src/presets/shared.ts:369",
+        "src/presets/shared.ts:374",
+        "src/plan-command.ts:27",
+        "src/index.ts:334",
+        "src/index.ts:435"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "CommandHandlerContext",
+      "name": "options",
+      "uses": [
+        "src/upgrade-command.ts:46",
+        "src/upgrade-command.ts:48",
+        "src/upgrade-command.ts:49",
+        "src/upgrade-command.ts:50",
+        "src/plan-command.ts:38",
+        "src/plan-command.ts:39",
+        "src/plan-command.ts:40",
+        "src/stack-command.ts:10",
+        "src/index.ts:293",
+        "src/index.ts:430",
+        "src/index.ts:489",
+        "src/index.ts:494",
+        "src/index.ts:527",
+        "src/index.ts:562",
+        "src/index.ts:568"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "CommandHandlerContext",
+      "name": "pm_root",
+      "uses": [
+        "src/presets/shared.ts:110"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "CommandHandlerContext",
+      "name": "sdk",
+      "uses": [
+        "src/presets/shared.ts:278",
+        "src/presets/shared.ts:285",
+        "src/upgrade-command.ts:49",
+        "src/upgrade-command.ts:67",
+        "src/plan-command.ts:29",
+        "src/plan-command.ts:30",
+        "src/stack-command.ts:12",
+        "src/index.ts:567"
+      ],
+      "first": "2026.7.19",
+      "previous": "2026.7.18",
+      "sha256": "513e0aead42767a113a26b8b2e2cbb8a22879d0cb0500d4d3cdd16d21d9f7a39",
+      "previousSha256": "44b48fe680cf330254a4ab8d42b55cbcee81ba5cf21e4d4550b40413265d64b9"
+    },
+    {
+      "kind": "member",
+      "module": "ExtensionApi",
+      "name": "registerCommand",
+      "uses": [
+        "src/upgrade-command.ts:34",
+        "src/upgrade-command.ts:62",
+        "src/plan-command.ts:52",
+        "src/stack-command.ts:17",
+        "src/index.ts:209",
+        "src/index.ts:218",
+        "src/index.ts:227",
+        "src/index.ts:236",
+        "src/index.ts:245",
+        "src/index.ts:254",
+        "src/index.ts:263",
+        "src/index.ts:280",
+        "src/index.ts:388",
+        "src/index.ts:400",
+        "src/index.ts:412",
+        "src/index.ts:455",
+        "src/index.ts:511",
+        "src/index.ts:519",
+        "src/index.ts:540",
+        "src/index.ts:577",
+        "src/index.ts:584",
+        "src/index.ts:591"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "ExtensionApi",
+      "name": "registerItemTypes",
+      "uses": [
+        "src/index.ts:272",
+        "src/index.ts:273",
+        "src/index.ts:274"
+      ],
+      "first": "2026.5.1",
+      "previous": "2026.3.12",
+      "sha256": "730de8b79aa0074dc2ca81a54ce37f9aaa0a4167b690c9a62b87d2121a8b37f7",
+      "previousSha256": "4e4e6a33cb45d665f072120e9e1ce25d2e5773e738cbc914b29e8f54367747fb"
+    },
+    {
+      "kind": "member",
+      "module": "ExtensionCommandSdk",
+      "name": "client",
+      "uses": [
+        "src/plan-command.ts:30",
+        "src/index.ts:567"
+      ],
+      "first": "2026.7.19",
+      "previous": "2026.7.18",
+      "sha256": "513e0aead42767a113a26b8b2e2cbb8a22879d0cb0500d4d3cdd16d21d9f7a39",
+      "previousSha256": "44b48fe680cf330254a4ab8d42b55cbcee81ba5cf21e4d4550b40413265d64b9"
+    },
+    {
+      "kind": "member",
+      "module": "ExtensionCommandSdk",
+      "name": "mutateWorkspaceSettings",
+      "uses": [
+        "src/presets/shared.ts:278",
+        "src/presets/shared.ts:285",
+        "src/upgrade.ts:166",
+        "src/upgrade.ts:168",
+        "src/plan-command.ts:29",
+        "src/stack.ts:169",
+        "src/stack.ts:199",
+        "src/simulation.ts:79"
+      ],
+      "first": "2026.9.30",
+      "previous": "2026.9.29",
+      "sha256": "a966b19b5d0e845bdc46df61f89d7c89800606821bcf1e061d619dfcfd0dc7db",
+      "previousSha256": "fa52ca1b2512ee2ed15d348d393383706705f94479ba7432079bd8e14d57b97d"
+    },
+    {
+      "kind": "member",
+      "module": "PmClient",
+      "name": "claim",
+      "uses": [
+        "src/simulation.ts:96"
+      ],
+      "first": "2026.7.7",
+      "previous": "2026.7.6",
+      "sha256": "c455dbda90d6f5aff55b23517683376ea6ab74d4a1540f3f8274590b1687c47e",
+      "previousSha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158"
+    },
+    {
+      "kind": "member",
+      "module": "PmClient",
+      "name": "close",
+      "uses": [
+        "src/simulation.ts:102",
+        "src/simulation.ts:105"
+      ],
+      "first": "2026.7.6",
+      "previous": "2026.7.5",
+      "sha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158",
+      "previousSha256": "4a6664f68120cace5648faf48d51b08c14e969d9c7e185e592f1a0fceae57274"
+    },
+    {
+      "kind": "member",
+      "module": "PmClient",
+      "name": "create",
+      "uses": [
+        "src/seeds.ts:166",
+        "src/seeds.ts:217",
+        "src/plan-command.ts:30",
+        "src/simulation.ts:90"
+      ],
+      "first": "2026.7.6",
+      "previous": "2026.7.5",
+      "sha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158",
+      "previousSha256": "4a6664f68120cace5648faf48d51b08c14e969d9c7e185e592f1a0fceae57274"
+    },
+    {
+      "kind": "member",
+      "module": "PmClient",
+      "name": "get",
+      "uses": [
+        "src/simulation.ts:114"
+      ],
+      "first": "2026.7.6",
+      "previous": "2026.7.5",
+      "sha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158",
+      "previousSha256": "4a6664f68120cace5648faf48d51b08c14e969d9c7e185e592f1a0fceae57274"
+    },
+    {
+      "kind": "member",
+      "module": "PmClient",
+      "name": "update",
+      "uses": [
+        "src/simulation.ts:97"
+      ],
+      "first": "2026.7.6",
+      "previous": "2026.7.5",
+      "sha256": "0d6e446cf93a0f0660ce4e21943adf1e0c21381010ef67369f40cc9834b8d158",
+      "previousSha256": "4a6664f68120cace5648faf48d51b08c14e969d9c7e185e592f1a0fceae57274"
+    }
+  ]
+}
