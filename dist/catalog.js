@@ -11,8 +11,7 @@
  * keeps it unit-testable with `node --test` and side-effect free.
  */
 import { CommandError, EXIT_CODE } from "./presets/shared.js";
-import { bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
-import { PRESET_REGISTRY } from "./registry.js";
+import { PRESET_REGISTRY, bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
 /**
  * Raw exports keyed by the closed {@link PresetId} union.
  *
@@ -32,6 +31,10 @@ const RAW_PRESETS = {
     "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
     "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
+/** Copy bundled template payloads for adaptation into host profile definitions. */
+export function presetTemplateEntries(id) {
+    return structuredClone(Object.values(RAW_PRESETS[id].templates));
+}
 /**
  * Project a stored template into the compact view the catalog exposes.
  *

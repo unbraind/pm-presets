@@ -35,4 +35,6 @@ export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpg
 export type { VersionedPreset, UpgradeSettings, UpgradeValue, UpgradeDecisions, UpgradeChange, PresetUpgradeReceipt, PresetUpgradeSummary, PresetUpgradeResult, UpgradeRefusalCode } from "./upgrade.ts";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.ts";
 export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPlanTarget, PresetPlanGap, PresetPlan, PlanRefusalCode } from "./plan.ts";
+export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
+export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";
 //# sourceMappingURL=index.d.ts.map

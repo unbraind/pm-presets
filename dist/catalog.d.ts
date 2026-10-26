@@ -11,7 +11,7 @@
  * keeps it unit-testable with `node --test` and side-effect free.
  */
 import type { PresetSettingsPatch, PresetTemplateMap, StoredCreateTemplateDocument } from "./presets/shared.ts";
-import { type PresetDescriptor } from "./registry.ts";
+import { type PresetDescriptor, type PresetId } from "./registry.ts";
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
     name: string;
@@ -56,6 +56,8 @@ interface RawPreset {
         }>;
     }[];
 }
+/** Copy bundled template payloads for adaptation into host profile definitions. */
+export declare function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[];
 /**
  * Project a stored template into the compact view the catalog exposes.
  *

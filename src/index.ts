@@ -36,6 +36,7 @@ import { runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
 import { PRESET_REGISTRY } from "./registry.ts";
 import { registerPlanCommand } from "./plan-command.ts";
+import { registerStackCommand } from "./stack-command.ts";
 import { registerUpgradeCommands } from "./upgrade-command.ts";
 import {
   buildListRows,
@@ -203,6 +204,7 @@ export default defineExtension({
   activate(api: ExtensionApi) {
     registerUpgradeCommands(api);
     registerPlanCommand(api);
+    registerStackCommand(api);
     // ── bug-triage ──────────────────────────────────────────────────────────
     api.registerCommand({
       name: "triage-setup",
@@ -614,3 +616,6 @@ export type { VersionedPreset, UpgradeSettings, UpgradeValue, UpgradeDecisions, 
 
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.ts";
 export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPlanTarget, PresetPlanGap, PresetPlan, PlanRefusalCode } from "./plan.ts";
+
+export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
+export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";

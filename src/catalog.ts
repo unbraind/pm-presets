@@ -19,6 +19,9 @@ import type {
 } from "./presets/shared.ts";
 import { CommandError, EXIT_CODE } from "./presets/shared.ts";
 import {
+  PRESET_REGISTRY,
+  type PresetDescriptor,
+  type PresetId,
   bugTriageSettings,
   bugTriageTemplates,
   indieDevSettings,
@@ -36,7 +39,6 @@ import {
   agentWorkflowTemplates,
   agentWorkflowItemTypes,
 } from "./registry.ts";
-import { PRESET_REGISTRY, type PresetDescriptor, type PresetId } from "./registry.ts";
 
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
@@ -95,6 +97,11 @@ const RAW_PRESETS: Record<PresetId, RawPreset> = {
   "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
   "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
 };
+
+/** Copy bundled template payloads for adaptation into host profile definitions. */
+export function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[] {
+  return structuredClone(Object.values(RAW_PRESETS[id].templates));
+}
 
 /**
  * Project a stored template into the compact view the catalog exposes.
