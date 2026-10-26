@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Use the pm SDK for preset seed creation ([pm-1j8u](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-1j8u.toon))
+
 ## 2026.10.25 - 2026-10-25
 
 ### Added
