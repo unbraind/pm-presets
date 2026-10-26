@@ -32,6 +32,7 @@ import { runSoftwareSprintSetup } from "./presets/software-sprint/index.js";
 import { runStartupRoadmapSetup } from "./presets/startup-roadmap/index.js";
 import { PRESET_REGISTRY } from "./registry.js";
 import { registerPlanCommand } from "./plan-command.js";
+import { registerStackCommand } from "./stack-command.js";
 import { registerUpgradeCommands } from "./upgrade-command.js";
 import { buildListRows, requirePresetDefinition, requireValidPresets, validateAllPresets, } from "./catalog.js";
 import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
@@ -177,6 +178,7 @@ export default defineExtension({
     activate(api) {
         registerUpgradeCommands(api);
         registerPlanCommand(api);
+        registerStackCommand(api);
         // ── bug-triage ──────────────────────────────────────────────────────────
         api.registerCommand({
             name: "triage-setup",
@@ -516,4 +518,5 @@ export { PRESET_REGISTRY } from "./registry.js";
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.js";
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.js";
+export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.js";
 //# sourceMappingURL=index.js.map

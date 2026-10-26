@@ -65,6 +65,7 @@ management surface plus a generic `apply`:
 | `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
 | `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. Add `--strict` to exit non-zero on drift (CI/compliance). |
 | `pm presets plan <id>` | Negotiate operational prerequisites before mutation; use `--composition` and `--target` for composed/provider plans. Missing required contracts exit 2. |
+| `pm presets stack --input stack.json` | Preview a canonical preset stack; conflicting settings, templates and seed identities require explicit owner choices. |
 | `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
 | `pm presets apply <id>` | Scaffold a preset into the current workspace (the generic form of the `*-setup` commands). Add `--replace` for a clean reset of the owned settings trees. |
 | `pm presets export <name>` | Snapshot the **current** workspace's settings + templates as a reusable preset definition (JSON), to stdout or a file. |
@@ -445,3 +446,40 @@ SDK plan includes every gap. CLI reports retain complete counts and at most
 host output budgets/projection may reduce output further. Plans contain only
 contract identifiers and decisions, never settings values or tracker content.
 See [the composed preset example](docs/plan-example.md).
+
+## Preview preset stacks
+
+`pm presets stack --input stack.json --json` adapts selected catalog contributions
+to the host's `ProjectProfileDefinition` and `planProfileApplication`. TOON is the
+default; both formats retain ownership rows and bounded counts without stored
+settings values, template bodies or seed bodies. Unresolved conflicts return
+`ready: false`, `code: conflicts`, a remedy and exit 2. Identical contributions
+share ownership; different values at the same identity require a listed owner.
+Selection order and JSON formatting never determine precedence.
+
+Each selection names a bundled `preset`. Boolean `settings` and `templates`
+default to true; `seeds` defaults to false. Disable surfaces to compose disjoint
+contributions. Settings ownership uses leaf JSON pointers, templates use their
+name, and seeds use `type:title` as a catalog identity (not an existing item ID).
+Choices map each conflicting pointer to a competing preset. Unknown, unused or
+non-competing choices are refused. Arrays are atomic settings values.
+
+The SDK exports `planPresetStack(pmRoot, sdk, input)`, `summarizePresetStack` and
+typed `StackRefusal` errors. It accepts 1–7 unique selections and at most 128
+choices (512 characters per pointer), rejects sparse arrays, unknown keys and
+non-boolean flags, and bounds CLI JSON artifacts to 1 MiB. Settings previews
+require canonical `includePreview` support (host 2026.10.17+). Core plans the
+registered `id_prefix` config and templates; other governance, validation and
+testing leaves use the host's audited dry-run normalization in an isolated,
+mode-0700 scratch directory with a mode-0600 settings copy, removed in `finally`.
+This avoids the host dry-run's workspace lock writes on the source. If normalization
+would discard an explicit setting choice, `normalization_conflict` asks for
+coherent owners. Custom item types/options remain owned by extension activation.
+
+Preview works without git, including on read-only trackers, and writes no source
+settings, items, templates, history, receipts or journals. Temporary normalization
+files are removed on success or refusal. There is no stack apply/import/export/sync command.
+Seed rows describe prospective catalog contributions, without claiming existing
+items by title. Plans are observations, not transactions or replayable authority;
+replan after peer changes. Target classifications always read current settings
+and templates. See [the stack example](docs/stack-example.md).
