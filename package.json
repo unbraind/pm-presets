@@ -1,6 +1,6 @@
 {
   "name": "pm-presets",
-  "version": "2026.10.25",
+  "version": "2026.10.26",
   "description": "All 7 official pm-cli workspace presets in one package: bug-triage, indie-dev, open-source, software-sprint, startup-roadmap, kanban, agent-workflow",
   "repository": {
     "type": "git",
@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/unbraind/pm-presets/issues"
   },
-  "homepage": "https://github.com/unbraind/pm-presets#readme",
+  "homepage": "https://pm-cli.unbrained.dev/packages/pm-presets",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -69,7 +69,10 @@
   "engines": {
     "node": ">=22.18.0"
   },
-  "author": "@unbraind",
+  "author": {
+    "name": "unbrained",
+    "url": "https://unbrained.dev/about"
+  },
   "license": "MIT",
   "keywords": [
     "agent-setup",
