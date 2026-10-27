@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Other
+
+- Stop Hound from linting generated dist/ output ([pm-hound-generated-dist](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-hound-generated-dist.toon))
+
 ## 2026.10.27 - 2026-10-27
 
 ### Changed
