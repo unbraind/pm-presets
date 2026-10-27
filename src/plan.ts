@@ -154,7 +154,7 @@ export function bundledPresetComposition(id: string, withSeeds = false): PresetC
       ...[...new Set(preset.templates.map((template) => template.type))].map((name) => ({ kind: "type" as const, name }))] },
   ];
   if (withSeeds) features.push({ id: "seeds", optional: false, requires: [{ kind: "capability", name: "items.create" },
-    ...[...new Set(resolvedSeedsForPreset(preset.id).map((seed) => seed.type))].map((name) => ({ kind: "type" as const, name }))] });
+    ...[...new Set(resolvedSeedsForPreset(preset.id, {}, true).map((seed) => seed.type))].map((name) => ({ kind: "type" as const, name }))] });
   return { id: preset.id, features };
 }
 /** Compact CLI view with complete counts and explicit truncation, never hidden gaps. */

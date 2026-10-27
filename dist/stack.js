@@ -131,7 +131,7 @@ export async function planPresetStack(pmRoot, sdk, input) {
             for (const template of presetTemplateEntries(id))
                 add(`/templates/${escape(template.name)}`, id, template.options);
         if (selection.seeds)
-            for (const seed of resolvedSeedsForPreset(id))
+            for (const seed of resolvedSeedsForPreset(id, {}, true))
                 add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
     }
     const ownership = [];

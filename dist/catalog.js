@@ -12,7 +12,7 @@
  */
 import { CommandError, EXIT_CODE } from "./presets/shared.js";
 import { PRESET_REGISTRY, PRESET_PARAMETERS, bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
-import { buildParameterViews, resolveParameterValues, resolveParameterizedPreset, } from "./params.js";
+import { buildParameterViews, collectParameterValues, resolveParameterizedPreset, } from "./params.js";
 /**
  * Raw exports keyed by the closed {@link PresetId} union.
  *
@@ -35,22 +35,50 @@ const RAW_PRESETS = {
 /**
  * Resolve one bundled preset's raw exports against its typed parameter manifest.
  *
- * The single resolution path for every catalog consumer: bindings are
- * substituted with default or caller-supplied values through the same engine
- * the apply path uses, so previews (`show`, `diff`, `stack`) never display or
- * compare unresolved binding syntax.
+ * Declaration mode, on purpose: catalog and read surfaces (`show`, `list`,
+ * `validate`, `plan`, `stack`) display a preset's declarations — parameters are
+ * collected leniently, every ANSWERED occurrence is substituted through the
+ * same engine the apply path uses, and declared-but-unanswered occurrences
+ * stay authored in the returned content while the parameter views flag them.
+ * Only the apply path (and the parameterized diff preview that mirrors it)
+ * demands full answers and refuses on unanswered parameters.
  */
 function resolveRawPreset(raw, supplied) {
     const manifest = raw.parameters;
-    const resolved = resolveParameterValues(manifest, supplied ?? {});
+    const resolved = collectParameterValues(manifest, supplied ?? {});
     const substitution = resolveParameterizedPreset(manifest, resolved.values, {
         settings: raw.settings,
         templates: raw.templates,
-    });
+    }, true);
     return {
         settings: substitution.settings,
         templates: substitution.templates,
         parameterViews: buildParameterViews(manifest, supplied),
+    };
+}
+/**
+ * Project one raw preset export set into a full catalog definition.
+ *
+ * Pure and exported so the declaration-mode contract is directly testable
+ * with synthetic raw exports (required parameters without defaults, authored
+ * binding occurrences) rather than only through the bundled catalog.
+ */
+export function projectPresetDefinition(descriptor, raw, supplied) {
+    const resolved = resolveRawPreset(raw, supplied);
+    const templates = Object.values(resolved.templates)
+        .map(projectTemplateView)
+        .sort((left, right) => left.name.localeCompare(right.name));
+    return {
+        id: descriptor.id,
+        displayName: descriptor.displayName,
+        description: descriptor.description,
+        command: descriptor.command,
+        idPrefix: descriptor.idPrefix,
+        governance: descriptor.governance,
+        settings: resolved.settings,
+        templates,
+        itemTypes: projectItemTypeViews(raw.itemTypes),
+        parameters: resolved.parameterViews,
     };
 }
 /** Copy bundled template payloads for adaptation into host profile definitions. */
@@ -124,22 +152,7 @@ function buildDefinition(descriptor, supplied) {
     if (!raw) {
         throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
     }
-    const resolved = resolveRawPreset(raw, supplied);
-    const templates = Object.values(resolved.templates)
-        .map(projectTemplateView)
-        .sort((left, right) => left.name.localeCompare(right.name));
-    return {
-        id: descriptor.id,
-        displayName: descriptor.displayName,
-        description: descriptor.description,
-        command: descriptor.command,
-        idPrefix: descriptor.idPrefix,
-        governance: descriptor.governance,
-        settings: resolved.settings,
-        templates,
-        itemTypes: projectItemTypeViews(raw.itemTypes),
-        parameters: resolved.parameterViews,
-    };
+    return projectPresetDefinition(descriptor, raw, supplied);
 }
 /** All preset definitions in registry order. */
 export function listPresetDefinitions() {
@@ -264,7 +277,19 @@ export function requireValidPresets(result) {
 export function collectPresetParameterIssues(definition, raw, advertisedTemplates) {
     try {
         const resolved = resolveRawPreset({ settings: raw.settings, templates: raw.templates, parameters: raw.parameters ?? [] });
-        return collectPresetIssues(definition, resolved.templates, advertisedTemplates);
+        const issues = collectPresetIssues(definition, resolved.templates, advertisedTemplates);
+        // A bundled preset must be applicable with its own defaults: any binding
+        // that stays unresolved after default resolution is a validation failure,
+        // not a state to display.
+        for (const view of resolved.parameterViews) {
+            if (view.unanswered) {
+                issues.push({
+                    presetId: definition.id,
+                    message: `required parameter '${view.name}' has no default and cannot be resolved for validation`,
+                });
+            }
+        }
+        return issues;
     }
     catch (error) {
         return [{ presetId: definition.id, message: `parameter resolution failed: ${String(error)}` }];

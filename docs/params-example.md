@@ -95,6 +95,19 @@ tracker state is read or written:
 | `secret_in_public_prose` | a `secret` parameter bound in template or seed text | bind secrets only into settings values |
 
 Refusal messages never echo secret values (secrets render as `<redacted>`).
+Secret values reach exactly one place — the private `settings.json` an apply
+writes; the apply summary, `--dry-run` patch dumps and every `presets diff`
+settings entry render them as `<redacted>` on both sides.
+
+## 6. Resolution is computed once and holds under concurrency
+
+The unified apply resolves your input exactly once (flags plus at most one
+params file), pre-validates the seed bindings at that same boundary, and
+threads the effective values through settings, templates and seeds — so
+editing the params file mid-apply cannot split the workspace across two
+values. Real applies hold a workspace-scoped lock across the settings mutation
+and the template writes, keeping concurrent applies internally consistent;
+dry-runs skip the lock and create no files.
 
 ## 5. Programmatic use
 

@@ -16,8 +16,11 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  assertResolvedParameterValues,
   buildParameterViews,
+  collectParameterValues,
   parseParameterFlagEntries,
+  redactSecretValues,
   parseParamsFile,
   ParameterRefusal,
   readSuppliedParameterValues,
@@ -28,6 +31,7 @@ import {
   resolveTemplatesWithParameters,
   validateParameterManifest,
   type PresetParameter,
+  type ResolvedParameterValues,
   type PresetParameterManifest,
 } from "../src/params.ts";
 import type { PresetSettingsPatch, PresetTemplateMap } from "../src/presets/shared.ts";
@@ -339,4 +343,51 @@ test("secret values may bind into settings but the refusal never echoes the valu
     assert.equal(error.code, "secret_in_public_prose");
     assert.ok(!error.message.includes("super-secret-value"), "refusals must never echo secret values");
   }
+});
+test("collectParameterValues is lenient: unanswered parameters are listed, not thrown", () => {
+  const manifest: PresetParameterManifest = [
+    { name: "a", type: "string", required: true },
+    { name: "b", type: "string", required: false, default: "bee" },
+  ];
+  const collected = collectParameterValues(manifest, {});
+  assert.deepEqual(collected.values, { b: "bee" });
+  assert.deepEqual(collected.sources, { b: "default" });
+  assert.deepEqual(collected.unanswered, ["a"]);
+  // Supplied invalid values still refuse at the lenient boundary.
+  refuses("invalid_value", () => collectParameterValues([{ name: "a", type: "string", required: true, pattern: "[a-z]+" }], { a: "A" }));
+  refuses("unknown_parameter", () => collectParameterValues(manifest, { ghost: "1" }));
+});
+
+test("assertResolvedParameterValues re-validates injected resolutions", () => {
+  const manifest: PresetParameterManifest = [{ name: "a", type: "string", required: true, pattern: "[a-z]+" }];
+  const good: ResolvedParameterValues = { values: { a: "abc" }, sources: { a: "supplied" }, unanswered: [] };
+  assertResolvedParameterValues(manifest, good);
+  refuses("unknown_parameter", () => assertResolvedParameterValues(manifest, { values: { ghost: "x" }, sources: { ghost: "supplied" }, unanswered: [] }));
+  refuses("invalid_value", () => assertResolvedParameterValues(manifest, { values: { a: 5 as never }, sources: { a: "supplied" }, unanswered: [] }));
+  refuses("invalid_value", () => assertResolvedParameterValues(manifest, { values: { a: "ABC" }, sources: { a: "supplied" }, unanswered: [] }));
+  refuses("invalid_value", () => assertResolvedParameterValues(manifest, { values: { a: "abc" }, sources: { a: "injected" as never }, unanswered: [] }));
+  refuses("unanswered_parameter", () => assertResolvedParameterValues(manifest, { values: {}, sources: {}, unanswered: ["a"] }));
+});
+
+test("substitution refuses declared-but-unanswered bindings on write paths and leaves them raw for declarations", () => {
+  const manifest: PresetParameterManifest = [{ name: "a", type: "string", required: true }];
+  // Write mode (default): a missing binding refuses.
+  refuses("unanswered_parameter", () =>
+    resolveParameterizedPreset(manifest, {}, { settings: { id_prefix: "${param:a}-" } as never }));
+  refuses("unanswered_parameter", () =>
+    resolveSettingsWithParameters(manifest, {}, { id_prefix: "${param:a}-" } as never));
+  refuses("unanswered_parameter", () =>
+    resolveTemplatesWithParameters(manifest, {}, { "card.json": storedTemplate("card", { body: "${param:a}" }) }));
+  refuses("unanswered_parameter", () =>
+    resolveSeedsWithParameters(manifest, {}, [{ type: "Task", title: "${param:a}" }]));
+  // Declaration mode: the authored occurrence survives for inspection.
+  const declared = resolveParameterizedPreset(manifest, {}, { settings: { id_prefix: "${param:a}-" } as never }, true);
+  assert.equal(declared.settings?.id_prefix, "${param:a}-");
+  assert.equal(declared.occurrences, 0);
+});
+
+test("redactSecretValues replaces exact secret matches and tolerates edge inputs", () => {
+  assert.equal(redactSecretValues("token hunter2 inside longer hunter2 text", ["hunter2"]), "token <redacted> inside longer <redacted> text");
+  assert.equal(redactSecretValues("no secrets", []), "no secrets");
+  assert.equal(redactSecretValues("empty secret", [""]), "empty secret");
 });

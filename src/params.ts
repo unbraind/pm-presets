@@ -241,22 +241,24 @@ function assertValueConstraints(parameter: PresetParameter, value: string): void
 
 /** The resolved outcome of a manifest against caller-supplied values. */
 export interface ResolvedParameterValues {
-  /** Effective value per declared parameter (supplied or default). */
+  /** Effective value per answered parameter (supplied or default). */
   readonly values: Readonly<Record<string, string>>;
   /** Where each effective value came from. */
   readonly sources: Readonly<Record<string, "supplied" | "default">>;
+  /** Declared parameters with neither a supplied value nor a default (lenient collection only). */
+  readonly unanswered: readonly string[];
 }
 
 /**
- * Resolve a manifest against caller-supplied values.
+ * Effective parameter values collected WITHOUT answering requirements.
  *
- * The strict boundary: every supplied key must be declared
- * (`unknown_parameter`), every required parameter must be answered by a
- * supplied value or a default (`unanswered_parameter`, listing ALL unanswered
- * choices and their remedies), and every value must satisfy its parameter's own
- * constraints (`invalid_value`). Pure: reads nothing, writes nothing.
+ * The lenient half of the resolution boundary: every supplied key must still
+ * be declared and satisfy its own constraints, but required parameters may
+ * remain unanswered (listed in {@link ResolvedParameterValues.unanswered}) so
+ * read surfaces can display declarations without pretending to apply them.
+ * Pure: reads nothing, writes nothing.
  */
-export function resolveParameterValues(
+export function collectParameterValues(
   manifest: PresetParameterManifest,
   supplied: Readonly<Record<string, string>>,
 ): ResolvedParameterValues {
@@ -279,7 +281,7 @@ export function resolveParameterValues(
       if (parameter.default !== undefined) {
         values[parameter.name] = parameter.default;
         sources[parameter.name] = "default";
-      } else if (parameter.required) {
+      } else {
         unanswered.push(parameter.name);
       }
       continue;
@@ -292,13 +294,87 @@ export function resolveParameterValues(
     values[parameter.name] = value;
     sources[parameter.name] = "supplied";
   }
-  if (unanswered.length > 0) {
+  return { values, sources, unanswered };
+}
+
+/**
+ * Resolve a manifest against caller-supplied values.
+ *
+ * The strict boundary every write path uses: `unknown_parameter` for
+ * undeclared names, `unanswered_parameter` listing every required choice
+ * without a value or default, `invalid_value` for constraint violations.
+ * Pure: reads nothing, writes nothing.
+ */
+export function resolveParameterValues(
+  manifest: PresetParameterManifest,
+  supplied: Readonly<Record<string, string>>,
+): ResolvedParameterValues {
+  const resolved = collectParameterValues(manifest, supplied);
+  if (resolved.unanswered.some((name) => manifest.find((parameter) => parameter.name === name)?.required)) {
+    const required = resolved.unanswered.filter(
+      (name) => manifest.find((parameter) => parameter.name === name)?.required,
+    );
     throw new ParameterRefusal(
       "unanswered_parameter",
-      `Unanswered required parameter(s): ${unanswered.join(", ")}. Supply --param <name>=<value> (or a --params-file) for each before applying; see 'pm presets show <id>'.`,
+      `Unanswered required parameter(s): ${required.join(", ")}. Supply --param <name>=<value> (or a --params-file) for each before applying; see 'pm presets show <id>'.`,
     );
   }
-  return { values, sources };
+  return resolved;
+}
+
+/**
+ * Re-validate a pre-resolved value set (e.g. injected by a command that
+ * already resolved them at its boundary) against the manifest.
+ *
+ * Ensures a threaded-in result still declares only manifest parameters with
+ * constraint-satisfying values, every required parameter is answered, and the
+ * sources are well-formed — so a downstream consumer can trust values it did
+ * not resolve itself without re-reading any input.
+ */
+export function assertResolvedParameterValues(
+  manifest: PresetParameterManifest,
+  resolved: ResolvedParameterValues,
+): void {
+  validateParameterManifest(manifest);
+  for (const [name, value] of Object.entries(resolved.values)) {
+    const parameter = manifest.find((entry) => entry.name === name);
+    if (!parameter) {
+      throw new ParameterRefusal("unknown_parameter", `Parameter '${name}' is not declared by this preset.`);
+    }
+    if (typeof value !== "string") {
+      throw new ParameterRefusal("invalid_value", `Parameter '${name}' must be a string value.`);
+    }
+    assertValueConstraints(parameter, assertPlainValue(name, value, parameter.type));
+    const source = resolved.sources[name];
+    if (source !== "supplied" && source !== "default") {
+      throw new ParameterRefusal("invalid_value", `Parameter '${name}' has an invalid resolution source.`);
+    }
+  }
+  for (const parameter of manifest) {
+    if (parameter.required && !Object.hasOwn(resolved.values, parameter.name)) {
+      throw new ParameterRefusal(
+        "unanswered_parameter",
+        `Unanswered required parameter(s): ${parameter.name}. Supply --param <name>=<value> (or a --params-file) before applying.`,
+      );
+    }
+  }
+}
+
+/**
+ * Replace every occurrence of any supplied secret value with `<redacted>`.
+ *
+ * The single redaction primitive for every emitted surface (dry-run patch
+ * dumps, diff results): privacy-safe in both directions — it can never reveal a
+ * secret, and it only ever matches exact secret values.
+ */
+export function redactSecretValues(text: string, secretValues: readonly string[]): string {
+  let result = text;
+  for (const secret of secretValues) {
+    if (secret.length > 0) {
+      result = result.split(secret).join("<redacted>");
+    }
+  }
+  return result;
 }
 
 /** Build the compact parameter views for `presets show` (secrets never show defaults). */
@@ -461,8 +537,22 @@ function scanString(value: string, location: string): { occurrences: ParameterBi
   return { occurrences, malformed };
 }
 
-/** Substitute every well-formed occurrence in one string, or detect malformed ones. */
-function substituteString(value: string, location: string, values: Readonly<Record<string, string>>): { result: string; occurrences: number } {
+/**
+ * Substitute every well-formed occurrence in one string.
+ *
+ * Undeclared names always refuse (`unknown_binding` — an authoring bug). A
+ * name that IS declared but has no effective value refuses in write mode
+ * (`unanswered_parameter` — a missing binding must never reach a write) and is
+ * left untouched in declaration mode, so inspection surfaces can display the
+ * preset's authored content without answering its parameters.
+ */
+function substituteString(
+  value: string,
+  location: string,
+  values: Readonly<Record<string, string>>,
+  declared: ReadonlySet<string>,
+  allowUnresolved: boolean,
+): { result: string; occurrences: number } {
   let result = value;
   let occurrences = 0;
   let cursor = result.indexOf(BINDING_PREFIX);
@@ -477,10 +567,21 @@ function substituteString(value: string, location: string, values: Readonly<Reco
     }
     const name = result.slice(nameStart, end);
     if (!Object.hasOwn(values, name)) {
-      throw new ParameterRefusal(
-        "unknown_binding",
-        `Binding \${param:${name}} at ${location} is not declared by the preset's parameter manifest; declare it or fix the name.`,
-      );
+      if (!declared.has(name)) {
+        throw new ParameterRefusal(
+          "unknown_binding",
+          `Binding \${param:${name}} at ${location} is not declared by the preset's parameter manifest; declare it or fix the name.`,
+        );
+      }
+      if (!allowUnresolved) {
+        throw new ParameterRefusal(
+          "unanswered_parameter",
+          `Binding \${param:${name}} at ${location} has no supplied value or default. Supply --param ${name}=<value> (or a --params-file) before applying.`,
+        );
+      }
+      // Declaration mode: keep the authored occurrence for inspection.
+      cursor = result.indexOf(BINDING_PREFIX, end + 1);
+      continue;
     }
     result = result.slice(0, cursor) + values[name] + result.slice(end + 1);
     occurrences += 1;
@@ -494,22 +595,24 @@ function substituteTree(
   value: unknown,
   location: string,
   values: Readonly<Record<string, string>>,
+  declared: ReadonlySet<string>,
+  allowUnresolved: boolean,
   counter: { occurrences: number },
 ): unknown {
   if (typeof value === "string") {
-    const { result, occurrences } = substituteString(value, location, values);
+    const { result, occurrences } = substituteString(value, location, values, declared, allowUnresolved);
     counter.occurrences += occurrences;
     return result;
   }
   if (Array.isArray(value)) {
     return value.map((entry, index) =>
-      substituteTree(entry, `${location}[${index}]`, values, counter),
+      substituteTree(entry, `${location}[${index}]`, values, declared, allowUnresolved, counter),
     );
   }
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     const copy: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      copy[key] = substituteTree(entry, `${location}.${key}`, values, counter);
+      copy[key] = substituteTree(entry, `${location}.${key}`, values, declared, allowUnresolved, counter);
     }
     return copy;
   }
@@ -526,6 +629,11 @@ function refuseSecretsInProse(occurrences: ParameterBindingOccurrence[], secretN
       );
     }
   }
+}
+
+/** The declared parameter names of a manifest, for binding-name classification. */
+function declaredNames(manifest: PresetParameterManifest): ReadonlySet<string> {
+  return new Set(manifest.map((parameter) => parameter.name));
 }
 
 /** Collect all binding occurrences in a preset part for reporting and refusal. */
@@ -564,12 +672,15 @@ export function resolveSettingsWithParameters(
   manifest: PresetParameterManifest,
   values: Readonly<Record<string, string>>,
   settings: PresetSettingsPatch,
+  allowUnresolved = false,
 ): { settings: PresetSettingsPatch; occurrences: number } {
   const counter = { occurrences: 0 };
   const settingsResult = substituteTree(
     settings,
     "settings",
     values,
+    declaredNames(manifest),
+    allowUnresolved,
     counter,
   ) as PresetSettingsPatch;
   return { settings: settingsResult, occurrences: counter.occurrences };
@@ -586,6 +697,7 @@ export function resolveTemplatesWithParameters(
   manifest: PresetParameterManifest,
   values: Readonly<Record<string, string>>,
   templates: PresetTemplateMap,
+  allowUnresolved = false,
 ): { templates: PresetTemplateMap; occurrences: number } {
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
@@ -605,7 +717,7 @@ export function resolveTemplatesWithParameters(
   }
   refuseSecretsInProse(occurrences, secretNames, "templates");
   const counter = { occurrences: 0 };
-  const resolved = substituteTree(templates, "templates", values, counter) as PresetTemplateMap;
+  const resolved = substituteTree(templates, "templates", values, declaredNames(manifest), allowUnresolved, counter) as PresetTemplateMap;
   return { templates: resolved, occurrences: counter.occurrences };
 }
 
@@ -619,6 +731,7 @@ export function resolveSeedsWithParameters(
   manifest: PresetParameterManifest,
   values: Readonly<Record<string, string>>,
   seeds: readonly SeedItem[],
+  allowUnresolved = false,
 ): { seeds: SeedItem[]; occurrences: number } {
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
@@ -629,7 +742,7 @@ export function resolveSeedsWithParameters(
   }
   refuseSecretsInProse(occurrences, secretNames, "generated public seed prose");
   const counter = { occurrences: 0 };
-  const resolved = substituteTree(seeds, "seeds", values, counter) as SeedItem[];
+  const resolved = substituteTree(seeds, "seeds", values, declaredNames(manifest), allowUnresolved, counter) as SeedItem[];
   return { seeds: resolved, occurrences: counter.occurrences };
 }
 
@@ -638,7 +751,9 @@ export function resolveSeedsWithParameters(
  *
  * Used by the apply path so settings, templates and seeds resolve against the
  * SAME effective values (one supplied project parameter reaches every declared
- * occurrence), with all refusals raised before any write.
+ * occurrence), with all refusals raised before any write. Passing
+ * `allowUnresolved` switches to declaration mode: occurrences of declared-but-
+ * unanswered parameters stay authored for inspection surfaces.
  */
 export function resolveParameterizedPreset(
   manifest: PresetParameterManifest,
@@ -648,6 +763,7 @@ export function resolveParameterizedPreset(
     readonly templates?: PresetTemplateMap;
     readonly seeds?: readonly SeedItem[];
   },
+  allowUnresolved = false,
 ): {
   settings?: PresetSettingsPatch;
   templates?: PresetTemplateMap;
@@ -657,17 +773,17 @@ export function resolveParameterizedPreset(
   let occurrences = 0;
   const result: { settings?: PresetSettingsPatch; templates?: PresetTemplateMap; seeds?: SeedItem[] } = {};
   if (parts.settings !== undefined) {
-    const resolved = resolveSettingsWithParameters(manifest, values, parts.settings);
+    const resolved = resolveSettingsWithParameters(manifest, values, parts.settings, allowUnresolved);
     result.settings = resolved.settings;
     occurrences += resolved.occurrences;
   }
   if (parts.templates !== undefined) {
-    const resolved = resolveTemplatesWithParameters(manifest, values, parts.templates);
+    const resolved = resolveTemplatesWithParameters(manifest, values, parts.templates, allowUnresolved);
     result.templates = resolved.templates;
     occurrences += resolved.occurrences;
   }
   if (parts.seeds !== undefined) {
-    const resolved = resolveSeedsWithParameters(manifest, values, parts.seeds);
+    const resolved = resolveSeedsWithParameters(manifest, values, parts.seeds, allowUnresolved);
     result.seeds = resolved.seeds;
     occurrences += resolved.occurrences;
   }

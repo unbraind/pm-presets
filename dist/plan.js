@@ -95,7 +95,7 @@ export function bundledPresetComposition(id, withSeeds = false) {
     ];
     if (withSeeds)
         features.push({ id: "seeds", optional: false, requires: [{ kind: "capability", name: "items.create" },
-                ...[...new Set(resolvedSeedsForPreset(preset.id).map((seed) => seed.type))].map((name) => ({ kind: "type", name }))] });
+                ...[...new Set(resolvedSeedsForPreset(preset.id, {}, true).map((seed) => seed.type))].map((name) => ({ kind: "type", name }))] });
     return { id: preset.id, features };
 }
 /** Compact CLI view with complete counts and explicit truncation, never hidden gaps. */

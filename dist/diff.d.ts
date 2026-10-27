@@ -17,6 +17,7 @@
  *     they are registered in-memory at activation, not written to disk).
  */
 import type { PresetDefinition } from "./catalog.ts";
+import { type PresetParameterManifest } from "./params.ts";
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
 /**
@@ -59,5 +60,17 @@ export interface PresetDiff {
 export declare function computePresetDiff(definition: PresetDefinition, snapshot: WorkspaceSnapshot): PresetDiff;
 /** Read the workspace snapshot from disk (the only impure part). */
 export declare function readWorkspaceSnapshot(pmDir: string): WorkspaceSnapshot;
+/**
+ * The parameterized diff surface both diff commands share.
+ *
+ * A diff is a preview of apply, so it resolves with the caller's supplied
+ * values and refuses exactly like apply does: any required parameter still
+ * unanswered refuses with the typed remedy before the workspace is read.
+ * Because diff results are emitted (TOON/JSON or console), every value that
+ * came from a secret-typed parameter is redacted on BOTH sides of each
+ * settings entry — the preset side and the workspace side — so a diff can
+ * never leak a secret into command output.
+ */
+export declare function computeParameterizedDiff(definition: PresetDefinition, manifest: PresetParameterManifest, supplied: Readonly<Record<string, string>>, snapshot: WorkspaceSnapshot): PresetDiff;
 export {};
 //# sourceMappingURL=diff.d.ts.map

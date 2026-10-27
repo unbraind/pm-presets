@@ -60,6 +60,28 @@ interface RawPreset {
         }>;
     }[];
 }
+/** The resolved-input shape {@link resolveRawPreset} requires: parameters normalized. */
+interface RawPresetInput {
+    settings: PresetSettingsPatch;
+    templates: PresetTemplateMap;
+    parameters: PresetParameterManifest;
+    itemTypes?: readonly {
+        name: string;
+        aliases?: string[];
+        options?: Array<{
+            key: string;
+            values?: string[];
+        }>;
+    }[];
+}
+/**
+ * Project one raw preset export set into a full catalog definition.
+ *
+ * Pure and exported so the declaration-mode contract is directly testable
+ * with synthetic raw exports (required parameters without defaults, authored
+ * binding occurrences) rather than only through the bundled catalog.
+ */
+export declare function projectPresetDefinition(descriptor: PresetDescriptor, raw: RawPresetInput, supplied?: Readonly<Record<string, string>>): PresetDefinition;
 /** Copy bundled template payloads for adaptation into host profile definitions. */
 export declare function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[];
 /**

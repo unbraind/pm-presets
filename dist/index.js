@@ -35,10 +35,12 @@ import { registerPlanCommand } from "./plan-command.js";
 import { registerStackCommand } from "./stack-command.js";
 import { registerUpgradeCommands } from "./upgrade-command.js";
 import { buildListRows, requirePresetDefinition, requireValidPresets, validateAllPresets, } from "./catalog.js";
-import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
+import { computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.js";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
 import { runPresetSeeds } from "./seeds.js";
 import { readSuppliedParameterValues } from "./params.js";
+import { PRESET_PARAMETERS } from "./registry.js";
+import { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 import * as fs from "node:fs";
 import { PRESET_HANDLERS } from "./setup.js";
 import { simulatePreset } from "./simulation.js";
@@ -295,9 +297,10 @@ export default defineExtension({
                     };
                 }
                 if (diffId) {
-                    const definition = requirePresetDefinition(diffId, readSuppliedParameterValues(options));
+                    const supplied = readSuppliedParameterValues(options);
+                    const definition = requirePresetDefinition(diffId, supplied);
                     const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-                    const result = computePresetDiff(definition, snapshot);
+                    const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
                     const strict = readBooleanOption(options, "strict");
                     if (strict && !result.inSync) {
                         // `--json` is host-owned; read it from ctx.global.
@@ -378,9 +381,10 @@ export default defineExtension({
             ],
             flags: DIFF_FLAGS,
             run: (ctx) => {
-                const definition = requirePresetDefinition(ctx.args?.[0], readSuppliedParameterValues(ctx.options));
+                const supplied = readSuppliedParameterValues(ctx.options);
+                const definition = requirePresetDefinition(ctx.args?.[0], supplied);
                 const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-                const result = computePresetDiff(definition, snapshot);
+                const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
                 const strict = readBooleanOption(ctx.options, "strict");
                 if (strict && !result.inSync) {
                     // Drift detected. Print the diff (respecting --json) so CI logs show
@@ -491,22 +495,22 @@ export default defineExtension({
             ],
             flags: APPLY_FLAGS,
             run: async (ctx) => {
-                const id = ctx.args?.[0];
-                // Validate the id up front (NOT_FOUND/exit 3 for unknown names).
-                const definition = requirePresetDefinition(id);
-                const handler = PRESET_HANDLERS[definition.id];
-                await handler(ctx);
-                const withSeeds = readBooleanOption(ctx.options, "withSeeds", "with-seeds");
-                if (!withSeeds) {
+                // ONE boundary before any write: the preset id, every parameter value
+                // AND the seed bindings resolve/refuse here — a bad seed can never
+                // leave a half-applied preset, and the params file is read exactly once.
+                const application = resolvePresetApplication(ctx);
+                const handler = PRESET_HANDLERS[application.definition.id];
+                await handler(contextWithResolvedParameters(ctx, application));
+                if (!application.withSeeds) {
                     return;
                 }
-                // Seeds resolve through the SAME supplied parameters the settings and
-                // templates used (one value reaches every declared occurrence), and
-                // refuse on secret bindings in the public seed prose.
-                await runPresetSeeds(resolvePmDir(ctx), definition.id, {
+                // Seeds use the SAME effective values that settings and templates
+                // used (one value reaches every declared occurrence), never a re-read
+                // of the caller's input.
+                await runPresetSeeds(resolvePmDir(ctx), application.definition.id, {
                     client: ctx.sdk?.client,
-                    dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
-                    suppliedParameters: readSuppliedParameterValues(ctx.options),
+                    dryRun: application.dryRun,
+                    parameterValues: application.parameters.values,
                 });
             },
         });
@@ -543,11 +547,13 @@ export default defineExtension({
 });
 // Re-export public API
 export { PRESET_REGISTRY } from "./registry.js";
+export { collectPresetParameterIssues, projectPresetDefinition } from "./catalog.js";
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.js";
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.js";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.js";
-export { ParameterRefusal, buildParameterViews, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
+export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
 export { PRESET_PARAMETERS } from "./registry.js";
+export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 export { resolvedSeedsForPreset } from "./seeds.js";
 //# sourceMappingURL=index.js.map

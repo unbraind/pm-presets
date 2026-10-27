@@ -44,7 +44,7 @@ import {
   requireValidPresets,
   validateAllPresets,
 } from "./catalog.ts";
-import { computePresetDiff, readWorkspaceSnapshot } from "./diff.ts";
+import { computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.ts";
 import {
   buildExportedPreset,
   readWorkspaceSettings,
@@ -52,6 +52,8 @@ import {
 } from "./export.ts";
 import { runPresetSeeds } from "./seeds.ts";
 import { readSuppliedParameterValues } from "./params.ts";
+import { PRESET_PARAMETERS } from "./registry.ts";
+import { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
 import * as fs from "node:fs";
 import { PRESET_HANDLERS } from "./setup.ts";
 import { simulatePreset, type PresetScenarioId } from "./simulation.ts";
@@ -350,9 +352,10 @@ export default defineExtension({
         }
 
         if (diffId) {
-          const definition = requirePresetDefinition(diffId, readSuppliedParameterValues(options));
+          const supplied = readSuppliedParameterValues(options);
+          const definition = requirePresetDefinition(diffId, supplied);
           const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-          const result = computePresetDiff(definition, snapshot);
+          const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
           const strict = readBooleanOption(options, "strict");
           if (strict && !result.inSync) {
             // `--json` is host-owned; read it from ctx.global.
@@ -449,9 +452,10 @@ export default defineExtension({
       ],
       flags: DIFF_FLAGS,
       run: (ctx: CommandHandlerContext) => {
-        const definition = requirePresetDefinition(ctx.args?.[0], readSuppliedParameterValues(ctx.options));
+        const supplied = readSuppliedParameterValues(ctx.options);
+        const definition = requirePresetDefinition(ctx.args?.[0], supplied);
         const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-        const result = computePresetDiff(definition, snapshot);
+        const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
         const strict = readBooleanOption(ctx.options, "strict");
         if (strict && !result.inSync) {
           // Drift detected. Print the diff (respecting --json) so CI logs show
@@ -578,23 +582,23 @@ export default defineExtension({
       ],
       flags: APPLY_FLAGS,
       run: async (ctx: CommandHandlerContext) => {
-        const id = ctx.args?.[0];
-        // Validate the id up front (NOT_FOUND/exit 3 for unknown names).
-        const definition = requirePresetDefinition(id);
-        const handler = PRESET_HANDLERS[definition.id];
-        await handler(ctx);
+        // ONE boundary before any write: the preset id, every parameter value
+        // AND the seed bindings resolve/refuse here — a bad seed can never
+        // leave a half-applied preset, and the params file is read exactly once.
+        const application = resolvePresetApplication(ctx);
+        const handler = PRESET_HANDLERS[application.definition.id];
+        await handler(contextWithResolvedParameters(ctx, application));
 
-        const withSeeds = readBooleanOption(ctx.options, "withSeeds", "with-seeds");
-        if (!withSeeds) {
+        if (!application.withSeeds) {
           return;
         }
-        // Seeds resolve through the SAME supplied parameters the settings and
-        // templates used (one value reaches every declared occurrence), and
-        // refuse on secret bindings in the public seed prose.
-        await runPresetSeeds(resolvePmDir(ctx), definition.id, {
+        // Seeds use the SAME effective values that settings and templates
+        // used (one value reaches every declared occurrence), never a re-read
+        // of the caller's input.
+        await runPresetSeeds(resolvePmDir(ctx), application.definition.id, {
           client: ctx.sdk?.client,
-          dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
-          suppliedParameters: readSuppliedParameterValues(ctx.options),
+          dryRun: application.dryRun,
+          parameterValues: application.parameters.values,
         });
       },
     });
@@ -635,6 +639,7 @@ export default defineExtension({
 
 // Re-export public API
 export { PRESET_REGISTRY } from "./registry.ts";
+export { collectPresetParameterIssues, projectPresetDefinition } from "./catalog.ts";
 export type { PresetDescriptor } from "./registry.ts";
 
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
@@ -651,10 +656,13 @@ export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, Pres
 
 export {
   ParameterRefusal,
+  assertResolvedParameterValues,
   buildParameterViews,
+  collectParameterValues,
   parseParameterFlagEntries,
   parseParamsFile,
   readSuppliedParameterValues,
+  redactSecretValues,
   resolveParameterValues,
   resolveParameterizedPreset,
   resolveSeedsWithParameters,
@@ -672,4 +680,6 @@ export type {
   ResolvedParameterValues,
 } from "./params.ts";
 export { PRESET_PARAMETERS } from "./registry.ts";
+export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
+export type { ResolvedPresetApplication } from "./apply-command.ts";
 export { resolvedSeedsForPreset } from "./seeds.ts";

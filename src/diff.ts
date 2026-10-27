@@ -21,6 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { PresetDefinition } from "./catalog.ts";
+import { collectParameterValues, redactSecretValues, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
 
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
@@ -173,4 +174,46 @@ export function readWorkspaceSnapshot(pmDir: string): WorkspaceSnapshot {
   }
 
   return { settings, templateNames };
+}
+
+/**
+ * The parameterized diff surface both diff commands share.
+ *
+ * A diff is a preview of apply, so it resolves with the caller's supplied
+ * values and refuses exactly like apply does: any required parameter still
+ * unanswered refuses with the typed remedy before the workspace is read.
+ * Because diff results are emitted (TOON/JSON or console), every value that
+ * came from a secret-typed parameter is redacted on BOTH sides of each
+ * settings entry — the preset side and the workspace side — so a diff can
+ * never leak a secret into command output.
+ */
+export function computeParameterizedDiff(
+  definition: PresetDefinition,
+  manifest: PresetParameterManifest,
+  supplied: Readonly<Record<string, string>>,
+  snapshot: WorkspaceSnapshot,
+): PresetDiff {
+  const unanswered = definition.parameters.filter((view) => view.unanswered).map((view) => view.name);
+  if (unanswered.length > 0) {
+    throw new ParameterRefusal(
+      "unanswered_parameter",
+      `Unanswered required parameter(s): ${unanswered.join(", ")}. Supply --param <name>=<value> (or a --params-file) for each, or diff the default resolution by omitting --param.`,
+    );
+  }
+  const diff = computePresetDiff(definition, snapshot);
+  const values = collectParameterValues(manifest, supplied).values;
+  const secrets = manifest
+    .filter((parameter) => parameter.type === "secret" && Object.hasOwn(values, parameter.name))
+    .map((parameter) => values[parameter.name]);
+  if (secrets.length === 0) {
+    return diff;
+  }
+  return {
+    ...diff,
+    settings: diff.settings.map((entry) => ({
+      ...entry,
+      preset: typeof entry.preset === "string" ? redactSecretValues(entry.preset, secrets) : entry.preset,
+      workspace: typeof entry.workspace === "string" ? redactSecretValues(entry.workspace, secrets) : entry.workspace,
+    })),
+  };
 }

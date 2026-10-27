@@ -14,7 +14,7 @@
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
 import { randomUUID } from "node:crypto";
-import { buildParameterViews, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, } from "../params.js";
+import { assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, redactSecretValues, resolveParameterValues, resolveParameterizedPreset, } from "../params.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 // pm's extension command runtime only treats a thrown error as a cleanly
@@ -156,6 +156,76 @@ export function mergePresetSettings(existing, patch, replace) {
     }
     return merged;
 }
+const APPLY_LOCK_FILE = "pm-presets-apply.lock";
+const APPLY_LOCK_POLL_MS = 50;
+const APPLY_LOCK_TIMEOUT_MS = 15_000;
+const APPLY_LOCK_STALE_MS = 120_000;
+/** Promise-based sleep so the lock polls without blocking the runtime. */
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/**
+ * Serialize parameterized applies on one workspace.
+ *
+ * A real apply mutates two things (audited settings and template files) that
+ * must describe the SAME parameter values; without serialization two
+ * concurrent applies could leave `id_prefix` from one invocation next to
+ * template prose from another. The lock is a `locks/` file with a unique
+ * owner token, created atomically (O_EXCL), polled briefly, stolen when stale
+ * (crashed owner) and released only by its owner — cross-process, not just
+ * in-process. Dry-runs skip it: they write nothing of ours.
+ */
+async function withPresetApplyLock(pmDir, run) {
+    const locksDir = path.join(pmDir, "locks");
+    const lockPath = path.join(locksDir, APPLY_LOCK_FILE);
+    const token = `${process.pid}-${randomUUID()}`;
+    fs.mkdirSync(locksDir, { recursive: true });
+    const deadline = Date.now() + APPLY_LOCK_TIMEOUT_MS;
+    for (;;) {
+        try {
+            const handle = fs.openSync(lockPath, "wx");
+            try {
+                fs.writeFileSync(handle, token, "utf8");
+            }
+            finally {
+                fs.closeSync(handle);
+            }
+            break;
+        }
+        catch (error) {
+            if (error.code !== "EEXIST") {
+                throw error;
+            }
+            try {
+                const stats = fs.statSync(lockPath);
+                if (Date.now() - stats.mtimeMs > APPLY_LOCK_STALE_MS) {
+                    // A crashed owner leaves a stale lock; stealing it keeps applies live.
+                    fs.rmSync(lockPath, { force: true });
+                    continue;
+                }
+            }
+            catch {
+                // The lock vanished between the failed create and the stat; retry.
+            }
+            if (Date.now() > deadline) {
+                throw new CommandError("Another pm-presets apply is running in this workspace and did not finish in time; retry once it completes.");
+            }
+            await delay(APPLY_LOCK_POLL_MS);
+        }
+    }
+    try {
+        return await run();
+    }
+    finally {
+        // Best-effort release: only a lock file that still carries OUR token is
+        // ours to delete. A vanished file means someone reaped it; a different
+        // token means a stale steal already handed ownership elsewhere — in both
+        // cases this owner must not delete another owner's lock.
+        if (fs.existsSync(lockPath) && fs.readFileSync(lockPath, "utf8") === token) {
+            fs.rmSync(lockPath, { force: true });
+        }
+    }
+}
 /**
  * Apply one preset's settings and templates to the workspace on disk.
  *
@@ -175,13 +245,20 @@ export async function applyPreset(context, input) {
     // Typed parameter binding manifest: validate every supplied value, answer
     // each declared parameter, and substitute every occurrence BEFORE reading or
     // writing any tracker state (unknown/missing/invalid input refuses first).
+    // When the unified apply command already resolved the values at its own
+    // boundary, they arrive injected here and are re-validated (never re-read
+    // from a params file), so settings, templates and the later seed step all
+    // use ONE resolution of the caller's input.
     const manifest = input.parameters ?? [];
     let effectiveSettings = input.settings;
     let effectiveTemplates = input.templates;
     let occurrenceCount = 0;
+    let secretValues = [];
     if (manifest.length > 0) {
-        const supplied = readSuppliedParameterValues(options);
-        const resolved = resolveParameterValues(manifest, supplied);
+        const injected = options.resolvedParameterValues;
+        const resolved = injected === undefined
+            ? resolveParameterValues(manifest, readSuppliedParameterValues(options))
+            : (assertResolvedParameterValues(manifest, injected), injected);
         const substitution = resolveParameterizedPreset(manifest, resolved.values, {
             settings: input.settings,
             templates: input.templates,
@@ -189,7 +266,10 @@ export async function applyPreset(context, input) {
         effectiveSettings = substitution.settings;
         effectiveTemplates = substitution.templates;
         occurrenceCount = substitution.occurrences;
-        const views = buildParameterViews(manifest, supplied);
+        secretValues = manifest
+            .filter((parameter) => parameter.type === "secret" && Object.hasOwn(resolved.values, parameter.name))
+            .map((parameter) => resolved.values[parameter.name]);
+        const views = buildParameterViews(manifest, resolved.values);
         const summary = views
             .map((view) => `${view.name}=${view.type === "secret" ? "<redacted>" : resolved.values[view.name]} (${resolved.sources[view.name]})`)
             .join(", ");
@@ -222,67 +302,67 @@ export async function applyPreset(context, input) {
         }
         return { template, templatePath: path.join(templatesDir, filename) };
     });
-    if (typeof context.sdk?.mutateWorkspaceSettings !== "function") {
+    const sdkMutation = context.sdk?.mutateWorkspaceSettings;
+    if (typeof sdkMutation !== "function") {
         throw new CommandError("Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability.");
     }
     const replacementResets = [];
-    try {
-        await context.sdk.mutateWorkspaceSettings({
-            operationId: `pm-presets-${randomUUID()}`,
-            dryRun,
-            mutate: (current) => {
-                const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
-                if (dryRun && replace) {
-                    for (const tree of REPLACE_SETTINGS_TREES) {
-                        const patch = effectivePatch[tree];
-                        if (patch === undefined) {
-                            replacementResets.push(tree);
-                            continue;
-                        }
-                        for (const key of Object.keys(current[tree])) {
-                            if (!Object.prototype.hasOwnProperty.call(patch, key)) {
-                                replacementResets.push(`${tree}.${key}`);
+    /** Everything a real apply mutates, so the lock covers all of it at once. */
+    const applyWrites = async () => {
+        try {
+            await sdkMutation({
+                operationId: `pm-presets-${randomUUID()}`,
+                dryRun,
+                mutate: (current) => {
+                    const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
+                    if (dryRun && replace) {
+                        for (const tree of REPLACE_SETTINGS_TREES) {
+                            const patch = effectivePatch[tree];
+                            if (patch === undefined) {
+                                replacementResets.push(tree);
+                                continue;
+                            }
+                            for (const key of Object.keys(current[tree])) {
+                                if (!Object.prototype.hasOwnProperty.call(patch, key)) {
+                                    replacementResets.push(`${tree}.${key}`);
+                                }
                             }
                         }
                     }
-                }
-                return mergedSettings;
-            },
-        });
-    }
-    catch (error) {
-        throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    const verb = replace ? "replace" : "merge";
-    if (dryRun) {
-        console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
-        console.log("Preset patch (the host derives governance policies and canonical storage):");
-        console.log(JSON.stringify(effectivePatch, null, 2));
-        if (replace) {
-            console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+                    return mergedSettings;
+                },
+            });
         }
-    }
-    else {
-        console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
-    }
-    if (dryRun) {
-        console.log(`[dry-run] Would create directory: ${templatesDir}`);
-    }
-    else {
-        fs.mkdirSync(templatesDir, { recursive: true });
-    }
-    for (const { template, templatePath } of templates) {
-        if (fs.existsSync(templatePath) && !force) {
-            console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
-            continue;
+        catch (error) {
+            throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
         }
+        const verb = replace ? "replace" : "merge";
         if (dryRun) {
-            console.log(`[dry-run] Would write template: ${templatePath}`);
-            console.log(JSON.stringify(template, null, 2));
-            continue;
+            console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
+            console.log("Preset patch (the host derives governance policies and canonical storage):");
+            // Emitted output is a public surface: secret parameter values are
+            // redacted from the patch dump exactly like from the summary line.
+            console.log(redactSecretValues(JSON.stringify(effectivePatch, null, 2), secretValues));
+            if (replace) {
+                console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+            }
         }
-        fs.writeFileSync(templatePath, `${JSON.stringify(template, null, 2)}\n`, "utf8");
-        console.log(`Wrote template ${templatePath}`);
+        else {
+            console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
+        }
+        writePresetTemplates(templatesDir, templates, { dryRun, force });
+    };
+    if (dryRun) {
+        // A dry-run writes nothing of ours, so it never creates lock files —
+        // inspection of read-only trackers keeps failing only on host locks.
+        await applyWrites();
+    }
+    else {
+        // Real applies hold the workspace-scoped preset lock across the settings
+        // mutation AND the template writes, so two concurrent parameterized
+        // applies can never leave settings from one invocation next to template
+        // prose from another.
+        await withPresetApplyLock(pmDir, applyWrites);
     }
     console.log("");
     console.log(`${input.label} preset applied. Next steps:`);
@@ -291,6 +371,35 @@ export async function applyPreset(context, input) {
     }
     if (input.warning) {
         console.warn(input.warning);
+    }
+}
+/**
+ * Write (or, under `dryRun`, print) one apply's resolved template documents.
+ *
+ * Extracted so the whole template half of an apply runs inside the same
+ * workspace apply lock as the settings mutation. Template documents can never
+ * hold secret bindings (the resolution engine refuses them), so their dry-run
+ * dumps need no redaction.
+ */
+function writePresetTemplates(templatesDir, templates, options) {
+    if (options.dryRun) {
+        console.log(`[dry-run] Would create directory: ${templatesDir}`);
+    }
+    else {
+        fs.mkdirSync(templatesDir, { recursive: true });
+    }
+    for (const { template, templatePath } of templates) {
+        if (fs.existsSync(templatePath) && !options.force) {
+            console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
+            continue;
+        }
+        if (options.dryRun) {
+            console.log(`[dry-run] Would write template: ${templatePath}`);
+            console.log(JSON.stringify(template, null, 2));
+            continue;
+        }
+        fs.writeFileSync(templatePath, `${JSON.stringify(template, null, 2)}\n`, "utf8");
+        console.log(`Wrote template ${templatePath}`);
     }
 }
 /** Resolve template reads through the existing package-or-host SDK loader. */

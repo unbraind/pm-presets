@@ -99,21 +99,50 @@ export interface PresetParameterView {
 export declare function validateParameterManifest(manifest: PresetParameterManifest): void;
 /** The resolved outcome of a manifest against caller-supplied values. */
 export interface ResolvedParameterValues {
-    /** Effective value per declared parameter (supplied or default). */
+    /** Effective value per answered parameter (supplied or default). */
     readonly values: Readonly<Record<string, string>>;
     /** Where each effective value came from. */
     readonly sources: Readonly<Record<string, "supplied" | "default">>;
+    /** Declared parameters with neither a supplied value nor a default (lenient collection only). */
+    readonly unanswered: readonly string[];
 }
+/**
+ * Effective parameter values collected WITHOUT answering requirements.
+ *
+ * The lenient half of the resolution boundary: every supplied key must still
+ * be declared and satisfy its own constraints, but required parameters may
+ * remain unanswered (listed in {@link ResolvedParameterValues.unanswered}) so
+ * read surfaces can display declarations without pretending to apply them.
+ * Pure: reads nothing, writes nothing.
+ */
+export declare function collectParameterValues(manifest: PresetParameterManifest, supplied: Readonly<Record<string, string>>): ResolvedParameterValues;
 /**
  * Resolve a manifest against caller-supplied values.
  *
- * The strict boundary: every supplied key must be declared
- * (`unknown_parameter`), every required parameter must be answered by a
- * supplied value or a default (`unanswered_parameter`, listing ALL unanswered
- * choices and their remedies), and every value must satisfy its parameter's own
- * constraints (`invalid_value`). Pure: reads nothing, writes nothing.
+ * The strict boundary every write path uses: `unknown_parameter` for
+ * undeclared names, `unanswered_parameter` listing every required choice
+ * without a value or default, `invalid_value` for constraint violations.
+ * Pure: reads nothing, writes nothing.
  */
 export declare function resolveParameterValues(manifest: PresetParameterManifest, supplied: Readonly<Record<string, string>>): ResolvedParameterValues;
+/**
+ * Re-validate a pre-resolved value set (e.g. injected by a command that
+ * already resolved them at its boundary) against the manifest.
+ *
+ * Ensures a threaded-in result still declares only manifest parameters with
+ * constraint-satisfying values, every required parameter is answered, and the
+ * sources are well-formed — so a downstream consumer can trust values it did
+ * not resolve itself without re-reading any input.
+ */
+export declare function assertResolvedParameterValues(manifest: PresetParameterManifest, resolved: ResolvedParameterValues): void;
+/**
+ * Replace every occurrence of any supplied secret value with `<redacted>`.
+ *
+ * The single redaction primitive for every emitted surface (dry-run patch
+ * dumps, diff results): privacy-safe in both directions — it can never reveal a
+ * secret, and it only ever matches exact secret values.
+ */
+export declare function redactSecretValues(text: string, secretValues: readonly string[]): string;
 /** Build the compact parameter views for `presets show` (secrets never show defaults). */
 export declare function buildParameterViews(manifest: PresetParameterManifest, supplied?: Readonly<Record<string, string>>): PresetParameterView[];
 /** Parse repeated `--param <name>=<value>` flag entries.
@@ -156,7 +185,7 @@ export interface ParameterBindingOccurrence {
  * Returns a substituted deep copy; the input is never mutated. Secret
  * parameters are allowed here (settings are the private configuration surface).
  */
-export declare function resolveSettingsWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, settings: PresetSettingsPatch): {
+export declare function resolveSettingsWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, settings: PresetSettingsPatch, allowUnresolved?: boolean): {
     settings: PresetSettingsPatch;
     occurrences: number;
 };
@@ -167,7 +196,7 @@ export declare function resolveSettingsWithParameters(manifest: PresetParameterM
  * the `name`, which additionally must stay binding-free because it becomes a
  * file name) is refused with {@link ParameterRefusal} before any write.
  */
-export declare function resolveTemplatesWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, templates: PresetTemplateMap): {
+export declare function resolveTemplatesWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, templates: PresetTemplateMap, allowUnresolved?: boolean): {
     templates: PresetTemplateMap;
     occurrences: number;
 };
@@ -177,7 +206,7 @@ export declare function resolveTemplatesWithParameters(manifest: PresetParameter
  * Seed items become PUBLIC tracker prose, so a secret binding in ANY seed field
  * is refused; the refusal names the parameter and location but never a value.
  */
-export declare function resolveSeedsWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, seeds: readonly SeedItem[]): {
+export declare function resolveSeedsWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, seeds: readonly SeedItem[], allowUnresolved?: boolean): {
     seeds: SeedItem[];
     occurrences: number;
 };
@@ -186,13 +215,15 @@ export declare function resolveSeedsWithParameters(manifest: PresetParameterMani
  *
  * Used by the apply path so settings, templates and seeds resolve against the
  * SAME effective values (one supplied project parameter reaches every declared
- * occurrence), with all refusals raised before any write.
+ * occurrence), with all refusals raised before any write. Passing
+ * `allowUnresolved` switches to declaration mode: occurrences of declared-but-
+ * unanswered parameters stay authored for inspection surfaces.
  */
 export declare function resolveParameterizedPreset(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, parts: {
     readonly settings?: PresetSettingsPatch;
     readonly templates?: PresetTemplateMap;
     readonly seeds?: readonly SeedItem[];
-}): {
+}, allowUnresolved?: boolean): {
     settings?: PresetSettingsPatch;
     templates?: PresetTemplateMap;
     seeds?: SeedItem[];

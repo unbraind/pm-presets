@@ -245,7 +245,7 @@ test("model-based property sequences round-trip parameters through the SDK again
       await runPresetSeeds(activePmDir, "startup-roadmap", {
         dryRun: false,
         client: activeClient,
-        suppliedParameters: { projectKey: value },
+        parameterValues: { projectKey: value },
       });
       const afterSeeds = await activeClient.listAllItemMetadataLight();
       const created = afterSeeds.filter((item) => !beforeIds.has(item.id));
@@ -374,14 +374,16 @@ test("concurrent parameterized applies on one non-git tracker stay consistent wi
   const outcomes = await Promise.allSettled([
     applyRoadmap(pmDir, client, left),
     applyRoadmap(pmDir, client, right),
-    runPresetSeeds(pmDir, "startup-roadmap", { dryRun: false, client, suppliedParameters: { projectKey: left } }),
-    runPresetSeeds(pmDir, "startup-roadmap", { dryRun: false, client, suppliedParameters: { projectKey: right } }),
+    runPresetSeeds(pmDir, "startup-roadmap", { dryRun: false, client, parameterValues: { projectKey: left } }),
+    runPresetSeeds(pmDir, "startup-roadmap", { dryRun: false, client, parameterValues: { projectKey: right } }),
   ]);
-  // The audited settings mutation and item locks serialize; at least one of
-  // each pair must have committed, and nothing may corrupt the tracker.
+  // The workspace apply lock serializes settings AND template writes per
+  // invocation, so every commit must be internally consistent and all runs
+  // must succeed (a lock timeout would itself be a failure).
   const fulfilled = outcomes.filter((outcome) => outcome.status === "fulfilled").length;
-  assert.ok(fulfilled >= 2, `expected at least one apply and one seed run to commit: ${outcomes.map((outcome) => outcome.status).join(",")}`);
+  assert.equal(fulfilled, 4, `serialized applies must all commit: ${outcomes.map((outcome) => outcome.status).join(",")}`);
   const settings = await readSettings(pmDir);
+  const winner = settings.id_prefix === `${left}-` ? left : right;
   assert.ok(
     settings.id_prefix === `${left}-` || settings.id_prefix === `${right}-`,
     `final prefix must match one of the concurrent applies: ${settings.id_prefix}`,
@@ -394,15 +396,15 @@ test("concurrent parameterized applies on one non-git tracker stay consistent wi
     );
     assert.equal(item.parent, undefined);
   }
-  // Template writes happen outside the audited settings transaction, so the
-  // surviving content must match SOME concurrent invocation's value.
+  // Full occurrence consistency: the surviving template prose must describe
+  // the SAME invocation as the surviving settings prefix.
   for (const name of ["initiative", "feature"]) {
     const options = await loadCreateTemplateOptions(pmDir, name);
     const body = String(options.body ?? "");
     assert.ok(!body.includes("${param:"), `template ${name} must never keep unresolved binding syntax`);
     assert.ok(
-      body.includes(`## Project\n${left}`) || body.includes(`## Project\n${right}`),
-      `template ${name} must carry one of the concurrent values`,
+      body.includes(`## Project\n${winner}`),
+      `template ${name} must describe the same invocation as the settings (${winner})`,
     );
   }
 });

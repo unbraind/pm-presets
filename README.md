@@ -215,7 +215,8 @@ read or written, with typed exit-2 refusals:
 
 - an unknown supplied name (`--param ghost=1`) is refused (`unknown_parameter`);
 - a required parameter with neither a value nor a default is refused and every
-  unanswered choice is listed (`unanswered_parameter`);
+  unanswered choice is listed (`unanswered_parameter`) — by `apply` and by a
+  parameterized `diff`, while `show` keeps displaying the declaration;
 - values that violate the declared pattern, enum or length bound are refused
   (`invalid_value`); control characters and line breaks never enter prose;
 - a binding that references a name the preset never declared is an authoring
@@ -223,8 +224,25 @@ read or written, with typed exit-2 refusals:
   fragment (`malformed_binding`);
 - `secret`-typed parameters may only bind into **settings** values — a secret
   occurrence in template or seed prose refuses (`secret_in_public_prose`)
-  before any file is written or item is created, and refusal messages never echo
-  the secret value.
+  before any file is written or item is created.
+
+**Secret handling.** A secret value reaches exactly one place: the private
+`settings.json` an apply writes. Every emitted surface — the apply summary
+line, `--dry-run` patch dumps, and both sides of every `presets diff` settings
+entry — renders it as `<redacted>`, and refusal messages never echo it. `show`
+displays the authored `${param:...}` occurrence without resolving secrets.
+
+**One resolution, one read.** The unified apply reads your flags and params
+file exactly once, resolves every parameter at that boundary, pre-validates the
+preset's seed bindings, and threads the same effective values through the
+settings merge, the template writes and the seed creation — editing the params
+file mid-apply cannot split your workspace across two values.
+
+**Concurrent applies.** A real apply holds a workspace-scoped lock
+(`.agents/pm/locks/`) across the audited settings mutation *and* the template
+writes, so two concurrent parameterized applies can never leave the id prefix
+of one invocation next to the template prose of another. Dry-runs skip the
+lock and never create files.
 
 The same engine backs every read path (`show`, `diff`, `plan`, `stack`,
 `validate`), so previews never display unresolved `${param:...}` syntax. See
