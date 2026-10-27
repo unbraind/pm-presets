@@ -8,7 +8,7 @@ import type * as Host from "@unbrained/pm-cli/sdk";
 import type { ExtensionCommandSdk } from "@unbrained/pm-cli/sdk/authoring";
 import { requirePresetDefinition, presetTemplateEntries } from "./catalog.ts";
 import { PRESET_REGISTRY, type PresetId } from "./registry.ts";
-import { seedsForPreset, type SeedItem } from "./seeds.ts";
+import { resolvedSeedsForPreset, type SeedItem } from "./seeds.ts";
 import { mergePresetSettings } from "./presets/shared.ts";
 import { resolveSimulationSdk } from "./sdk-loader.ts";
 
@@ -149,7 +149,7 @@ export async function planPresetStack(pmRoot: string, sdk: ExtensionCommandSdk, 
     const id = selection.preset;
     if (selection.settings) for (const [path, value] of leaves(requirePresetDefinition(id).settings)) add(`/settings${path}`, id, value);
     if (selection.templates) for (const template of presetTemplateEntries(id)) add(`/templates/${escape(template.name)}`, id, template.options);
-    if (selection.seeds) for (const seed of seedsForPreset(id)) add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
+    if (selection.seeds) for (const seed of resolvedSeedsForPreset(id)) add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
   }
   const ownership: PresetStackOwnership[] = [];
   const resolved = new Map<string, { owner: PresetId; value: unknown }>();

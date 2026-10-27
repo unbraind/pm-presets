@@ -1,4 +1,15 @@
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk";
+import type { PresetParameterManifest } from "../../params.ts";
+/**
+ * The typed parameter binding manifest for the startup-roadmap preset.
+ *
+ * `projectKey` is declared once here and referenced with `${param:projectKey}`
+ * occurrences in the settings patch (`id_prefix`), template bodies and the
+ * preset's seed item, so one supplied value reaches every declared occurrence.
+ * Its default keeps the historical `road-` prefix and prose when no parameter
+ * is supplied, so existing invocations are unchanged.
+ */
+export declare const PARAMETERS: PresetParameterManifest;
 /**
  * The settings patch for the startup-roadmap preset.
  *

@@ -14,6 +14,8 @@ import {
   buildListRows,
   validateAllPresets,
   collectPresetIssues,
+  collectPresetParameterIssues,
+  presetTemplateEntries,
   requireValidPresets,
   projectTemplateView,
   projectItemTypeViews,
@@ -273,4 +275,59 @@ test("a registry descriptor with no raw exports is named, not dereferenced", () 
   }
   // The registry is restored, so the rest of the suite sees the real catalog.
   assert.strictEqual(listPresetDefinitions().length, PRESET_REGISTRY.length);
+});
+
+test("collectPresetParameterIssues validates resolved content and isolates a bad record", () => {
+  const healthy = requirePresetDefinition("startup-roadmap");
+  // A parameterless raw input (the `parameters` key absent) resolves like an empty manifest.
+  const plain = collectPresetParameterIssues(healthy, { settings: healthy.settings, templates: {} });
+  assert.equal(plain.length, 1);
+  assert.match(plain[0].message, /registry templates \[\] differ from exported/);
+
+  // A healthy parameterized raw input resolves bindings through the same engine.
+  const kanban = requirePresetDefinition("kanban");
+  const resolved = collectPresetParameterIssues(
+    kanban,
+    {
+      settings: kanban.settings,
+      templates: Object.fromEntries(
+        presetTemplateEntries(kanban.id).map((document) => [`${document.name}.json`, document]),
+      ),
+    },
+    ["card", "expedite", "blocked"],
+  );
+  assert.equal(resolved.length, 0);
+
+  // A broken manifest fails alone: one issue, not a thrown error.
+  const broken = collectPresetParameterIssues(healthy, {
+    settings: healthy.settings,
+    templates: {
+      "initiative.json": {
+        name: "initiative",
+        created_at: "1970-01-01T00:00:00.000Z",
+        updated_at: "1970-01-01T00:00:00.000Z",
+        options: { type: "Epic", body: "${param:ghost}" },
+      },
+    },
+    parameters: healthy.parameters.map((view) => ({ ...view })) as never,
+  });
+  assert.equal(broken.length, 1);
+  assert.match(broken[0].message, /parameter resolution failed: ParameterRefusal: unknown_binding/);
+});
+
+test("presetTemplateEntries returns resolved copies for parameterized and plain presets", () => {
+  const roadmap = presetTemplateEntries("startup-roadmap");
+  assert.ok(roadmap.length > 0);
+  for (const document of roadmap) {
+    assert.ok(!JSON.stringify(document).includes("${param:"), `template ${document.name} must be resolved`);
+  }
+  const kanban = presetTemplateEntries("kanban");
+  assert.ok(kanban.length > 0);
+  // Copies, never aliases into the catalog's internal state.
+  kanban[0].options = { ...kanban[0].options, extra: "mark" };
+  assert.equal(presetTemplateEntries("kanban")[0].options.extra, undefined);
+  assert.throws(
+    () => presetTemplateEntries("nope" as never),
+    (error: unknown) => error instanceof CommandError && /No definition exports for preset 'nope'/.test(error.message),
+  );
 });

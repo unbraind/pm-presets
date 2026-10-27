@@ -14,6 +14,8 @@
 import type { PmClient } from "@unbrained/pm-cli/sdk";
 
 import { CommandError } from "./presets/shared.ts";
+import { PRESET_PARAMETERS } from "./registry.ts";
+import { resolveSeedsWithParameters, resolveParameterValues, type PresetParameterManifest } from "./params.ts";
 
 /** A single starter item, restricted to built-in create fields. */
 export interface SeedItem {
@@ -72,10 +74,10 @@ export const PRESET_SEEDS: Record<string, SeedItem[]> = {
   "startup-roadmap": [
     {
       type: "Feature",
-      title: "Define first roadmap initiative",
+      title: "Define the ${param:projectKey} first roadmap initiative",
       priority: "2",
       tags: "roadmap",
-      body: "Starter initiative seeded by pm-presets.",
+      body: "Starter initiative for the ${param:projectKey} project seeded by pm-presets. Replace with a real initiative.",
     },
   ],
   "kanban": [
@@ -109,6 +111,27 @@ export function seedsForPreset(presetId: string): SeedItem[] {
   return PRESET_SEEDS[presetId] ?? [];
 }
 
+/**
+ * Resolve a preset's seed items against its typed parameter manifest.
+ *
+ * Seeds are authored with `${param:<name>}` occurrences exactly like settings
+ * and templates; the SAME resolution engine substitutes every occurrence and
+ * refuses secret bindings in the public seed prose before anything is created.
+ * Presets without parameters return their seeds unchanged.
+ */
+export function resolvedSeedsForPreset(
+  presetId: string,
+  supplied: Readonly<Record<string, string>> = {},
+): SeedItem[] {
+  const seeds = seedsForPreset(presetId);
+  const manifest: PresetParameterManifest = PRESET_PARAMETERS[presetId as keyof typeof PRESET_PARAMETERS] ?? [];
+  if (manifest.length === 0 || seeds.length === 0) {
+    return seeds;
+  }
+  const values = resolveParameterValues(manifest, supplied).values;
+  return resolveSeedsWithParameters(manifest, values, seeds).seeds;
+}
+
 /** Build a manual command preview only; seed writes never execute these arguments. */
 export function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[] {
   const args = ["--path", pmRoot, "create", "--type", seed.type, "--title", seed.title];
@@ -136,8 +159,8 @@ export interface SeedPlanEntry {
 }
 
 /** Pure dry-run plan: what `--with-seeds` would create, without running anything. */
-export function planSeeds(pmRoot: string, presetId: string): SeedPlanEntry[] {
-  return seedsForPreset(presetId).map((seed) => ({
+export function planSeeds(pmRoot: string, presetId: string, supplied: Readonly<Record<string, string>> = {}): SeedPlanEntry[] {
+  return resolvedSeedsForPreset(presetId, supplied).map((seed) => ({
     title: seed.title,
     type: seed.type,
     command: `pm ${buildSeedCreateArgs(pmRoot, seed).join(" ")}`,
@@ -155,15 +178,18 @@ export interface SeedResult {
  * Non-throwing: native create failures retain the existing partial-result shape.
  * There is no batch/replay precondition: an invalid seed must not undo others.
  */
-export async function seedPresetItems(client: PmClient, presetId: string): Promise<SeedResult> {
-  const seeds = seedsForPreset(presetId);
+export async function seedPresetItems(client: PmClient, presetId: string, supplied: Readonly<Record<string, string>> = {}): Promise<SeedResult> {
+  const seeds = resolvedSeedsForPreset(presetId, supplied);
   const details: SeedResult["details"] = [];
   let created = 0;
   let failed = 0;
 
   for (const seed of seeds) {
     try {
-      await client.create(seed);
+      // State every relationship/scope field explicitly (no ambient defaults):
+      // `unset: ["parent"]` is the SDK's explicit no-parent form, so a random
+      // ambient session focus can never be inherited as the seed's parent.
+      await client.create({ ...seed, unset: ["parent"] });
       created += 1;
       details.push({ title: seed.title, ok: true });
     } catch (error) {
@@ -185,6 +211,8 @@ export interface RunPresetSeedsOptions {
   readonly dryRun: boolean;
   /** Invocation-bound client; required only when creating seeds. */
   readonly client?: PmClient;
+  /** Caller-supplied parameter values resolved through the preset's manifest. */
+  readonly suppliedParameters?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -199,7 +227,7 @@ export async function runPresetSeeds(
   presetId: string,
   options: RunPresetSeedsOptions,
 ): Promise<void> {
-  const seeds = seedsForPreset(presetId);
+  const seeds = resolvedSeedsForPreset(presetId, options.suppliedParameters);
   if (seeds.length === 0) {
     console.log(`No starter seeds defined for '${presetId}'.`);
     return;
@@ -207,7 +235,7 @@ export async function runPresetSeeds(
   if (options.dryRun) {
     console.log("");
     console.log(`[dry-run] Would seed ${seeds.length} starter item(s):`);
-    for (const entry of planSeeds(pmRoot, presetId)) {
+    for (const entry of planSeeds(pmRoot, presetId, options.suppliedParameters)) {
       console.log(`  - ${entry.type}: ${entry.title}`);
     }
     return;
@@ -217,7 +245,7 @@ export async function runPresetSeeds(
   if (typeof options.client?.create !== "function") {
     throw new CommandError("Preset seeds require the host SDK client.create capability. Run with a pm CLI host >=2026.9.30.");
   }
-  const seedResult = await seedPresetItems(options.client, presetId);
+  const seedResult = await seedPresetItems(options.client, presetId, options.suppliedParameters);
   for (const detail of seedResult.details) {
     if (detail.ok) {
       console.log(`  Created: ${detail.title}`);

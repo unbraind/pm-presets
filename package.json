@@ -32,7 +32,8 @@
     "docs/simulation-example.md",
     "docs/upgrade-example.md",
     "docs/plan-example.md",
-    "docs/stack-example.md"
+    "docs/stack-example.md",
+    "docs/params-example.md"
   ],
   "scripts": {
     "build": "tsc",

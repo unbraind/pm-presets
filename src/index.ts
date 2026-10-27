@@ -51,6 +51,7 @@ import {
   readWorkspaceTemplates,
 } from "./export.ts";
 import { runPresetSeeds } from "./seeds.ts";
+import { readSuppliedParameterValues } from "./params.ts";
 import * as fs from "node:fs";
 import { PRESET_HANDLERS } from "./setup.ts";
 import { simulatePreset, type PresetScenarioId } from "./simulation.ts";
@@ -80,6 +81,26 @@ class PresetError extends Error {
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
 // `long: "dry-run"` (no `--`) makes the flag invisible to `--help` AND rejected
 // at parse time as "Unknown option". Always include the prefixes.
+// Shared parameter flags: `--param` is repeatable (`k=v` entries accumulate) and
+// `--params-file` reads a JSON object. Supplied names must be declared by the
+// preset's typed parameter manifest; unknown or unanswered values refuse
+// before any write with a typed exit-2 refusal.
+const PARAM_FLAGS: FlagDefinition[] = [
+  {
+    long: "--param",
+    value_name: "<name>=<value>",
+    value_type: "string",
+    repeatable: true,
+    description: "Supply a declared preset parameter (repeatable); see `pm presets show <id>` for the manifest.",
+  },
+  {
+    long: "--params-file",
+    value_name: "<file>",
+    value_type: "string",
+    description: "Read supplied parameter values from a JSON object file (same names as --param).",
+  },
+];
+
 const COMMON_FLAGS: FlagDefinition[] = [
   {
     long: "--force",
@@ -100,6 +121,7 @@ const COMMON_FLAGS: FlagDefinition[] = [
     value_type: "string",
     description: "Override the id_prefix written to settings.json.",
   },
+  ...PARAM_FLAGS,
 ];
 
 // `presets apply` additionally accepts --with-seeds to create starter items
@@ -120,7 +142,8 @@ const APPLY_FLAGS: FlagDefinition[] = [
   },
 ];
 
-// `presets diff` additionally accepts --strict for CI drift detection.
+// `presets diff` additionally accepts --strict for CI drift detection and the
+// parameter flags so the preview mirrors a parameterized apply.
 const DIFF_FLAGS: FlagDefinition[] = [
   {
     long: "--strict",
@@ -128,6 +151,7 @@ const DIFF_FLAGS: FlagDefinition[] = [
     description:
       "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
   },
+  ...PARAM_FLAGS,
 ];
 
 // `presets export` writes to a file or stdout and can carry a display name.
@@ -188,6 +212,7 @@ const PRESETS_FLAGS: FlagDefinition[] = [
     value_type: "string",
     description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
   },
+  ...PARAM_FLAGS,
 ];
 
 /**
@@ -325,7 +350,7 @@ export default defineExtension({
         }
 
         if (diffId) {
-          const definition = requirePresetDefinition(diffId);
+          const definition = requirePresetDefinition(diffId, readSuppliedParameterValues(options));
           const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
           const result = computePresetDiff(definition, snapshot);
           const strict = readBooleanOption(options, "strict");
@@ -424,7 +449,7 @@ export default defineExtension({
       ],
       flags: DIFF_FLAGS,
       run: (ctx: CommandHandlerContext) => {
-        const definition = requirePresetDefinition(ctx.args?.[0]);
+        const definition = requirePresetDefinition(ctx.args?.[0], readSuppliedParameterValues(ctx.options));
         const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
         const result = computePresetDiff(definition, snapshot);
         const strict = readBooleanOption(ctx.options, "strict");
@@ -563,9 +588,13 @@ export default defineExtension({
         if (!withSeeds) {
           return;
         }
+        // Seeds resolve through the SAME supplied parameters the settings and
+        // templates used (one value reaches every declared occurrence), and
+        // refuse on secret bindings in the public seed prose.
         await runPresetSeeds(resolvePmDir(ctx), definition.id, {
           client: ctx.sdk?.client,
           dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
+          suppliedParameters: readSuppliedParameterValues(ctx.options),
         });
       },
     });
@@ -619,3 +648,28 @@ export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPla
 
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
 export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";
+
+export {
+  ParameterRefusal,
+  buildParameterViews,
+  parseParameterFlagEntries,
+  parseParamsFile,
+  readSuppliedParameterValues,
+  resolveParameterValues,
+  resolveParameterizedPreset,
+  resolveSeedsWithParameters,
+  resolveSettingsWithParameters,
+  resolveTemplatesWithParameters,
+  validateParameterManifest,
+} from "./params.ts";
+export type {
+  ParameterRefusalCode,
+  ParameterBindingOccurrence,
+  PresetParameter,
+  PresetParameterManifest,
+  PresetParameterType,
+  PresetParameterView,
+  ResolvedParameterValues,
+} from "./params.ts";
+export { PRESET_PARAMETERS } from "./registry.ts";
+export { resolvedSeedsForPreset } from "./seeds.ts";

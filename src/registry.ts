@@ -9,9 +9,12 @@ export { SETTINGS as bugTriageSettings, TEMPLATES as bugTriageTemplates, runBugT
 export { SETTINGS as indieDevSettings, TEMPLATES as indieDevTemplates, runIndieDevSetup } from "./presets/indie-dev/index.ts";
 export { SETTINGS as openSourceSettings, TEMPLATES as openSourceTemplates, runOpenSourceSetup } from "./presets/open-source/index.ts";
 export { SETTINGS as softwareSprintSettings, TEMPLATES as softwareSprintTemplates, runSoftwareSprintSetup } from "./presets/software-sprint/index.ts";
-export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
+export { SETTINGS as startupRoadmapSettings, TEMPLATES as startupRoadmapTemplates, PARAMETERS as startupRoadmapParameters, runStartupRoadmapSetup } from "./presets/startup-roadmap/index.ts";
 export { SETTINGS as kanbanSettings, TEMPLATES as kanbanTemplates, ITEM_TYPES as kanbanItemTypes, runKanbanSetup } from "./presets/kanban/index.ts";
 export { SETTINGS as agentWorkflowSettings, TEMPLATES as agentWorkflowTemplates, ITEM_TYPES as agentWorkflowItemTypes, runAgentWorkflowSetup } from "./presets/agent-workflow/index.ts";
+
+import type { PresetParameterManifest } from "./params.ts";
+import { PARAMETERS as startupRoadmapParameters } from "./presets/startup-roadmap/index.ts";
 
 /**
  * The bundled preset ids, as a closed union.
@@ -29,6 +32,23 @@ export type PresetId =
   | "startup-roadmap"
   | "kanban"
   | "agent-workflow";
+
+/**
+ * Each bundled preset's typed parameter binding manifest (empty = no parameters).
+ *
+ * The single authoring source of truth: the catalog, apply path, diff and seed
+ * resolution all read the declaration from here so a parameter is declared once
+ * and resolved consistently through settings, templates and seeds.
+ */
+export const PRESET_PARAMETERS: Record<PresetId, PresetParameterManifest> = {
+  "bug-triage": [],
+  "indie-dev": [],
+  "open-source": [],
+  "software-sprint": [],
+  "startup-roadmap": startupRoadmapParameters,
+  "kanban": [],
+  "agent-workflow": [],
+};
 
 /**
  * The static catalog entry for one preset, surfaced by `pm preset list`.

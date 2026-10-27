@@ -13,6 +13,7 @@
  */
 import type * as PmSdk from "@unbrained/pm-cli/sdk";
 import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
+import { type PresetParameterManifest } from "../params.ts";
 /**
  * Numeric exit codes mirroring the pm-cli SDK contract.
  *
@@ -127,6 +128,8 @@ export declare function applyPreset(context: CommandHandlerContext, input: {
     templates: PresetTemplateMap;
     nextSteps: string[];
     warning?: string;
+    /** Typed parameter manifest; supplied values resolve through it before any write. */
+    parameters?: PresetParameterManifest;
 }): Promise<void>;
 /** Resolve template reads through the existing package-or-host SDK loader. */
 export declare function loadTemplateSdk(): Pick<typeof PmSdk, "runTemplatesList" | "runTemplatesShow" | "loadCreateTemplateOptions">;

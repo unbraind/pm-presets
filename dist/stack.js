@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { requirePresetDefinition, presetTemplateEntries } from "./catalog.js";
 import { PRESET_REGISTRY } from "./registry.js";
-import { seedsForPreset } from "./seeds.js";
+import { resolvedSeedsForPreset } from "./seeds.js";
 import { mergePresetSettings } from "./presets/shared.js";
 import { resolveSimulationSdk } from "./sdk-loader.js";
 /** A usage refusal carries a stable category and a concrete corrective action. */
@@ -131,7 +131,7 @@ export async function planPresetStack(pmRoot, sdk, input) {
             for (const template of presetTemplateEntries(id))
                 add(`/templates/${escape(template.name)}`, id, template.options);
         if (selection.seeds)
-            for (const seed of seedsForPreset(id))
+            for (const seed of resolvedSeedsForPreset(id))
                 add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
     }
     const ownership = [];

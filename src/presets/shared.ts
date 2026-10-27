@@ -17,6 +17,13 @@ import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.ts";
 import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
 import { randomUUID } from "node:crypto";
+import {
+  buildParameterViews,
+  readSuppliedParameterValues,
+  resolveParameterValues,
+  resolveParameterizedPreset,
+  type PresetParameterManifest,
+} from "../params.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -242,16 +249,50 @@ export async function applyPreset(
     templates: PresetTemplateMap;
     nextSteps: string[];
     warning?: string;
+    /** Typed parameter manifest; supplied values resolve through it before any write. */
+    parameters?: PresetParameterManifest;
   }
 ): Promise<void> {
   const { options } = context;
-  const pmDir = resolvePmDir(context);
-  const settingsPath = path.join(pmDir, "settings.json");
-  const templatesDir = path.join(pmDir, "templates");
   const dryRun = readBooleanOption(options, "dryRun", "dry-run");
   const force = readBooleanOption(options, "force");
   const replace = readBooleanOption(options, "replace");
   const prefixOverride = readStringOption(options, "prefix");
+
+  // Typed parameter binding manifest: validate every supplied value, answer
+  // each declared parameter, and substitute every occurrence BEFORE reading or
+  // writing any tracker state (unknown/missing/invalid input refuses first).
+  const manifest = input.parameters ?? [];
+  let effectiveSettings = input.settings;
+  let effectiveTemplates = input.templates;
+  let occurrenceCount = 0;
+  if (manifest.length > 0) {
+    const supplied = readSuppliedParameterValues(options);
+    const resolved = resolveParameterValues(manifest, supplied);
+    const substitution = resolveParameterizedPreset(manifest, resolved.values, {
+      settings: input.settings,
+      templates: input.templates,
+    });
+    effectiveSettings = substitution.settings as PresetSettingsPatch;
+    effectiveTemplates = substitution.templates as PresetTemplateMap;
+    occurrenceCount = substitution.occurrences;
+    const views = buildParameterViews(manifest, supplied);
+    const summary = views
+      .map((view) => `${view.name}=${view.type === "secret" ? "<redacted>" : resolved.values[view.name]} (${resolved.sources[view.name]})`)
+          .join(", ");
+    console.log(`Resolved ${views.length} parameter(s), ${occurrenceCount} binding occurrence(s): ${summary}`);
+  } else {
+    const supplied = readSuppliedParameterValues(options);
+    if (Object.keys(supplied).length > 0) {
+      // A parameterized flag against a parameterless preset is an unknown
+      // binding: refuse before any read or write.
+      resolveParameterValues([], supplied);
+    }
+  }
+
+  const pmDir = resolvePmDir(context);
+  const settingsPath = path.join(pmDir, "settings.json");
+  const templatesDir = path.join(pmDir, "templates");
 
   if (!fs.existsSync(pmDir) || !fs.existsSync(settingsPath)) {
     throw new CommandError(
@@ -263,10 +304,10 @@ export async function applyPreset(
 
   readJsonObject(settingsPath, "settings.json");
   const effectivePatch: PresetSettingsPatch = {
-    ...input.settings,
-    id_prefix: prefixOverride ?? input.settings.id_prefix,
+    ...effectiveSettings,
+    id_prefix: prefixOverride ?? effectiveSettings.id_prefix,
   };
-  const templates = Object.entries(input.templates).map(([filename, template]) => {
+  const templates = Object.entries(effectiveTemplates).map(([filename, template]) => {
     const normalizedName = normalizeTemplateName(template.name);
     if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
       throw new CommandError(

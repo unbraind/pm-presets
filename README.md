@@ -49,6 +49,8 @@ All setup commands share the same flags:
 | `--force` | `-f` | Overwrite existing preset template files |
 | `--dry-run` | `-n` | Preview changes without writing any files |
 | `--prefix` | `-p` | Override the id_prefix in settings.json |
+| `--param <name>=<value>` | | Supply a declared preset parameter (repeatable; see [Preset parameters](#preset-parameters)) |
+| `--params-file <file>` | | Read parameter values from a JSON object file |
 
 Each setup command installs valid `pm create` templates and registers the
 `templates show` runtime handler required by the current pm CLI, so
@@ -181,6 +183,52 @@ Registered item-type options are supported through `--type-option`: the
 agent-workflow templates persist `phase`, `mode`, and `model` this way while
 leaving the core pm `status` field untouched. The kanban `Card` and
 agent-workflow `AgentRun` seeds are created with their registered item types.
+
+## Preset parameters
+
+A preset can declare **typed parameters** once in a manifest and reference them
+with `${param:<name>}` binding occurrences in its settings patch, template
+options and seed items. One supplied value then reaches **every** declared
+occurrence — the `startup-roadmap` preset, for example, uses its `projectKey`
+parameter for the `id_prefix`, the roadmap template prose, and its starter
+initiative seed:
+
+```bash
+# Default resolution (projectKey defaults to "road"):
+pm presets apply startup-roadmap
+
+# One supplied value reaches every occurrence (prefix becomes "acme-",
+# templates record "## Project: acme", the seed title names the acme project):
+pm presets apply startup-roadmap --param projectKey=acme --with-seeds
+
+# Values can also come from a JSON file:
+pm presets apply startup-roadmap --params-file params.json
+```
+
+`pm presets show <id>` lists every declared parameter (type, constraints,
+default, and whether it is still **unanswered**), and `presets diff <id>`
+accepts the same `--param` flags so the drift preview resolves exactly like a
+parameterized apply.
+
+**Refusal contract.** All parameter input is validated once, before anything is
+read or written, with typed exit-2 refusals:
+
+- an unknown supplied name (`--param ghost=1`) is refused (`unknown_parameter`);
+- a required parameter with neither a value nor a default is refused and every
+  unanswered choice is listed (`unanswered_parameter`);
+- values that violate the declared pattern, enum or length bound are refused
+  (`invalid_value`); control characters and line breaks never enter prose;
+- a binding that references a name the preset never declared is an authoring
+  error and refuses (`unknown_binding`), as does a malformed `${param:...}`
+  fragment (`malformed_binding`);
+- `secret`-typed parameters may only bind into **settings** values — a secret
+  occurrence in template or seed prose refuses (`secret_in_public_prose`)
+  before any file is written or item is created, and refusal messages never echo
+  the secret value.
+
+The same engine backs every read path (`show`, `diff`, `plan`, `stack`,
+`validate`), so previews never display unresolved `${param:...}` syntax. See
+[docs/params-example.md](docs/params-example.md) for the full authoring walkthrough.
 
 ## Presets in Detail
 

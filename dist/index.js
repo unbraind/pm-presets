@@ -38,6 +38,7 @@ import { buildListRows, requirePresetDefinition, requireValidPresets, validateAl
 import { computePresetDiff, readWorkspaceSnapshot } from "./diff.js";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
 import { runPresetSeeds } from "./seeds.js";
+import { readSuppliedParameterValues } from "./params.js";
 import * as fs from "node:fs";
 import { PRESET_HANDLERS } from "./setup.js";
 import { simulatePreset } from "./simulation.js";
@@ -63,6 +64,25 @@ class PresetError extends Error {
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
 // `long: "dry-run"` (no `--`) makes the flag invisible to `--help` AND rejected
 // at parse time as "Unknown option". Always include the prefixes.
+// Shared parameter flags: `--param` is repeatable (`k=v` entries accumulate) and
+// `--params-file` reads a JSON object. Supplied names must be declared by the
+// preset's typed parameter manifest; unknown or unanswered values refuse
+// before any write with a typed exit-2 refusal.
+const PARAM_FLAGS = [
+    {
+        long: "--param",
+        value_name: "<name>=<value>",
+        value_type: "string",
+        repeatable: true,
+        description: "Supply a declared preset parameter (repeatable); see `pm presets show <id>` for the manifest.",
+    },
+    {
+        long: "--params-file",
+        value_name: "<file>",
+        value_type: "string",
+        description: "Read supplied parameter values from a JSON object file (same names as --param).",
+    },
+];
 const COMMON_FLAGS = [
     {
         long: "--force",
@@ -83,6 +103,7 @@ const COMMON_FLAGS = [
         value_type: "string",
         description: "Override the id_prefix written to settings.json.",
     },
+    ...PARAM_FLAGS,
 ];
 // `presets apply` additionally accepts --with-seeds to create starter items
 // and --replace to full-replace (rather than deep-merge) the owned settings trees.
@@ -100,13 +121,15 @@ const APPLY_FLAGS = [
         description: "Full-replace the governance/validation/testing settings trees with the preset's (clean reset) instead of deep-merging. Other settings are still preserved.",
     },
 ];
-// `presets diff` additionally accepts --strict for CI drift detection.
+// `presets diff` additionally accepts --strict for CI drift detection and the
+// parameter flags so the preview mirrors a parameterized apply.
 const DIFF_FLAGS = [
     {
         long: "--strict",
         value_type: "boolean",
         description: "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
     },
+    ...PARAM_FLAGS,
 ];
 // `presets export` writes to a file or stdout and can carry a display name.
 const EXPORT_FLAGS = [
@@ -164,6 +187,7 @@ const PRESETS_FLAGS = [
         value_type: "string",
         description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
     },
+    ...PARAM_FLAGS,
 ];
 /**
  * Local stand-in for the SDK's `defineExtension` identity helper.
@@ -271,7 +295,7 @@ export default defineExtension({
                     };
                 }
                 if (diffId) {
-                    const definition = requirePresetDefinition(diffId);
+                    const definition = requirePresetDefinition(diffId, readSuppliedParameterValues(options));
                     const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
                     const result = computePresetDiff(definition, snapshot);
                     const strict = readBooleanOption(options, "strict");
@@ -354,7 +378,7 @@ export default defineExtension({
             ],
             flags: DIFF_FLAGS,
             run: (ctx) => {
-                const definition = requirePresetDefinition(ctx.args?.[0]);
+                const definition = requirePresetDefinition(ctx.args?.[0], readSuppliedParameterValues(ctx.options));
                 const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
                 const result = computePresetDiff(definition, snapshot);
                 const strict = readBooleanOption(ctx.options, "strict");
@@ -476,9 +500,13 @@ export default defineExtension({
                 if (!withSeeds) {
                     return;
                 }
+                // Seeds resolve through the SAME supplied parameters the settings and
+                // templates used (one value reaches every declared occurrence), and
+                // refuse on secret bindings in the public seed prose.
                 await runPresetSeeds(resolvePmDir(ctx), definition.id, {
                     client: ctx.sdk?.client,
                     dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
+                    suppliedParameters: readSuppliedParameterValues(ctx.options),
                 });
             },
         });
@@ -519,4 +547,7 @@ export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulatio
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.js";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.js";
+export { ParameterRefusal, buildParameterViews, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
+export { PRESET_PARAMETERS } from "./registry.js";
+export { resolvedSeedsForPreset } from "./seeds.js";
 //# sourceMappingURL=index.js.map
