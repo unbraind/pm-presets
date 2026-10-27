@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.27 - 2026-10-27
 
 ### Changed
 
@@ -29,7 +29,6 @@
 ### Fixed
 
 - Propagate the docstring gate entry guard fix ([pm-wqll](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-wqll.toon))
-- Fix release publish ordering before protected main push ([pm-g33z](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-g33z.toon))
 - The publish-attestation gate misses a publish routed through an unquoted shell variable ([pm-mzg9](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-mzg9.toon))
 - Preset apply bypasses workspace settings history and leaves strict health failing ([pm-1vx6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-1vx6.toon))
 - Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior ([pm-0czt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-0czt.toon))
@@ -39,6 +38,10 @@
 ### Other
 
 - Certify pm-presets on PM CLI SDK 2026.9.28 and current published release helpers ([pm-weky](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-weky.toon))
+
+### Closed
+
+- Closed: Fix release publish ordering before protected main push ([pm-g33z](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-g33z.toon))
 
 ## 2026.10.12 - 2026-10-12
 
@@ -107,9 +110,9 @@
 
 ## 2026.8.31 - 2026-08-31
 
-### Fixed
+### Closed
 
-- The release changelog remained Unreleased after the release tag was created ([pm-70um](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-70um.toon))
+- Closed: The release changelog remained Unreleased after the release tag was created ([pm-70um](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-70um.toon))
 
 ## 2026.8.29 - 2026-08-29
 
@@ -126,13 +129,13 @@
 
 - changelog scripts read the pm workspace with default budgets instead of canonical complete reads ([pm-4wc5](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-4wc5.toon))
 
-### Security
-
-- The identity gate deadlocks the one remediation its own failure message prescribes ([pm-dc4q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-dc4q.toon))
-
 ### Other
 
 - Relocate the preset catalog out of manifest.json and guard the closed manifest vocabulary ([pm-3e1u](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-3e1u.toon))
+
+### Closed
+
+- Closed: The identity gate deadlocks the one remediation its own failure message prescribes ([pm-dc4q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-dc4q.toon))
 
 ## 2026.8.17 - 2026-08-17
 
@@ -216,13 +219,13 @@
 
 ## 2026.7.23 - 2026-07-23
 
-### Fixed
-
-- Recommend pm merge reconcile (2026.7.22) over raw history-repair in Multi-agent merge safety docs ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
-
 ### Other
 
 - Adopt pm field-aware merge driver for multi-agent branch-merge safety ([pm-8mdk](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-8mdk.toon))
+
+### Closed
+
+- Closed: Recommend pm merge reconcile (2026.7.22) over raw history-repair in Multi-agent merge safety docs ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
 
 ## 2026.7.19 - 2026-07-19
 
