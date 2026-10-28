@@ -12,7 +12,7 @@
  */
 import { CommandError, EXIT_CODE } from "./presets/shared.js";
 import { PRESET_REGISTRY, PRESET_PARAMETERS, bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
-import { buildParameterViews, collectParameterValues, resolveParameterizedPreset, } from "./params.js";
+import { buildParameterViews, collectParameterValues, collectSecretSettingPaths, resolveParameterizedPreset, } from "./params.js";
 /**
  * Raw exports keyed by the closed {@link PresetId} union.
  *
@@ -79,6 +79,7 @@ export function projectPresetDefinition(descriptor, raw, supplied) {
         templates,
         itemTypes: projectItemTypeViews(raw.itemTypes),
         parameters: resolved.parameterViews,
+        secretSettingPaths: collectSecretSettingPaths(raw.settings, raw.parameters),
     };
 }
 /** Copy bundled template payloads for adaptation into host profile definitions. */

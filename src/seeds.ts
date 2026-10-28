@@ -15,7 +15,7 @@ import type { PmClient } from "@unbrained/pm-cli/sdk";
 
 import { CommandError } from "./presets/shared.ts";
 import { PRESET_PARAMETERS } from "./registry.ts";
-import { resolveSeedsWithParameters, type PresetParameterManifest } from "./params.ts";
+import { collectParameterValues, resolveSeedsWithParameters, type PresetParameterManifest } from "./params.ts";
 
 /** A single starter item, restricted to built-in create fields. */
 export interface SeedItem {
@@ -112,25 +112,40 @@ export function seedsForPreset(presetId: string): SeedItem[] {
 }
 
 /**
- * Resolve a preset's seed items with already-effective parameter values.
+ * Resolve a preset's seed items with supplied values and declared defaults.
  *
  * Seeds are authored with `${param:<name>}` occurrences exactly like settings
  * and templates; the SAME resolution engine substitutes every occurrence and
  * refuses secret bindings in the public seed prose before anything is created.
- * The caller passes the EFFECTIVE values it resolved once at its own boundary
- * (never a params file or flag list), so no input is re-read here. A declared
+ * Callers may pass values already resolved at their boundary or omit them for
+ * default-backed previews. No params file or flag list is re-read. A declared
  * parameter without an effective value refuses (`unanswered_parameter`) rather
  * than letting raw binding syntax reach a seed. Presets without parameters
- * return their seeds unchanged.
+ * still validate seed bindings against their empty declaration.
  */
 export function resolvedSeedsForPreset(
   presetId: string,
-  values: Readonly<Record<string, string>> = {},
+  supplied: Readonly<Record<string, string>> = {},
   allowUnresolved = false,
 ): SeedItem[] {
   const seeds = seedsForPreset(presetId);
   const manifest: PresetParameterManifest = PRESET_PARAMETERS[presetId as keyof typeof PRESET_PARAMETERS] ?? [];
-  if (manifest.length === 0 || seeds.length === 0) {
+  if (seeds.length === 0) {
+    return seeds;
+  }
+  // Declared defaults are part of the preset's own resolution: read surfaces
+  // that pass no supplied values still resolve default-backed seed prose, and
+  // only truly unanswerable occurrences stay authored in declaration mode.
+  const values = collectParameterValues(manifest, supplied).values;
+  if (manifest.length === 0) {
+    // Preserve native per-seed failure reporting for accessor-backed SDK input:
+    // validate authored data without invoking accessors before the create loop.
+    const data = seeds.map((seed) => Object.fromEntries(
+      Object.entries(Object.getOwnPropertyDescriptors(seed))
+        .filter(([, descriptor]) => descriptor.enumerable && Object.hasOwn(descriptor, "value"))
+        .map(([key, descriptor]) => [key, descriptor.value]),
+    ) as unknown as SeedItem);
+    resolveSeedsWithParameters(manifest, values, data, allowUnresolved);
     return seeds;
   }
   return resolveSeedsWithParameters(manifest, values, seeds, allowUnresolved).seeds;

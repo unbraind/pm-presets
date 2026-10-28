@@ -552,7 +552,7 @@ export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulatio
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.js";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.js";
-export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
+export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, collectSecretSettingPaths, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
 export { PRESET_PARAMETERS } from "./registry.js";
 export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 export { resolvedSeedsForPreset } from "./seeds.js";

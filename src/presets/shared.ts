@@ -22,7 +22,7 @@ import {
   buildParameterViews,
   collectParameterValues,
   readSuppliedParameterValues,
-  redactSecretValues,
+  redactSecretValuesDeep,
   resolveParameterValues,
   resolveParameterizedPreset,
   type PresetParameterManifest,
@@ -450,8 +450,10 @@ export async function applyPreset(
       console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
       console.log("Preset patch (the host derives governance policies and canonical storage):");
       // Emitted output is a public surface: secret parameter values are
-      // redacted from the patch dump exactly like from the summary line.
-      console.log(redactSecretValues(JSON.stringify(effectivePatch, null, 2), secretValues));
+      // redacted from the patch dump exactly like from the summary line —
+      // on the structured VALUES before serialization, never on the JSON
+      // text, so quote/backslash-bearing secrets cannot escape the match.
+      console.log(JSON.stringify(redactSecretValuesDeep(effectivePatch, secretValues), null, 2));
       if (replace) {
         console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
       }

@@ -38,7 +38,7 @@ export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanR
 export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPlanTarget, PresetPlanGap, PresetPlan, PlanRefusalCode } from "./plan.ts";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
 export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";
-export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.ts";
+export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, collectSecretSettingPaths, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.ts";
 export type { ParameterRefusalCode, ParameterBindingOccurrence, PresetParameter, PresetParameterManifest, PresetParameterType, PresetParameterView, ResolvedParameterValues, } from "./params.ts";
 export { PRESET_PARAMETERS } from "./registry.ts";
 export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";

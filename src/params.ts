@@ -200,8 +200,7 @@ export function validateParameterManifest(manifest: PresetParameterManifest): vo
         throw new ParameterRefusal("invalid_manifest", `Secret parameter '${parameter.name}' must not declare a default; supply it per invocation.`);
       }
       try {
-        const value = assertPlainValue(parameter.name, parameter.default, parameter.type);
-        assertValueConstraints(parameter, value);
+        normalizeParameterValue(parameter, parameter.default);
       } catch (error) {
         throw new ParameterRefusal(
           "invalid_manifest",
@@ -237,6 +236,13 @@ function assertValueConstraints(parameter: PresetParameter, value: string): void
   if (parameter.type === "string" && parameter.pattern !== undefined && !new RegExp(`^(?:${parameter.pattern})$`).test(value)) {
     throw new ParameterRefusal("invalid_value", `Parameter '${parameter.name}' must match ${parameter.pattern}.`);
   }
+}
+
+/** Normalize and validate the exact value that every downstream consumer receives. */
+function normalizeParameterValue(parameter: PresetParameter, raw: string): string {
+  const value = assertPlainValue(parameter.name, raw, parameter.type);
+  assertValueConstraints(parameter, value);
+  return value;
 }
 
 /** The resolved outcome of a manifest against caller-supplied values. */
@@ -279,7 +285,7 @@ export function collectParameterValues(
     const raw = Object.hasOwn(supplied, parameter.name) ? supplied[parameter.name] : undefined;
     if (raw === undefined) {
       if (parameter.default !== undefined) {
-        values[parameter.name] = parameter.default;
+        values[parameter.name] = normalizeParameterValue(parameter, parameter.default);
         sources[parameter.name] = "default";
       } else {
         unanswered.push(parameter.name);
@@ -289,8 +295,7 @@ export function collectParameterValues(
     if (typeof raw !== "string") {
       throw new ParameterRefusal("invalid_value", `Parameter '${parameter.name}' must be supplied as a string value.`);
     }
-    const value = assertPlainValue(parameter.name, raw, parameter.type);
-    assertValueConstraints(parameter, value);
+    const value = normalizeParameterValue(parameter, raw);
     values[parameter.name] = value;
     sources[parameter.name] = "supplied";
   }
@@ -344,7 +349,9 @@ export function assertResolvedParameterValues(
     if (typeof value !== "string") {
       throw new ParameterRefusal("invalid_value", `Parameter '${name}' must be a string value.`);
     }
-    assertValueConstraints(parameter, assertPlainValue(name, value, parameter.type));
+    if (normalizeParameterValue(parameter, value) !== value) {
+      throw new ParameterRefusal("invalid_value", `Parameter '${name}' must already be normalized in an injected resolution.`);
+    }
     const source = resolved.sources[name];
     if (source !== "supplied" && source !== "default") {
       throw new ParameterRefusal("invalid_value", `Parameter '${name}' has an invalid resolution source.`);
@@ -377,6 +384,90 @@ export function redactSecretValues(text: string, secretValues: readonly string[]
   return result;
 }
 
+/**
+ * Redact secret values in a structured JSON value, BEFORE serialization.
+ *
+ * Redaction must always operate on VALUES, never on serialized text: a secret
+ * containing quotes or backslashes appears JSON-escaped in the serialized form
+ * (`abc\"def`) and a text-level match silently misses it. This walker redacts
+ * every string that contains a secret, inside plain objects and dense arrays
+ * alike, cloning as it goes so the input is never mutated.
+ */
+export function redactSecretValuesDeep(value: unknown, secretValues: readonly string[]): unknown {
+  if (typeof value === "string") {
+    return redactSecretValues(value, secretValues);
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSecretValuesDeep(entry, secretValues));
+  }
+  if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    const copy: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      copy[key] = redactSecretValuesDeep(entry, secretValues);
+    }
+    return copy;
+  }
+  return structuredClone(value);
+}
+
+/**
+ * Dotted settings paths whose authored content binds a secret parameter.
+ *
+ * Value-based redaction alone cannot protect a rotated credential: the stored
+ * workspace value is a DIFFERENT string than the currently supplied secret, so
+ * nothing matches it. These paths identify every settings leaf the preset's
+ * authored content binds a `secret`-typed parameter into, so emitted surfaces
+ * can redact those leaves wholesale regardless of the value they currently
+ * hold. Arrays are atomic (mirroring the settings diff's leaf model).
+ */
+export function collectSecretSettingPaths(
+  settings: PresetSettingsPatch,
+  manifest: PresetParameterManifest,
+): string[] {
+  const secretNames = new Set(
+    manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name),
+  );
+  const paths: string[] = [];
+  const walk = (value: unknown, prefix: string): void => {
+    if (typeof value === "string") {
+      const scan = scanString(value, prefix);
+      if (scan.occurrences.some((occurrence) => secretNames.has(occurrence.parameter))) {
+        paths.push(prefix);
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      // Arrays are atomic leaves in the settings model: a secret bound
+      // anywhere inside one marks the WHOLE leaf for wholesale redaction.
+      if (containsSecretBinding(value, secretNames)) {
+        paths.push(prefix);
+      }
+      return;
+    }
+    if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+      for (const [key, entry] of Object.entries(value)) {
+        walk(entry, prefix ? `${prefix}.${key}` : key);
+      }
+    }
+  };
+  walk(settings, "");
+  return paths.sort((left, right) => left.localeCompare(right));
+}
+
+/** True when any string inside `value` (recursively) binds a secret parameter. */
+function containsSecretBinding(value: unknown, secretNames: ReadonlySet<string>): boolean {
+  if (typeof value === "string") {
+    return scanString(value, "array").occurrences.some((occurrence) => secretNames.has(occurrence.parameter));
+  }
+  if (Array.isArray(value)) {
+    return value.some((entry) => containsSecretBinding(entry, secretNames));
+  }
+  if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.values(value).some((entry) => containsSecretBinding(entry, secretNames));
+  }
+  return false;
+}
+
 /** Build the compact parameter views for `presets show` (secrets never show defaults). */
 export function buildParameterViews(
   manifest: PresetParameterManifest,
@@ -396,7 +487,7 @@ export function buildParameterViews(
       unanswered: parameter.required && !answered && parameter.default === undefined,
     };
     if (parameter.type !== "secret" && parameter.default !== undefined) {
-      view.default = parameter.default;
+      view.default = normalizeParameterValue(parameter, parameter.default);
     }
     if (parameter.description !== undefined) {
       view.description = parameter.description;

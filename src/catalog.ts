@@ -43,6 +43,7 @@ import {
 import {
   buildParameterViews,
   collectParameterValues,
+  collectSecretSettingPaths,
   resolveParameterizedPreset,
   type PresetParameterManifest,
   type PresetParameterView,
@@ -80,6 +81,8 @@ export interface PresetDefinition {
   itemTypes: PresetItemTypeView[];
   /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */
   parameters: PresetParameterView[];
+  /** Authored secret-bearing leaves, retained after substitution for safe previews. */
+  secretSettingPaths?: readonly string[];
 }
 
 interface RawPreset {
@@ -177,6 +180,7 @@ export function projectPresetDefinition(
     templates,
     itemTypes: projectItemTypeViews(raw.itemTypes),
     parameters: resolved.parameterViews,
+    secretSettingPaths: collectSecretSettingPaths(raw.settings, raw.parameters),
   };
 }
 

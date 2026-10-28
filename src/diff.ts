@@ -21,7 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { PresetDefinition } from "./catalog.ts";
-import { collectParameterValues, redactSecretValues, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
+import { collectParameterValues, redactSecretValuesDeep, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
 
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
@@ -135,10 +135,11 @@ export function computePresetDiff(
   const settingsToAdd = settings.filter((entry) => entry.status === "add").length;
   const settingsToChange = settings.filter((entry) => entry.status === "change").length;
 
+  const secretPaths = new Set(definition.secretSettingPaths ?? []);
   return {
     presetId: definition.id,
     inSync: settingsToAdd === 0 && settingsToChange === 0 && missing.length === 0,
-    settings,
+    settings: settings.map((entry) => secretPaths.has(entry.path) ? redactSettingEntry(entry) : entry),
     templates: { missing, present },
     itemTypes: definition.itemTypes.map((type) => type.name),
     summary: {
@@ -147,6 +148,23 @@ export function computePresetDiff(
       templatesMissing: missing.length,
     },
   };
+}
+
+/** Hide an entire sensitive location, including a stored value of a different shape. */
+function redactSettingEntry(entry: SettingDiffEntry): SettingDiffEntry {
+  return {
+    ...entry,
+    preset: "<redacted>",
+    workspace: entry.workspace === undefined ? undefined : "<redacted>",
+  };
+}
+
+/** Detect supplied secrets anywhere in a resolved leaf, including atomic arrays. */
+function containsSecretValue(value: unknown, secrets: readonly string[]): boolean {
+  if (typeof value === "string") return secrets.some((secret) => value.includes(secret));
+  if (Array.isArray(value)) return value.some((entry) => containsSecretValue(entry, secrets));
+  if (isJsonObject(value)) return Object.values(value).some((entry) => containsSecretValue(entry, secrets));
+  return false;
 }
 
 /** Read the workspace snapshot from disk (the only impure part). */
@@ -208,12 +226,19 @@ export function computeParameterizedDiff(
   if (secrets.length === 0) {
     return diff;
   }
+  // Projected definitions retain authored provenance. For SDK callers that
+  // construct resolved definitions directly, infer sensitive leaves from the
+  // supplied values as well. In either case hide BOTH sides wholesale: stored
+  // credentials can differ in value and JSON shape during rotation.
+  const secretPaths = new Set(definition.secretSettingPaths ?? []);
   return {
     ...diff,
-    settings: diff.settings.map((entry) => ({
-      ...entry,
-      preset: typeof entry.preset === "string" ? redactSecretValues(entry.preset, secrets) : entry.preset,
-      workspace: typeof entry.workspace === "string" ? redactSecretValues(entry.workspace, secrets) : entry.workspace,
-    })),
+    settings: diff.settings.map((entry) =>
+      secretPaths.has(entry.path) || containsSecretValue(entry.preset, secrets)
+        ? redactSettingEntry(entry) : {
+          ...entry,
+          preset: redactSecretValuesDeep(entry.preset, secrets),
+          workspace: redactSecretValuesDeep(entry.workspace, secrets),
+        }),
   };
 }

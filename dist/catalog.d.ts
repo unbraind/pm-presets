@@ -46,6 +46,8 @@ export interface PresetDefinition {
     itemTypes: PresetItemTypeView[];
     /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */
     parameters: PresetParameterView[];
+    /** Authored secret-bearing leaves, retained after substitution for safe previews. */
+    secretSettingPaths?: readonly string[];
 }
 interface RawPreset {
     settings: PresetSettingsPatch;

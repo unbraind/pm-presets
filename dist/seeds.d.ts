@@ -30,18 +30,18 @@ export declare const PRESET_SEEDS: Record<string, SeedItem[]>;
  */
 export declare function seedsForPreset(presetId: string): SeedItem[];
 /**
- * Resolve a preset's seed items with already-effective parameter values.
+ * Resolve a preset's seed items with supplied values and declared defaults.
  *
  * Seeds are authored with `${param:<name>}` occurrences exactly like settings
  * and templates; the SAME resolution engine substitutes every occurrence and
  * refuses secret bindings in the public seed prose before anything is created.
- * The caller passes the EFFECTIVE values it resolved once at its own boundary
- * (never a params file or flag list), so no input is re-read here. A declared
+ * Callers may pass values already resolved at their boundary or omit them for
+ * default-backed previews. No params file or flag list is re-read. A declared
  * parameter without an effective value refuses (`unanswered_parameter`) rather
  * than letting raw binding syntax reach a seed. Presets without parameters
- * return their seeds unchanged.
+ * still validate seed bindings against their empty declaration.
  */
-export declare function resolvedSeedsForPreset(presetId: string, values?: Readonly<Record<string, string>>, allowUnresolved?: boolean): SeedItem[];
+export declare function resolvedSeedsForPreset(presetId: string, supplied?: Readonly<Record<string, string>>, allowUnresolved?: boolean): SeedItem[];
 /** Build a manual command preview only; seed writes never execute these arguments. */
 export declare function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[];
 /**

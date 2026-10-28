@@ -143,6 +143,27 @@ export declare function assertResolvedParameterValues(manifest: PresetParameterM
  * secret, and it only ever matches exact secret values.
  */
 export declare function redactSecretValues(text: string, secretValues: readonly string[]): string;
+/**
+ * Redact secret values in a structured JSON value, BEFORE serialization.
+ *
+ * Redaction must always operate on VALUES, never on serialized text: a secret
+ * containing quotes or backslashes appears JSON-escaped in the serialized form
+ * (`abc\"def`) and a text-level match silently misses it. This walker redacts
+ * every string that contains a secret, inside plain objects and dense arrays
+ * alike, cloning as it goes so the input is never mutated.
+ */
+export declare function redactSecretValuesDeep(value: unknown, secretValues: readonly string[]): unknown;
+/**
+ * Dotted settings paths whose authored content binds a secret parameter.
+ *
+ * Value-based redaction alone cannot protect a rotated credential: the stored
+ * workspace value is a DIFFERENT string than the currently supplied secret, so
+ * nothing matches it. These paths identify every settings leaf the preset's
+ * authored content binds a `secret`-typed parameter into, so emitted surfaces
+ * can redact those leaves wholesale regardless of the value they currently
+ * hold. Arrays are atomic (mirroring the settings diff's leaf model).
+ */
+export declare function collectSecretSettingPaths(settings: PresetSettingsPatch, manifest: PresetParameterManifest): string[];
 /** Build the compact parameter views for `presets show` (secrets never show defaults). */
 export declare function buildParameterViews(manifest: PresetParameterManifest, supplied?: Readonly<Record<string, string>>): PresetParameterView[];
 /** Parse repeated `--param <name>=<value>` flag entries.

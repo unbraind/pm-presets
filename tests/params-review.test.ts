@@ -27,6 +27,7 @@ import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk/authoring";
 import mod from "../src/index.ts";
 import { applyPreset } from "../src/presets/shared.ts";
 import { computeParameterizedDiff } from "../src/diff.ts";
+import { collectSecretSettingPaths, redactSecretValuesDeep } from "../src/params.ts";
 import { collectPresetParameterIssues, projectPresetDefinition, requirePresetDefinition, type PresetDefinition } from "../src/catalog.ts";
 import { resolvePresetApplication, contextWithResolvedParameters } from "../src/apply-command.ts";
 import { PRESET_PARAMETERS } from "../src/registry.ts";
@@ -532,5 +533,250 @@ test("concurrent parameterized applies stay fully consistent under the lock", as
       `template ${name} must describe the same invocation as the settings (${winner})`,
     );
     assert.ok(!template.options.body.includes("${param:"));
+  }
+});
+test("diff redacts the STORED credential at secret-bound paths during rotation", () => {
+  const definition = {
+    id: "startup-roadmap" as const,
+    displayName: "Startup roadmap",
+    description: "",
+    command: "roadmap-setup",
+    idPrefix: "rev-",
+    governance: "custom" as const,
+    settings: { id_prefix: "rev-", validation: { webhook_secret: "new-secret" } },
+    templates: [],
+    itemTypes: [],
+    parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }],
+  } as unknown as PresetDefinition;
+  const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
+  // The workspace still holds the credential from the PREVIOUS apply; the
+  // caller supplies the new one. Value matching alone would miss the old one.
+  const snapshot = {
+    settings: { validation: { webhook_secret: "old-private-secret" } } as Record<string, unknown>,
+    templateNames: [],
+  };
+  const result = computeParameterizedDiff(
+    definition,
+    manifest,
+    { token: "new-secret" },
+    snapshot,
+  );
+  const serialized = JSON.stringify(result);
+  assert.ok(!serialized.includes("old-private-secret"), `the stored credential leaked: ${serialized}`);
+  assert.ok(!serialized.includes("new-secret"), "the supplied credential leaked");
+  const entry = result.settings.find((candidate) => candidate.path === "validation.webhook_secret");
+  assert.ok(entry, "the secret leaf must appear in the diff");
+  assert.equal(entry.preset, "<redacted>");
+  assert.equal(entry.workspace, "<redacted>");
+});
+
+test("collectSecretSettingPaths reports every secret-bound settings leaf", () => {
+  const manifest: PresetParameterManifest = [
+    { name: "token", type: "secret", required: true },
+    { name: "key", type: "string", required: true, default: "k" },
+  ];
+  const paths = collectSecretSettingPaths(
+    { id_prefix: "${param:key}-", validation: { webhook_secret: "prefix ${param:token}" }, testing: { record_results_to_items: false }, hooks: { list: [5, ["deep"], { nested: "no binding" }, { deeper: "before ${param:token} after" }] } } as unknown as PresetSettingsPatch,
+    manifest,
+  );
+  assert.deepEqual(paths, ["hooks.list", "validation.webhook_secret"]);
+  assert.deepEqual(collectSecretSettingPaths({ id_prefix: "k-" } as PresetSettingsPatch, manifest), []);
+  assert.deepEqual(
+    collectSecretSettingPaths({ id_prefix: "${param:key}-" } as PresetSettingsPatch, [{ name: "key", type: "string", required: true }]),
+    [],
+    "non-secret bindings must not be reported",
+  );
+});
+
+test("dry-run redaction survives quote and backslash bearing secrets (values, not serialized text)", async (t) => {
+  const { pmDir } = await workspace(t);
+  const client = new Client({ pmRoot: pmDir, noExtensions: true });
+  const tricky = 'abc"def\\ghi';
+  const logs = await captureOutput(() =>
+    applyPreset(context(pmDir, client, { param: [`token=${tricky}`], dryRun: true }), SECRET_PRESET));
+  const joined = logs.join("\n");
+  assert.ok(!joined.includes('abc"def'), `the quote-bearing secret leaked into dry-run output: ${joined}`);
+  assert.ok(!joined.includes('abc\\"def'), "the JSON-escaped secret leaked into dry-run output");
+  assert.ok(!joined.includes("abc\\\\"), "the backslash-bearing secret leaked into dry-run output");
+  assert.ok(logs.some((line) => line.includes("<redacted>")), "the patch dump must show the redaction marker");
+});
+
+test("redactSecretValuesDeep redacts structured values before serialization", () => {
+  const redacted = redactSecretValuesDeep(
+    { a: 'x abc"def y', nested: { b: ["abc\\def", "plain"] }, n: 5, flag: false },
+    ['abc"def', "abc\\def"],
+  ) as Record<string, unknown>;
+  assert.equal(redacted.a, "x <redacted> y");
+  const nested = redacted.nested as Record<string, unknown>;
+  assert.deepEqual(nested.b, ["<redacted>", "plain"]);
+  assert.equal(redacted.n, 5);
+  assert.equal(redacted.flag, false);
+  assert.ok(!JSON.stringify(redacted).includes("abc"));
+});
+
+test("stack seed previews resolve declared defaults, never raw binding syntax", async (t) => {
+  const { planPresetStack } = await import("../src/stack.ts");
+  const { pmDir } = await workspace(t);
+  const client = new Client({ pmRoot: pmDir, noExtensions: true });
+  const sdk = createExtensionCommandSdk(pmDir, client, "review-test");
+  const plan = await planPresetStack(pmDir, sdk, { selections: [{ preset: "startup-roadmap", seeds: true }] });
+  assert.equal(plan.seeds.length, 1);
+  assert.equal(plan.seeds[0].item.title, "Define the road first roadmap initiative");
+  assert.ok(!plan.seeds[0].identity.includes("${param:"), `seed identity must not keep binding syntax: ${plan.seeds[0].identity}`);
+  assert.ok(!JSON.stringify(plan.ownership).includes("${param:"), "ownership output must not keep binding syntax");
+});
+
+/** Generate deterministic strings with distinct raw and encoded representations. */
+function adversarialSecrets(): string[] {
+  const pieces = ['"', "\\", '\\"', '"\\', "é", "\u2028", "\ud800"];
+  return Array.from({ length: 35 }, (_, index) => `synthetic-${index}-${pieces[index % pieces.length]}-${pieces[(index * 3 + 1) % pieces.length]}-end`);
+}
+
+test("property: default and supplied values share canonical resolution in every preset part", async () => {
+  const { collectParameterValues, resolveParameterValues, resolveParameterizedPreset, buildParameterViews, assertResolvedParameterValues } = await import("../src/params.ts");
+  const spaces = [" ", "\u00a0", "\u2003", "\u202f", "\ufeff"];
+  for (let index = 0; index < 120; index++) {
+    const value = `key${String.fromCharCode(97 + index % 26)}`;
+    const padded = spaces[index % spaces.length] + value + spaces[(index + 2) % spaces.length];
+    const manifest: PresetParameterManifest = [{ name: "key", type: index % 2 ? "enum" : "string", required: true,
+      ...(index % 2 ? { values: [value, "other"] } : { pattern: "[a-z]+" }), maxLength: value.length, default: padded }];
+    const parts = { settings: { id_prefix: "${param:key}-", nested: { entries: ["${param:key}"] } } as unknown as PresetSettingsPatch,
+      templates: { "card.json": storedTemplate("card", { body: "Project ${param:key}" }) },
+      seeds: [{ type: "Issue", title: "${param:key}", body: "Project ${param:key}", tags: "${param:key}" }] };
+    const before = JSON.stringify({ manifest, parts });
+    const defaults = resolveParameterValues(manifest, {});
+    const supplied = resolveParameterValues(manifest, { key: padded });
+    assert.deepEqual(defaults.values, { key: value });
+    assert.deepEqual(collectParameterValues(manifest, {}).values, supplied.values);
+    assert.deepEqual(resolveParameterizedPreset(manifest, defaults.values, parts), resolveParameterizedPreset(manifest, supplied.values, parts));
+    assert.equal(buildParameterViews(manifest)[0].default, value);
+    assert.throws(() => assertResolvedParameterValues(manifest, { ...defaults, values: { key: padded } }), { code: "invalid_value" });
+    assert.equal(JSON.stringify({ manifest, parts }), before);
+  }
+});
+
+test("property: secret provenance protects rotated locations across scalar, array and object shapes", async () => {
+  const { computePresetDiff } = await import("../src/diff.ts");
+  const descriptor = { id: "startup-roadmap" as const, displayName: "Test", description: "", command: "roadmap-setup", idPrefix: "unit-", governance: "custom" as const, templates: [] };
+  const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: false }];
+  for (const [index, secret] of adversarialSecrets().entries()) {
+    const old = `old-${secret}`;
+    const shape = ["Bearer ${param:token}", [null, 3, { token: "${param:token}" }]][index % 2];
+    const raw = { settings: { id_prefix: "unit-", hook: { token: shape }, testing: { record_results_to_items: false } } as unknown as PresetSettingsPatch, templates: {}, parameters: manifest };
+    const definition = projectPresetDefinition(descriptor, raw, { token: secret });
+    const stored = [old, [old], { nested: old }, null, 42, undefined][index % 6];
+    const snapshot = { settings: { hook: { token: stored }, testing: { record_results_to_items: false } }, templateNames: [] };
+    const before = JSON.stringify({ raw, definition, snapshot });
+    for (const diff of [computeParameterizedDiff(definition, manifest, { token: secret }, snapshot), computePresetDiff(definition, snapshot),
+      computeParameterizedDiff(projectPresetDefinition(descriptor, raw), manifest, {}, snapshot)]) {
+      const entry = diff.settings.find((entry) => entry.path === "hook.token");
+      assert.equal(entry?.preset, "<redacted>");
+      assert.equal(entry?.workspace, stored === undefined ? undefined : "<redacted>");
+      assert.equal(entry?.status, "change");
+      assert.equal(diff.settings.find((entry) => entry.path === "testing.record_results_to_items")?.preset, false);
+      assert.ok(!JSON.stringify(diff).includes(JSON.stringify(secret).slice(1, -1)));
+    }
+    assert.equal(JSON.stringify({ raw, definition, snapshot }), before);
+    // Direct SDK definitions without provenance still infer secrets in atomic arrays.
+    const direct = { ...definition, secretSettingPaths: undefined };
+    assert.equal(computeParameterizedDiff(direct, manifest, { token: secret }, snapshot).settings.find((entry) => entry.path === "hook.token")?.workspace, stored === undefined ? undefined : "<redacted>");
+  }
+});
+
+test("property: every valid escaped secret is removed before dry-run JSON encoding", async (t) => {
+  const { pmDir } = await workspace(t);
+  const client = new Client({ pmRoot: pmDir, noExtensions: true });
+  const before = readFileSync(join(pmDir, "settings.json"), "utf8");
+  for (const secret of adversarialSecrets()) {
+    const logs = await captureOutput(() => applyPreset(context(pmDir, client, { param: [`token=${secret}`], dryRun: true }), SECRET_PRESET));
+    const patch = logs.find((line) => line.startsWith("{\n"));
+    assert.ok(patch, "the actual emitted patch must be tested");
+    assert.equal(JSON.parse(patch).id_prefix, "<redacted>-");
+    assert.ok(!logs.join("\n").includes(secret));
+    assert.ok(!logs.join("\n").includes(JSON.stringify(secret).slice(1, -1)));
+    const input = { entries: [{ token: secret }, [secret, null, false]], plain: "retained" };
+    const saved = JSON.stringify(input);
+    assert.deepEqual(redactSecretValuesDeep(input, [secret]), { entries: [{ token: "<redacted>" }, ["<redacted>", null, false]], plain: "retained" });
+    assert.equal(JSON.stringify(input), saved);
+  }
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), before);
+});
+
+test("property: every seed SDK and command consumer resolves normalized manifest defaults", async (t) => {
+  const { resolvedSeedsForPreset, planSeeds, seedPresetItems, runPresetSeeds } = await import("../src/seeds.ts");
+  const { bundledPresetComposition } = await import("../src/plan.ts");
+  const { planPresetStack } = await import("../src/stack.ts");
+  const { pmDir } = await workspace(t);
+  const client = new Client({ pmRoot: pmDir, noExtensions: true });
+  const sdk = createExtensionCommandSdk(pmDir, client);
+  const savedManifest = [...ROADMAP_PARAMETERS];
+  const savedSeed = structuredClone(PRESET_SEEDS["startup-roadmap"]);
+  const h = await activatePresets();
+  t.after(() => { restoreManifest("startup-roadmap", savedManifest); PRESET_SEEDS["startup-roadmap"] = savedSeed; });
+  for (const key of ["alpha", "beta", "gamma", "delta", "epsilon"]) {
+    replaceManifest("startup-roadmap", [{ ...savedManifest[0], default: ` \u2003${key}\u00a0 ` },
+      { name: "seedType", type: "enum", required: true, values: ["Feature"], default: " Feature " }]);
+    PRESET_SEEDS["startup-roadmap"][0].type = "${param:seedType}";
+    const expected = `Define the ${key} first roadmap initiative`;
+    assert.equal(resolvedSeedsForPreset("startup-roadmap")[0].title, expected);
+    assert.equal(planSeeds("tracker", "startup-roadmap")[0].title, expected);
+    const plan = bundledPresetComposition("startup-roadmap", true);
+    assert.ok(plan.features.find((feature) => feature.id === "seeds")?.requires.some((entry) => entry.kind === "type" && entry.name === "Feature"));
+    const stack = await planPresetStack(pmDir, sdk, { selections: [{ preset: "startup-roadmap", settings: false, templates: false, seeds: true }] });
+    assert.equal(stack.seeds[0].item.title, expected);
+    assert.ok(stack.ownership.some((entry) => entry.path.includes(expected)));
+    assert.ok(!JSON.stringify(stack).includes("${param:"));
+    const logs = await captureOutput(() => runPresetSeeds("tracker", "startup-roadmap", { dryRun: true }));
+    assert.ok(logs.join("\n").includes(expected));
+    const seeded = await seedPresetItems(client, "startup-roadmap");
+    assert.equal(seeded.created, 1);
+    assert.equal(seeded.details[0].title, expected);
+    for (const command of ["roadmap-setup", "presets apply"]) {
+      await captureOutput(async () => { await h.runCommand({ command, args: command === "presets apply" ? ["startup-roadmap"] : [], options: { dryRun: true }, pmRoot: pmDir }); });
+    }
+  }
+  const items = (await client.listAllComplete()).items;
+  assert.equal(items.length, 5);
+  assert.ok(items.every((item) => !JSON.stringify(item).includes("${param:")));
+});
+
+test("seed consumers refuse undeclared bindings even with an empty manifest", async () => {
+  const { resolvedSeedsForPreset, planSeeds } = await import("../src/seeds.ts");
+  const seeds = PRESET_SEEDS["bug-triage"];
+  try {
+    PRESET_SEEDS["bug-triage"] = [{ type: "Issue", title: "${param:missing}" }];
+    assert.throws(() => resolvedSeedsForPreset("bug-triage"), { code: "unknown_binding" });
+    assert.throws(() => resolvedSeedsForPreset("bug-triage", {}, true), { code: "unknown_binding" });
+    assert.throws(() => planSeeds("tracker", "bug-triage"), { code: "unknown_binding" });
+    const seed = { type: "Issue", title: "Static data", get body(): string { throw new Error("native accessor refusal"); } };
+    Object.defineProperty(seed, "hidden", { value: "${param:missing}", enumerable: false });
+    PRESET_SEEDS["bug-triage"] = [seed];
+    assert.strictEqual(resolvedSeedsForPreset("bug-triage")[0], seed, "validation must not invoke an accessor or change native failure timing");
+  } finally { PRESET_SEEDS["bug-triage"] = seeds; }
+});
+
+test("redaction helpers preserve nonsecret JSON and non-plain values without mutation", () => {
+  const stamp = new Date(0);
+  assert.deepEqual(redactSecretValuesDeep(stamp, []), stamp);
+  assert.deepEqual(collectSecretSettingPaths({ empty: [], plain: [null, false, { value: "plain" }], stamp } as unknown as PresetSettingsPatch, []), []);
+});
+
+test("property: secret redaction preserves diff control fields for every status and identifier collision", () => {
+  for (const token of ["add", "change", "match", "startup-roadmap", "id_prefix", "validation", "token", "settings", "<redacted>"]) {
+    const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
+    const definition = { id: "startup-roadmap", settings: { id_prefix: "unit-", validation: { token }, testing: { record_results_to_items: false } },
+      templates: [{ name: "token", type: "Issue", optionKeys: [] }], itemTypes: [{ name: "token", aliases: [], options: [] }],
+      parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }] } as unknown as PresetDefinition;
+    const diff = computeParameterizedDiff(definition, manifest, { token }, { settings: { id_prefix: "unit-", validation: { token: "previous-credential" } }, templateNames: [] });
+    assert.equal(diff.presetId, "startup-roadmap");
+    assert.deepEqual(diff.settings.map(({ path, status }) => ({ path, status })), [
+      { path: "id_prefix", status: "match" }, { path: "validation.token", status: "change" }, { path: "testing.record_results_to_items", status: "add" },
+    ]);
+    assert.deepEqual(diff.templates, { missing: ["token"], present: [] });
+    assert.deepEqual(diff.itemTypes, ["token"]);
+    assert.deepEqual(diff.summary, { settingsToAdd: 1, settingsToChange: 1, templatesMissing: 1 });
+    const sensitive = diff.settings.find((entry) => entry.path === "validation.token")!;
+    assert.equal(sensitive.preset, "<redacted>");
+    assert.equal(sensitive.workspace, "<redacted>");
   }
 });

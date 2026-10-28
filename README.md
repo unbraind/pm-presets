@@ -231,6 +231,13 @@ read or written, with typed exit-2 refusals:
 line, `--dry-run` patch dumps, and both sides of every `presets diff` settings
 entry — renders it as `<redacted>`, and refusal messages never echo it. `show`
 displays the authored `${param:...}` occurrence without resolving secrets.
+Redaction is rotation-proof and serialization-proof: diff settings leaves that
+the preset binds a secret into are redacted wholesale whatever value they
+currently hold (a stored, rotated credential never shows), and redaction always
+runs on structured values before serialization, so quote- or backslash-bearing
+secrets cannot escape the match. Defaults and supplied values share the same
+trimming and constraint checks; seed previews resolve defaults before computing
+identities and ownership.
 
 **One resolution, one read.** The unified apply reads your flags and params
 file exactly once, resolves every parameter at that boundary, pre-validates the

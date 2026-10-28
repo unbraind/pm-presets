@@ -14,7 +14,7 @@
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
 import { randomUUID } from "node:crypto";
-import { assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, redactSecretValues, resolveParameterValues, resolveParameterizedPreset, } from "../params.js";
+import { assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, } from "../params.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 // pm's extension command runtime only treats a thrown error as a cleanly
@@ -341,8 +341,10 @@ export async function applyPreset(context, input) {
             console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
             console.log("Preset patch (the host derives governance policies and canonical storage):");
             // Emitted output is a public surface: secret parameter values are
-            // redacted from the patch dump exactly like from the summary line.
-            console.log(redactSecretValues(JSON.stringify(effectivePatch, null, 2), secretValues));
+            // redacted from the patch dump exactly like from the summary line —
+            // on the structured VALUES before serialization, never on the JSON
+            // text, so quote/backslash-bearing secrets cannot escape the match.
+            console.log(JSON.stringify(redactSecretValuesDeep(effectivePatch, secretValues), null, 2));
             if (replace) {
                 console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
             }
