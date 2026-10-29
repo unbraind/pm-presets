@@ -11,6 +11,7 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
+import { acquireApplyAdmission } from "../apply-admission.js";
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
 import { randomUUID } from "node:crypto";
@@ -176,6 +177,16 @@ function delay(ms) {
  * in-process. Dry-runs skip it: they write nothing of ours.
  */
 async function withPresetApplyLock(pmDir, run) {
+    const releaseAdmission = await acquireApplyAdmission(pmDir);
+    try {
+        return await withObservedApplyLock(pmDir, run);
+    }
+    finally {
+        releaseAdmission();
+    }
+}
+/** Keep the existing token-file protocol inside the admission claim for compatibility. */
+async function withObservedApplyLock(pmDir, run) {
     const locksDir = path.join(pmDir, "locks");
     const lockPath = path.join(locksDir, APPLY_LOCK_FILE);
     const token = `${process.pid}-${randomUUID()}`;
@@ -199,7 +210,9 @@ async function withPresetApplyLock(pmDir, run) {
             try {
                 const stats = fs.statSync(lockPath);
                 if (Date.now() - stats.mtimeMs > APPLY_LOCK_STALE_MS) {
-                    // A crashed owner leaves a stale lock; stealing it keeps applies live.
+                    // Publication, recovery and release all hold the admission claim:
+                    // another contender cannot publish a replacement between observation
+                    // and removal. A token comparison alone would not provide that fence.
                     fs.rmSync(lockPath, { force: true });
                     continue;
                 }

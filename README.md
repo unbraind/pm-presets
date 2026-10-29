@@ -251,6 +251,17 @@ writes, so two concurrent parameterized applies can never leave the id prefix
 of one invocation next to the template prose of another. Dry-runs skip the
 lock and never create files.
 
+Publication, stale recovery and release also hold an admission claim with a
+unique per-process pathname. Cleanup targets that exact claim, so a delayed
+reaper cannot unlink a replacement owner's claim. Live owners are never evicted
+because of age. Automatic recovery requires a verified kernel/PID namespace and
+a PID proven absent; unverifiable claims stay locked. Inspect abandoned claims
+only after confirming their writers have stopped.
+
+`--params-file` reads one regular JSON file, bounded to 64 KiB even if it grows
+while being read. Missing, unreadable, nonregular and oversized files return
+`invalid_params_file` with exit 2, without raw filesystem diagnostics.
+
 The same engine backs every read path (`show`, `diff`, `plan`, `stack`,
 `validate`), so previews never display unresolved `${param:...}` syntax. See
 [docs/params-example.md](docs/params-example.md) for the full authoring walkthrough.

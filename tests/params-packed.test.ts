@@ -5,6 +5,7 @@ import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFil
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { verifyLockInterleavings } from "./fixtures/params-lock-scenario.ts";
 import { PmClient } from "@unbrained/pm-cli/sdk";
 
 test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on non-git trackers", async (t) => {
@@ -20,6 +21,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   assert.equal(install.status, 0, install.stderr + install.stdout);
   const entry = join(pmRoot, "extensions", "pm-presets", "dist", "presets", "startup-roadmap", "index.js");
   assert.ok(existsSync(entry));
+  const originalEntry = readFileSync(entry, "utf8");
   // This synthetic authoring fixture exercises the published secret contract;
   // bundled presets intentionally ship no secrets. It also makes the bundled
   // default adversarial without changing any actual package source or tracker.
@@ -42,6 +44,28 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         env: { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, XDG_CACHE_HOME: root, GIT_CEILING_DIRECTORIES: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" } });
       assert.equal(result.status, 0, result.stdout + result.stderr);
       return result.stdout;
+    }
+    // Every flag-bearing entry point must translate file transport failures
+    // before the handler can change native settings, templates or seeds.
+    const invalid = join(root, "missing-params.json");
+    const entryPoints = [
+      ["triage-setup"], ["indie-setup"], ["oss-setup"], ["sprint-setup"],
+      ["roadmap-setup"], ["kanban-setup"], ["agent-setup"],
+      ["apply", "startup-roadmap"], ["apply", "indie-dev"],
+      ["diff", "startup-roadmap"], ["--diff", "startup-roadmap"],
+    ];
+    for (const [index, args] of entryPoints.entries()) {
+      for (const json of [[], ["--json"]]) {
+        const command = args[0].endsWith("-setup") ? args : ["presets", ...args];
+        const output = spawnSync(runtime, [cli, "--path", pmRoot, ...command, "--params-file", index % 2 ? root : invalid, ...json], {
+          cwd: root, encoding: "utf8", timeout: 60_000,
+          env: { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" },
+        });
+        assert.equal(output.status, 2, output.stdout + output.stderr);
+        assert.match(output.stdout + output.stderr, /invalid_params_file/);
+        assert.ok(!/ENOENT|EISDIR|ENOTDIR/.test(output.stdout + output.stderr));
+        assert.equal(readFileSync(settingsFile, "utf8"), before);
+      }
     }
     writeFileSync(entry, fixture);
     const secret = 'new-synthetic"credential\\value';
@@ -76,4 +100,6 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
 
   }
   assert.equal(readFileSync(settingsFile, "utf8"), before, "read commands must preserve stored settings");
+  writeFileSync(entry, originalEntry);
+  await verifyLockInterleavings(t, join(pmRoot, "extensions", "pm-presets", "dist", "presets", "shared.js"), runtimes);
 });

@@ -20,7 +20,7 @@
  *    through as literal prose.
  */
 
-import * as fs from "node:fs";
+import { readBoundedInputFile } from "./input-file.ts";
 import type { PresetSettingsPatch, PresetTemplateMap } from "./presets/shared.ts";
 import type { SeedItem } from "./seeds.ts";
 
@@ -579,13 +579,18 @@ export function parseParamsFile(text: string): Record<string, string> {
  */
 export function readSuppliedParameterValues(options: Readonly<Record<string, unknown>>): Record<string, string> {
   const flags = parseParameterFlagEntries(options.param);
-  const file = options.paramsFile;
+  const file = options.paramsFile !== undefined ? options.paramsFile : options["params-file"];
   const supplied: Record<string, string> = {};
   for (const entry of flags) {
     supplied[entry.name] = entry.value;
   }
   if (typeof file === "string" && file.trim().length > 0) {
-    const fromFile = parseParamsFile(fs.readFileSync(file.trim(), "utf8"));
+    let text: string;
+    try { text = readBoundedInputFile(file.trim(), MAX_PARAMS_FILE_BYTES); }
+    catch {
+      throw new ParameterRefusal("invalid_params_file", `Use a readable regular JSON params file no larger than ${MAX_PARAMS_FILE_BYTES} bytes.`);
+    }
+    const fromFile = parseParamsFile(text);
     for (const [name, value] of Object.entries(fromFile)) {
       if (Object.hasOwn(supplied, name)) {
         throw new ParameterRefusal("invalid_param_flag", `Parameter '${name}' supplied by both --param and the params file; keep one.`);
