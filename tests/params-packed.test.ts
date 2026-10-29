@@ -1,13 +1,64 @@
 /** Packed commands protect defaults and secrets under both supported runtimes and renderers. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { verifyLockInterleavings } from "./fixtures/params-lock-scenario.ts";
 import { assertNoCredentials, secretCorpus, trackerBytes } from "./fixtures/params-secret-oracle.ts";
 import { PmClient } from "@unbrained/pm-cli/sdk";
+
+test("packed applies and both strict diff forms agree on complete artifacts under Node and Bun", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "preset-artifacts-packed-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const consumerEnv = { ...process.env, NODE_V8_COVERAGE: "", PM_AUTHOR: "packed-artifact-test", PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" };
+  const packed = spawnSync("npm", ["pack", "--ignore-scripts", "--pack-destination", root, "--json"], { encoding: "utf8", env: consumerEnv });
+  assert.equal(packed.status, 0, packed.stderr);
+  const archive = join(root, JSON.parse(packed.stdout)[0].filename);
+  const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
+  const runtimes = [process.execPath];
+  if (spawnSync("bun", ["--version"], { encoding: "utf8" }).status === 0) runtimes.push("bun");
+  else t.diagnostic("Bun unavailable; packed Node verified; Bun remains an external gate.");
+  for (const runtime of runtimes) {
+    const work = join(root, runtime === "bun" ? "bun" : "node"), pmRoot = join(work, ".agents", "pm");
+    mkdirSync(work, { recursive: true });
+    await new PmClient({ pmRoot, cwd: work, noExtensions: true }).init();
+    /** Execute installed artifacts with isolated user state and explicit exit assertions. */
+    function run(args: string[], status = 0) {
+      const result = spawnSync(runtime, [cli, "--path", pmRoot, ...args], { cwd: work, encoding: "utf8", timeout: 60_000,
+        env: { ...consumerEnv, HOME: work, USERPROFILE: work, XDG_CONFIG_HOME: work, XDG_CACHE_HOME: work } });
+      assert.equal(result.status, status, result.stdout + result.stderr);
+      return result.stdout + result.stderr;
+    }
+    run(["package", "install", archive, "--project"]);
+    // Card and AgentRun are supplied by the active host schema, rather than a
+    // manually persisted schema fixture. Their complete seed state must agree.
+    for (const preset of ["startup-roadmap", "kanban", "agent-workflow"]) {
+      run(["presets", "apply", preset, "--with-seeds", "--force", "--replace"]);
+      assert.equal(JSON.parse(run(["presets", "diff", preset, "--strict", "--json"])).inSync, true);
+    }
+    run(["presets", "apply", "startup-roadmap", "--param", "projectKey=alpha", "--force"]);
+    const before = trackerBytes(pmRoot);
+    assert.match(run(["presets", "apply", "startup-roadmap", "--param", "projectKey=beta"], 2), /stale_artifacts.*templates\/initiative.json/s);
+    assert.equal(trackerBytes(pmRoot), before, "refused binding changes must preserve every tracker byte");
+    for (const json of [[], ["--json"]]) for (const command of [["presets", "diff", "startup-roadmap"], ["presets", "--diff", "startup-roadmap"]]) {
+      assert.match(run([...command, "--param", "projectKey=beta", "--strict", ...json], 4), /templates\/initiative.json/);
+    }
+    run(["presets", "apply", "startup-roadmap", "--param", "projectKey=beta", "--force"]);
+    assert.equal(JSON.parse(run(["presets", "diff", "startup-roadmap", "--param", "projectKey=beta", "--strict", "--json"])).inSync, true);
+    const template = join(pmRoot, "templates", "initiative.json"), document = JSON.parse(readFileSync(template, "utf8"));
+    document.options.body += "\nManual edit";
+    writeFileSync(template, JSON.stringify(document));
+    assert.match(run(["presets", "diff", "startup-roadmap", "--param", "projectKey=beta", "--strict", "--json"], 4), /templates\/initiative.json/);
+    const unrelated = JSON.parse(readFileSync(join(pmRoot, "settings.json"), "utf8")).preset_artifacts.kanban.seedIds[0];
+    const card = join(pmRoot, "cards", `${unrelated}.toon`); assert.ok(existsSync(card));
+    writeFileSync(card, "invalid unrelated card");
+    run(["presets", "apply", "startup-roadmap", "--param", "projectKey=beta", "--force"]);
+    assert.equal(JSON.parse(run(["presets", "diff", "startup-roadmap", "--param", "projectKey=beta", "--strict", "--json"])).inSync, true);
+    assert.ok(run(["presets", "diff", "kanban", "--strict", "--json"], 4).includes(`items/${unrelated}`));
+  }
+});
 
 test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on non-git trackers", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-parameters-packed-"));
@@ -143,7 +194,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
     // Explicit reference destination remains safe through actual SDK dry-runs.
     writeFileSync(entry, fixture);
     for (const args of [["apply", "startup-roadmap"], ["roadmap-setup"]]) {
-      const output = run([...args, "--dry-run", "--param", `token=${secret}`]);
+      const output = run([...args, "--dry-run", "--force", "--param", `token=${secret}`]);
       assert.ok(output.includes("@PRESET_PACKED_TOKEN"));
       assert.ok(output.includes(secret));
     }
@@ -179,8 +230,8 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         const commands = [["presets", "list"], ["presets", "--list"], ["presets", "show", "startup-roadmap"], ["presets", "validate"],
           ["presets", "plan", "startup-roadmap"], ["presets", "stack", "--input", input], ["presets", "export", "reference-copy"], ["presets", "--custom", "reference-copy"],
           ["presets", "diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"], ["presets", "--diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"],
-          ["presets", "apply", "startup-roadmap", "--dry-run", "--with-seeds", "--param", "token=@PRESET_PACKED_TOKEN"],
-          ...entryPoints.slice(0, 7).map((args) => [...args, "--dry-run", "--param", "token=@PRESET_PACKED_TOKEN"])];
+          ["presets", "apply", "startup-roadmap", "--dry-run", "--force", "--with-seeds", "--param", "token=@PRESET_PACKED_TOKEN"],
+          ...entryPoints.slice(0, 7).map((args) => [...args, "--dry-run", "--force", "--param", "token=@PRESET_PACKED_TOKEN"])];
         for (const [index, command] of commands.entries()) {
           env.PRESET_PACKED_TOKEN = credentials[index % credentials.length];
           const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });

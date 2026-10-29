@@ -136,7 +136,7 @@ test("non-dry-run apply writes only the secret reference, never its credential",
   assert.equal(JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")).secret_references.token, "@REVIEW_TOKEN");
 });
 
-test("diff results redact secret values on both sides of every settings entry", () => {
+test("diff results redact secret values on both sides of every settings entry", async () => {
   const definition = {
     id: "startup-roadmap" as const,
     displayName: "Startup roadmap",
@@ -155,7 +155,7 @@ test("diff results redact secret values on both sides of every settings entry", 
     settings: { validation: { webhook_secret: "hunter2-secret" } } as Record<string, unknown>,
     templateNames: [],
   };
-  const result = computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot);
+  const result = await computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot);
   const serialized = JSON.stringify(result);
   assert.ok(!serialized.includes("hunter2-secret"), `the secret leaked into diff output: ${serialized}`);
   assert.ok(serialized.includes("<redacted>"), "diff entries must carry the redaction marker");
@@ -169,7 +169,7 @@ test("diff results redact secret values on both sides of every settings entry", 
   );
 });
 
-test("diff refuses unanswered required parameters with the typed remedy before reading the workspace", () => {
+test("diff refuses unanswered required parameters with the typed remedy before reading the workspace", async () => {
   const definition = {
     id: "startup-roadmap" as const,
     displayName: "Startup roadmap",
@@ -182,7 +182,7 @@ test("diff refuses unanswered required parameters with the typed remedy before r
     itemTypes: [],
     parameters: [{ name: "teamKey", type: "string", required: true, hasDefault: false, unanswered: true }],
   } as unknown as PresetDefinition;
-  assert.throws(
+  await assert.rejects(
     () => computeParameterizedDiff(definition, [{ name: "teamKey", type: "string", required: true }], {}, { settings: undefined, templateNames: [] }),
     (error: unknown) => {
       assert.match(String((error as { message: string }).message), /unanswered_parameter: .*teamKey/);
@@ -191,7 +191,7 @@ test("diff refuses unanswered required parameters with the typed remedy before r
   );
 });
 
-test("catalog projection displays declarations for required parameters without defaults", () => {
+test("catalog projection displays declarations for required parameters without defaults", async () => {
   const descriptor = {
     id: "startup-roadmap" as const,
     displayName: "Startup roadmap",
@@ -537,7 +537,7 @@ test("concurrent parameterized applies stay fully consistent under the lock", as
     assert.ok(!template.options.body.includes("${param:"));
   }
 });
-test("diff redacts the STORED credential at secret-bound paths during rotation", () => {
+test("diff redacts the STORED credential at secret-bound paths during rotation", async () => {
   const definition = {
     id: "startup-roadmap" as const,
     displayName: "Startup roadmap",
@@ -558,7 +558,7 @@ test("diff redacts the STORED credential at secret-bound paths during rotation",
     settings: { validation: { webhook_secret: "old-private-secret" } } as Record<string, unknown>,
     templateNames: [],
   };
-  const result = computeParameterizedDiff(
+  const result = await computeParameterizedDiff(
     definition,
     manifest,
     { token: "@REVIEW_TOKEN" },
@@ -573,7 +573,7 @@ test("diff redacts the STORED credential at secret-bound paths during rotation",
   assert.equal(entry.workspace, "<redacted>");
 });
 
-test("collectSecretSettingPaths reports every secret-bound settings leaf", () => {
+test("collectSecretSettingPaths reports every secret-bound settings leaf", async () => {
   const manifest: PresetParameterManifest = [
     { name: "token", type: "secret", required: true },
     { name: "key", type: "string", required: true, default: "k" },
@@ -604,7 +604,7 @@ test("dry-run redaction survives quote and backslash bearing secrets (values, no
   assert.ok(logs.some((line) => line.includes("@REVIEW_TOKEN")), "the patch dump must show the redaction marker");
 });
 
-test("redactSecretValuesDeep redacts structured values before serialization", () => {
+test("redactSecretValuesDeep redacts structured values before serialization", async () => {
   const redacted = redactSecretValuesDeep(
     { a: 'x abc"def y', nested: { b: ["abc\\def", "plain"] }, n: 5, flag: false },
     ['abc"def', "abc\\def"],
@@ -671,8 +671,8 @@ test("property: secret provenance protects rotated locations across scalar, arra
     const stored = [old, [old], { nested: old }, null, 42, undefined][index % 6];
     const snapshot = { settings: { hook: { token: stored }, testing: { record_results_to_items: false } }, templateNames: [] };
     const before = JSON.stringify({ raw, definition, snapshot });
-    for (const diff of [computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot), computePresetDiff(definition, snapshot),
-      computeParameterizedDiff(definition, manifest, {}, snapshot)]) {
+    for (const diff of [await computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot), await computePresetDiff(definition, snapshot),
+      await computeParameterizedDiff(definition, manifest, {}, snapshot)]) {
       const entry = diff.settings.find((entry) => entry.path === "hook.token");
       assert.equal(entry?.preset, "<redacted>");
       assert.equal(entry?.workspace, stored === undefined ? undefined : "<redacted>");
@@ -684,7 +684,7 @@ test("property: secret provenance protects rotated locations across scalar, arra
     // Direct SDK definitions without provenance still infer secrets in atomic arrays.
     for (const token of [["@REVIEW_TOKEN"], [{ nested: [null, 5, false, { credential: "@REVIEW_TOKEN" }] }]]) {
       const direct = { ...definition, settings: { ...definition.settings, hook: { token } }, secretSettingPaths: undefined };
-      assert.equal(computeParameterizedDiff(direct, manifest, { token: "@REVIEW_TOKEN" }, snapshot).settings.find((entry) => entry.path === "hook.token")?.workspace, stored === undefined ? undefined : "<redacted>");
+      assert.equal((await computeParameterizedDiff(direct, manifest, { token: "@REVIEW_TOKEN" }, snapshot)).settings.find((entry) => entry.path === "hook.token")?.workspace, stored === undefined ? undefined : "<redacted>");
     }
   }
 });
@@ -761,26 +761,26 @@ test("seed consumers refuse undeclared bindings even with an empty manifest", as
   } finally { PRESET_SEEDS["bug-triage"] = seeds; }
 });
 
-test("redaction helpers preserve nonsecret JSON and non-plain values without mutation", () => {
+test("redaction helpers preserve nonsecret JSON and non-plain values without mutation", async () => {
   const stamp = new Date(0);
   assert.deepEqual(redactSecretValuesDeep(stamp, []), stamp);
   assert.deepEqual(collectSecretSettingPaths({ empty: [], plain: [null, false, { value: "plain" }], stamp } as unknown as PresetSettingsPatch, []), []);
 });
 
-test("property: secret redaction preserves diff control fields for every status and identifier collision", () => {
+test("property: secret redaction preserves diff control fields for every status and identifier collision", async () => {
   for (const token of ["add", "change", "match", "startup-roadmap", "id_prefix", "validation", "token", "settings", "<redacted>"]) {
     const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
     const definition = { id: "startup-roadmap", settings: { id_prefix: "unit-", validation: { token }, testing: { record_results_to_items: false } },
-      templates: [{ name: "token", type: "Issue", optionKeys: [] }], itemTypes: [{ name: "token", aliases: [], options: [] }],
+      templates: [{ name: "token", type: "Issue", optionKeys: [] }], templateDocuments: { "token.json": storedTemplate("token", { type: "Issue" }) }, itemTypes: [{ name: "token", aliases: [], options: [] }],
       secretSettingPaths: ["validation.token"], parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }] } as unknown as PresetDefinition;
-    const diff = computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, { settings: { id_prefix: "unit-", validation: { token: "previous-credential" } }, templateNames: [] });
+    const diff = await computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, { settings: { id_prefix: "unit-", validation: { token: "previous-credential" } }, templateNames: [] });
     assert.equal(diff.presetId, "startup-roadmap");
     assert.deepEqual(diff.settings.map(({ path, status }) => ({ path, status })), [
       { path: "id_prefix", status: "match" }, { path: "validation.token", status: "change" }, { path: "testing.record_results_to_items", status: "add" },
     ]);
-    assert.deepEqual(diff.templates, { missing: ["token"], present: [] });
+    assert.deepEqual(diff.templates, { missing: ["token"], present: [], changed: [] });
     assert.deepEqual(diff.itemTypes, ["token"]);
-    assert.deepEqual(diff.summary, { settingsToAdd: 1, settingsToChange: 1, templatesMissing: 1 });
+    assert.deepEqual(diff.summary, { settingsToAdd: 1, settingsToChange: 1, templatesMissing: 1, templatesChanged: 0, seedsMissing: 0, seedsChanged: 0 });
     const sensitive = diff.settings.find((entry) => entry.path === "validation.token")!;
     assert.equal(sensitive.preset, "<redacted>");
     assert.equal(sensitive.workspace, "<redacted>");

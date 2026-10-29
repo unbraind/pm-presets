@@ -19,7 +19,7 @@ import { assertNoCredentials, secretCorpus, trackerBytes } from "./fixtures/para
 
 const descriptor = PRESET_REGISTRY.find((entry) => entry.id === "startup-roadmap")!;
 
-test("property: every secret-reference destination redacts legacy values independently of parameter provenance", () => {
+test("property: every secret-reference destination redacts legacy values independently of parameter provenance", async () => {
   const credentials = secretCorpus();
   const manifests: PresetParameterManifest[] = [[], [{ name: "unused", type: "secret", required: false }], [{ name: "public", type: "string", required: false, default: "safe" }]];
   for (const [index, credential] of credentials.entries()) {
@@ -34,7 +34,7 @@ test("property: every secret-reference destination redacts legacy values indepen
         for (const legacy of [credential, [credential, { nested: credential }], { nested: [credential] }, null, false, 7, "@PREVIOUS_TOKEN"]) {
           const snapshot = { settings: { id_prefix: "safe-", secret_references: { [key]: legacy } }, templateNames: [] };
           const before = JSON.stringify({ definition, snapshot });
-          for (const diff of [computePresetDiff(definition, snapshot), computeParameterizedDiff(definition, manifest, {}, snapshot)]) {
+          for (const diff of [await computePresetDiff(definition, snapshot), await computeParameterizedDiff(definition, manifest, {}, snapshot)]) {
             assertNoCredentials(JSON.stringify(diff), credentials);
             const entry = diff.settings.find((entry) => entry.path === `secret_references.${key}`)!;
             assert.equal(entry.preset, "@NEW_TOKEN");
@@ -45,7 +45,7 @@ test("property: every secret-reference destination redacts legacy values indepen
           assert.equal(JSON.stringify({ definition, snapshot }), before);
         }
         for (const current of [undefined, "@NEW_TOKEN"]) {
-          const diff = computeParameterizedDiff(definition, manifest, {}, { settings: current === undefined ? {} : settings, templateNames: [] });
+          const diff = await computeParameterizedDiff(definition, manifest, {}, { settings: current === undefined ? {} : settings, templateNames: [] });
           const entry = diff.settings.find((entry) => entry.path === `secret_references.${key}`)!;
           assert.equal(entry.workspace, current);
           assert.equal(entry.status, current === undefined ? "add" : "match");
@@ -59,7 +59,7 @@ test("property: every secret-reference destination redacts legacy values indepen
   assert.deepEqual(collectSecretSettingPaths(settings, []), ["secret_references.count", "secret_references.empty", "secret_references.list", "secret_references.nested.flag"]);
   assert.deepEqual(collectSecretSettingPaths({ secret_references: ["@TOKEN"] } as unknown as PresetSettingsPatch, []), ["secret_references"]);
   const definition = { ...projectPresetDefinition(descriptor, { parameters: [], settings: { id_prefix: "safe-" }, templates: {} }), settings };
-  const diff = computePresetDiff(definition, { settings: { secret_references: { list: credentials[0], nested: { flag: credentials[0] }, empty: credentials[0], count: credentials[0] } }, templateNames: [] });
+  const diff = await computePresetDiff(definition, { settings: { secret_references: { list: credentials[0], nested: { flag: credentials[0] }, empty: credentials[0], count: credentials[0] } }, templateNames: [] });
   assertNoCredentials(JSON.stringify(diff), credentials);
   assert.ok(diff.settings.filter((entry) => entry.path.startsWith("secret_references.")).every((entry) => entry.workspace === "<redacted>"));
 });

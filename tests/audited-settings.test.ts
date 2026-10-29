@@ -64,7 +64,7 @@ test("a missing host settings capability refuses application before any write", 
   const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
   await assert.rejects(async () => applyPreset({ command: "presets apply", args: [], options: {}, global: {}, pm_root: pmRoot }, {
     label: "Indie", settings: { id_prefix: "indie-" }, templates: {}, nextSteps: [],
-  }), /2026\.9\.30.*audited settings/i);
+  }), /2026\.10\.25.*audited settings/i);
   assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
 });
 

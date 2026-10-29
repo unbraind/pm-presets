@@ -52,7 +52,7 @@ export interface PresetParameter {
 /** A preset's parameter manifest: every parameter declared exactly once. */
 export type PresetParameterManifest = readonly PresetParameter[];
 /** Stable refusal categories agents can branch on without parsing prose. */
-export type ParameterRefusalCode = "invalid_manifest" | "invalid_param_flag" | "invalid_params_file" | "unknown_parameter" | "unanswered_parameter" | "invalid_value" | "invalid_secret_reference" | "unavailable_secret_reference" | "unknown_binding" | "malformed_binding" | "secret_in_public_prose" | "invalid_binding_location";
+export type ParameterRefusalCode = "stale_artifacts" | "invalid_artifact_record" | "artifact_unreadable" | "artifact_capability_missing" | "artifact_write_failed" | "invalid_manifest" | "invalid_param_flag" | "invalid_params_file" | "unknown_parameter" | "unanswered_parameter" | "invalid_value" | "invalid_secret_reference" | "unavailable_secret_reference" | "unknown_binding" | "malformed_binding" | "secret_in_public_prose" | "invalid_binding_location";
 /**
  * Actionable, privacy-safe refusal.
  *

@@ -30,14 +30,15 @@ function isJsonObject(value) {
 }
 /** Pure: assemble an ExportedPreset from already-read workspace inputs. */
 export function buildExportedPreset(input) {
-    const settings = input.settings ?? {};
+    const sourceSettings = input.settings ?? {};
     // Export is a tracked-file/output sink too. Refuse invalid reference storage
     // and legacy unresolved bindings rather than publishing a new copy of them.
     resolveParameterizedPreset([], {}, {
-        settings: settings,
+        settings: sourceSettings,
         templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])),
     });
-    const idPrefixRaw = settings["id_prefix"];
+    const settings = Object.fromEntries(Object.entries(sourceSettings).filter(([key]) => key !== "preset_artifacts"));
+    const idPrefixRaw = Object.hasOwn(settings, "id_prefix") ? settings["id_prefix"] : undefined;
     const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
     const now = input.now ?? new Date();
     const templates = [...input.templates].sort((left, right) => left.name.localeCompare(right.name));

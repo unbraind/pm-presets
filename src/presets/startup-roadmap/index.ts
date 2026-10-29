@@ -111,6 +111,7 @@ export const TEMPLATES = {
  */
 export async function runStartupRoadmapSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "startup-roadmap",
     label: "Startup roadmap",
     settings: SETTINGS,
     templates: TEMPLATES,

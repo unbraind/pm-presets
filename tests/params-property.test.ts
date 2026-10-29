@@ -286,17 +286,18 @@ test("model-based property sequences round-trip parameters through the SDK again
         governance: "custom" as const,
         settings: { id_prefix: `${value}-` },
         templates: ["initiative", "feature", "milestone"].map((name) => ({ name, type: "Feature", optionKeys: [] })),
+        templateDocuments: JSON.parse(JSON.stringify(TEMPLATES).replaceAll("${param:projectKey}", value)),
         itemTypes: [],
         parameters: [],
       };
-      const result = computePresetDiff(definition, readWorkspaceSnapshot(activePmDir));
+      const result = await computePresetDiff(definition, await readWorkspaceSnapshot(activePmDir));
       assert.equal(result.inSync, sdkSettings.id_prefix === `${value}-`, "diff preview must agree with the reference model");
     }
   }
   assert.ok(history.length > 50, `expected many applied sequences, got ${history.length}`);
 });
 
-test("synthetic manifests resolve to the generator's expected strings or typed refusals", () => {
+test("synthetic manifests resolve to the generator's expected strings or typed refusals", async () => {
   const rng = mulberry32(SEED ^ 0x5f5f);
   for (let sequence = 0; sequence < 600; sequence += 1) {
     const nameCount = 1 + Math.floor(rng() * 3);

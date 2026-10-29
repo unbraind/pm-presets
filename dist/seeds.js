@@ -203,7 +203,7 @@ export async function runPresetSeeds(pmRoot, presetId, options) {
     console.log("");
     console.log(`Seeding ${seeds.length} starter item(s)...`);
     if (typeof options.client?.create !== "function") {
-        throw new CommandError("Preset seeds require the host SDK client.create capability. Run with a pm CLI host >=2026.9.30.");
+        throw new CommandError("Preset seeds require the host SDK client.create capability. Run with a pm CLI host >=2026.10.25.");
     }
     const seedResult = await seedPresetItems(options.client, presetId, options.parameterValues);
     for (const detail of seedResult.details) {

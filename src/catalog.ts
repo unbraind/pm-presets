@@ -17,7 +17,7 @@ import type {
   PresetTemplateMap,
   StoredCreateTemplateDocument,
 } from "./presets/shared.ts";
-import { resolvedSeedsForPreset } from "./seeds.ts";
+import { resolvedSeedsForPreset, type SeedItem } from "./seeds.ts";
 import { CommandError, EXIT_CODE } from "./presets/shared.ts";
 import {
   PRESET_REGISTRY,
@@ -78,6 +78,10 @@ export interface PresetDefinition {
   settings: PresetSettingsPatch;
   /** Templates this preset installs. */
   templates: PresetTemplateView[];
+  /** Complete resolved template payloads used by application and drift detection. */
+  templateDocuments?: PresetTemplateMap;
+  /** Fully resolved starter-item payloads, selected when enrolled or requested. */
+  seedItems?: SeedItem[];
   /** Custom item types registered at activation (kanban only today). */
   itemTypes: PresetItemTypeView[];
   /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */
@@ -179,6 +183,7 @@ export function projectPresetDefinition(
     governance: descriptor.governance,
     settings: resolved.settings,
     templates,
+    templateDocuments: resolved.templates,
     itemTypes: projectItemTypeViews(raw.itemTypes),
     parameters: resolved.parameterViews,
     secretSettingPaths: collectSecretSettingPaths(raw.settings, raw.parameters),
@@ -262,8 +267,8 @@ function buildDefinition(
     throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
   }
   // Destination policy is authoring validation, even when no seeds are selected.
-  resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
-  return projectPresetDefinition(descriptor, raw, supplied);
+  const seedItems = resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
+  return { ...projectPresetDefinition(descriptor, raw, supplied), seedItems };
 }
 
 /** All preset definitions in registry order. */

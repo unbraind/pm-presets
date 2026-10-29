@@ -60,6 +60,7 @@ export const TEMPLATES = {
  */
 export async function runOpenSourceSetup(context) {
     await applyPreset(context, {
+        presetId: "open-source",
         label: "Open source",
         settings: SETTINGS,
         templates: TEMPLATES,

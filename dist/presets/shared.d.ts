@@ -126,6 +126,8 @@ export declare function mergePresetSettings(existing: JsonObject, patch: JsonObj
  */
 export declare function applyPreset(context: CommandHandlerContext, input: {
     label: string;
+    /** Bundled id used to maintain the complete managed seed inventory. */
+    presetId?: string;
     settings: PresetSettingsPatch;
     templates: PresetTemplateMap;
     nextSteps: string[];

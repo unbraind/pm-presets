@@ -179,12 +179,15 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
   assert.equal(effective.governance.workflow_enforcement, undefined);
   assert.equal((afterReplace.testing as { record_results_to_items: boolean }).record_results_to_items, false);
 
-  await applyPreset(context(pmDir), {
+  await applyPreset(context(pmDir), { label: "Matching", settings: { id_prefix: "indie-" }, templates: { "idea.json": storedTemplate("idea", { type: "Decision" }) }, nextSteps: [] });
+  const beforeRefusal = readFileSync(join(pmDir, "settings.json"), "utf8");
+  await assert.rejects(() => applyPreset(context(pmDir), {
     label: "Indie dev",
     settings: { id_prefix: "indie-" },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) },
     nextSteps: [],
-  });
+  }), { code: "stale_artifacts", exitCode: 2 });
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), beforeRefusal);
   assert.ok(warns.some((line) => line.includes("Skipped existing template")));
   const skipped = JSON.parse(readFileSync(join(pmDir, "templates", "idea.json"), "utf8")) as {
     options: { priority?: string };
@@ -218,7 +221,8 @@ test("applyPreset preview respects existing templates and force without writes",
   t.mock.method(console, "log", (...args: unknown[]) => { lines.push(args.map(String).join(" ")); });
   t.mock.method(console, "warn", (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); });
   const input = { label: "Preview", settings: { id_prefix: "preview-" }, templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) }, nextSteps: [] };
-  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), input);
+  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), { ...input, templates: { "idea.json": storedTemplate("idea", { type: "Task", priority: "1" }) } });
+  await assert.rejects(() => applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), input), { code: "stale_artifacts", exitCode: 2 });
   assert.ok(warnings.some((line) => line.includes("Skipped existing template")));
   assert.ok(!lines.some((line) => line.includes("Would write template")));
   lines.length = 0;

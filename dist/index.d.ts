@@ -44,4 +44,10 @@ export { PRESET_PARAMETERS } from "./registry.ts";
 export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
 export type { ResolvedPresetApplication } from "./apply-command.ts";
 export { resolvedSeedsForPreset } from "./seeds.ts";
+export { computeDesiredPresetState, compareDesiredPresetState } from "./desired-state.ts";
+export type { DesiredPresetState, PresetArtifactRecord } from "./desired-state.ts";
+export { computePresetDiff, computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.ts";
+export type { PresetDiff, WorkspaceSnapshot } from "./diff.ts";
+export { requirePresetDefinition } from "./catalog.ts";
+export type { PresetDefinition } from "./catalog.ts";
 //# sourceMappingURL=index.d.ts.map

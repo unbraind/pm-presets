@@ -1,5 +1,7 @@
 # pm-presets
 
+Requires pm CLI **2026.10.25 or newer** for complete artifact reconciliation and owned settings replacement.
+
 All 7 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
 
 Install once, get all preset setup commands:
@@ -46,7 +48,7 @@ All setup commands share the same flags:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--force` | `-f` | Overwrite existing preset template files |
+| `--force` | `-f` | Reconcile changed preset templates and managed seed contents |
 | `--dry-run` | `-n` | Preview changes without writing any files |
 | `--prefix` | `-p` | Override the id_prefix in settings.json |
 | `--param <name>=<value>` | | Supply a declared preset parameter (repeatable; see [Preset parameters](#preset-parameters)) |
@@ -65,7 +67,7 @@ management surface plus a generic `apply`:
 |---|---|
 | `pm presets list` | Enumerate every bundled preset and what it configures (governance, built-in + custom item types, templates). |
 | `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
-| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. Add `--strict` to exit non-zero on drift (CI/compliance). |
+| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, including missing or changed complete templates and managed seed contents. Add `--strict` to exit non-zero on drift (CI/compliance). |
 | `pm presets plan <id>` | Negotiate operational prerequisites before mutation; use `--composition` and `--target` for composed/provider plans. Missing required contracts exit 2. |
 | `pm presets stack --input stack.json` | Preview a canonical preset stack; conflicting settings, templates and seed identities require explicit owner choices. |
 | `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
@@ -114,7 +116,7 @@ plus:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--with-seeds` | `-s` | Also create the preset's starter items after applying it. |
+| `--with-seeds` | `-s` | Enroll the preset's starter items as managed artifacts, creating missing items and reconciling them with later bindings. |
 | `--replace` | | Full-replace the `governance` / `validation` / `testing` trees with the preset's instead of deep-merging them. |
 
 **Idempotency & safety.** `apply` is safe to re-run:
@@ -129,21 +131,32 @@ plus:
 - `--replace` instead **swaps the `governance` / `validation` / `testing` trees
   wholesale** with the preset's trees — resetting omitted keys to host defaults
   and deriving named governance policies, for a clean reset. The host serializer
-  retains unrecognized stored fields. Unrelated top-level settings (`id_prefix`,
-  `telemetry`, `locks`, …) are still preserved in both modes.
-- Templates are **skipped if a file with that name already exists**; pass
-  `--force` to overwrite them.
+  preserves unrelated top-level settings. Omitted raw keys inside the three
+  replaced trees are removed. Unowned top-level settings (`telemetry`, `locks`,
+  …) remain preserved in both modes; the preset still sets `id_prefix`.
+- Existing templates are skipped only when their complete JSON documents already
+  match. A non-force apply that would leave changed templates or managed seeds
+  returns `stale_artifacts` (exit 2), naming their relative paths, before changing
+  settings or history. Inspect the changes and use `--force` to reconcile them.
+- Apply and diff share one desired-state planner for settings keys, complete
+  template documents, managed seed content and seed ownership. A successful real
+  apply verifies that complete postcondition before reporting success.
 - `--dry-run` previews every settings merge/replace, template write, and seed
-  item without touching disk.
+  item without writing workspace settings, templates, items or history. The host
+  may acquire an audit lock; replacement normalization uses isolated public settings.
 
 ### Drift detection: `presets diff --strict`
 
 `presets diff <id> --strict` reuses the diff logic but **exits non-zero (code
-`4`)** when the workspace is not in sync with the named preset — settings to
-add/change or templates missing. It prints what drifted (human summary, or the
+`4`)** when any managed artifact differs: settings keys, full template JSON
+documents (including options and metadata), or managed seed contents. It prints what drifted (human summary, or the
 full diff with `--json`) before exiting, so CI logs explain the failure. When
 the workspace already matches the preset it exits `0`. Plain `presets diff`
-(without `--strict`) always exits `0` and just reports.
+(without `--strict`) reports structured drift with `templates.changed`, seed
+missing/changed entries and an `artifacts` list of relative paths. Both diff forms
+accept `--prefix`, `--replace` and `--with-seeds` to mirror application choices.
+Invalid inputs still refuse with a typed error. Unreadable artifacts remain
+named drift and can never produce a synchronized result.
 
 ```bash
 # Fail a compliance/CI job if the workspace drifts from the locked preset:
@@ -164,16 +177,25 @@ pm presets export our-config --output our-config.preset.json --display-name "Our
 ```
 
 The exported document is `$schema: "pm-presets/exported-preset@1"` and records
-`settings` + `templates`. **Custom item-field _values_ are not captured**:
+`settings` + `templates`. Workspace-local `preset_artifacts` ownership is excluded;
+a portable preset cannot adopt another tracker's item ids. **Custom item-field _values_ are not captured**:
 custom scalar fields have no `pm create --<field>` setter today (pm-cli #97),
 so the snapshot reconstructs the preset from settings + templates only.
 
-**Seed creation.** `--with-seeds` uses the host SDK client and the invocation's
-workspace, author and active schema. It needs neither a `pm` executable on PATH
-nor git. Each seed remains independent: native validation failures are reported
-per item, successful seeds stay created, and any failure exits nonzero. Dry runs
-retain the same preview. Failures show the native SDK validation detail instead
-of the subprocess CLI's generic error headline. A missing host `client.create` capability fails clearly.
+**Managed seeds.** `--with-seeds` uses the host SDK client and active schema;
+it needs neither a `pm` executable on PATH nor git. Stable preset/slot item ids
+are recorded in `settings.preset_artifacts` and recovered from the host's verified
+append-only workspace audit. Removing the settings record cannot hide stale or
+missing seeds from diff. Older unmanaged starter items are not adopted implicitly. Once enrolled, later applies and
+diffs include those seeds even without repeating `--with-seeds`; prefix changes
+keep their established ids and update the controlled type/title/priority/tags/body
+and explicit no-parent state. Existing item lifecycle and unrelated user metadata
+remain host-owned. Reapplying matching content creates no duplicate seeds.
+
+Settings, template and seed writes share one apply admission. A preflight checks
+overwrite conflicts before settings/history mutation. Native write failures exit
+nonzero; completed audited writes remain recorded, and retrying reconciles missing
+artifacts. Seed reads use the SDK locator/parser and emit no usage/cache writes.
 
 **Seeds and custom fields.** Starter items created by `--with-seeds` set only
 **built-in** fields (`type`, `title`, `priority`, `tags`, `body`). Custom scalar
@@ -594,3 +616,15 @@ Seed rows describe prospective catalog contributions, without claiming existing
 items by title. Plans are observations, not transactions or replayable authority;
 replan after peer changes. Target classifications always read current settings
 and templates. See [the stack example](docs/stack-example.md).
+
+SDK callers can await `computeDesiredPresetState`, `computePresetDiff`,
+`computeParameterizedDiff` and `readWorkspaceSnapshot`; `requirePresetDefinition`
+provides resolved bundled template/seed payloads. JSON and TOON commands use
+these same APIs. SDK diff requires complete `templateDocuments` for every
+declared template and an explicit `seedItems` inventory for seed comparisons;
+summary-only definitions refuse. Final overrides and payloads must be resolved.
+Legacy SDK settings projections remain redacted and cannot report synchronization
+when application would reject their settings.
+
+Development checks use `npm run check` for typechecking and `npm run lint` for
+compiler-backed unused-local/parameter checks with the pinned TypeScript version.

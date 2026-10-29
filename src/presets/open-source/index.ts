@@ -76,6 +76,7 @@ export const TEMPLATES = {
  */
 export async function runOpenSourceSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "open-source",
     label: "Open source",
     settings: SETTINGS,
     templates: TEMPLATES,

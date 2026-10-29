@@ -94,6 +94,7 @@ export const TEMPLATES = {
  */
 export async function runSoftwareSprintSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "software-sprint",
     label: "Software sprint",
     settings: SETTINGS,
     templates: TEMPLATES,

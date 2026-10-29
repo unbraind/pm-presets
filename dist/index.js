@@ -37,7 +37,6 @@ import { registerUpgradeCommands } from "./upgrade-command.js";
 import { buildListRows, requirePresetDefinition, requireValidPresets, validateAllPresets, } from "./catalog.js";
 import { computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.js";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
-import { runPresetSeeds } from "./seeds.js";
 import { parameterSafeApi } from "./command-errors.js";
 import { ParameterRefusal, parseParameterFlagEntries, readSuppliedParameterValues } from "./params.js";
 import { PRESET_PARAMETERS } from "./registry.js";
@@ -91,7 +90,7 @@ const COMMON_FLAGS = [
         long: "--force",
         short: "-f",
         value_type: "boolean",
-        description: "Overwrite existing settings.json and template files without prompting.",
+        description: "Reconcile changed preset templates and managed starter-item contents.",
     },
     {
         long: "--dry-run",
@@ -116,7 +115,7 @@ const APPLY_FLAGS = [
         long: "--with-seeds",
         short: "-s",
         value_type: "boolean",
-        description: "Also create the preset's starter items (built-in fields only; see #97).",
+        description: "Enroll starter items in managed preset state (built-in fields only; see #97).",
     },
     {
         long: "--replace",
@@ -133,6 +132,9 @@ const DIFF_FLAGS = [
         description: "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
     },
     ...PARAM_FLAGS,
+    { long: "--with-seeds", value_type: "boolean", description: "Include managed starter-item contents in the desired-state comparison." },
+    { long: "--prefix", value_name: "<prefix>", value_type: "string", description: "Compare against the same prefix override as apply." },
+    { long: "--replace", value_type: "boolean", description: "Compare replacement settings semantics." },
 ];
 // `presets export` writes to a file or stdout and can carry a display name.
 const EXPORT_FLAGS = [
@@ -155,6 +157,9 @@ const EXPORT_FLAGS = [
 // --custom <name>` from a single entry point. The subcommands (`presets list`,
 // `presets diff`, `presets export`) remain available with identical behavior.
 const PRESETS_FLAGS = [
+    { long: "--with-seeds", value_type: "boolean", description: "With --diff: compare managed starter-item contents." },
+    { long: "--prefix", value_name: "<prefix>", value_type: "string", description: "With --diff: use the same prefix override as apply." },
+    { long: "--replace", value_type: "boolean", description: "With --diff: compare replacement settings semantics." },
     {
         long: "--list",
         value_type: "boolean",
@@ -275,7 +280,7 @@ export default defineExtension({
                 "pm presets --custom our-config --output our-config.preset.json",
             ],
             flags: PRESETS_FLAGS,
-            run: (ctx) => {
+            run: async (ctx) => {
                 const options = ctx.options ?? {};
                 const list = readBooleanOption(options, "list");
                 const diffId = readStringOption(options, "diff");
@@ -305,8 +310,8 @@ export default defineExtension({
                 if (diffId) {
                     const supplied = readSuppliedParameterValues(options);
                     const definition = requirePresetDefinition(diffId, supplied);
-                    const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-                    const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
+                    const snapshot = await readWorkspaceSnapshot(resolvePmDir(ctx), ctx.sdk?.client);
+                    const result = await computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot, { withSeeds: readBooleanOption(ctx.options, "withSeeds", "with-seeds"), prefix: readStringOption(ctx.options, "prefix"), replace: readBooleanOption(ctx.options, "replace") });
                     const strict = readBooleanOption(options, "strict");
                     if (strict && !result.inSync) {
                         // `--json` is host-owned; read it from ctx.global.
@@ -318,7 +323,7 @@ export default defineExtension({
                             const { settingsToAdd, settingsToChange, templatesMissing } = result.summary;
                             console.error("Workspace is NOT in sync with preset '" + definition.id + "': " +
                                 settingsToAdd + " setting(s) to add, " + settingsToChange + " to change, " +
-                                templatesMissing + " template(s) missing.");
+                                templatesMissing + " template(s) missing. Drifted artifacts: " + result.artifacts.join(", "));
                         }
                         throw new PresetError("Workspace drifted from preset '" + definition.id + "'.", EXIT_CODE_DRIFT);
                     }
@@ -386,11 +391,11 @@ export default defineExtension({
                 { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
             ],
             flags: DIFF_FLAGS,
-            run: (ctx) => {
+            run: async (ctx) => {
                 const supplied = readSuppliedParameterValues(ctx.options);
                 const definition = requirePresetDefinition(ctx.args?.[0], supplied);
-                const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-                const result = computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot);
+                const snapshot = await readWorkspaceSnapshot(resolvePmDir(ctx), ctx.sdk?.client);
+                const result = await computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot, { withSeeds: readBooleanOption(ctx.options, "withSeeds", "with-seeds"), prefix: readStringOption(ctx.options, "prefix"), replace: readBooleanOption(ctx.options, "replace") });
                 const strict = readBooleanOption(ctx.options, "strict");
                 if (strict && !result.inSync) {
                     // Drift detected. Print the diff (respecting --json) so CI logs show
@@ -404,7 +409,7 @@ export default defineExtension({
                         const { settingsToAdd, settingsToChange, templatesMissing } = result.summary;
                         console.error(`Workspace is NOT in sync with preset '${definition.id}': ` +
                             `${settingsToAdd} setting(s) to add, ${settingsToChange} to change, ` +
-                            `${templatesMissing} template(s) missing.`);
+                            `${templatesMissing} template(s) missing. Drifted artifacts: ${result.artifacts.join(", ")}`);
                     }
                     throw new PresetError(`Workspace drifted from preset '${definition.id}'.`, EXIT_CODE_DRIFT);
                 }
@@ -507,17 +512,6 @@ export default defineExtension({
                 const application = resolvePresetApplication(ctx);
                 const handler = PRESET_HANDLERS[application.definition.id];
                 await handler(contextWithResolvedParameters(ctx, application));
-                if (!application.withSeeds) {
-                    return;
-                }
-                // Seeds use the SAME effective values that settings and templates
-                // used (one value reaches every declared occurrence), never a re-read
-                // of the caller's input.
-                await runPresetSeeds(resolvePmDir(ctx), application.definition.id, {
-                    client: ctx.sdk?.client,
-                    dryRun: application.dryRun,
-                    parameterValues: application.parameters.values,
-                });
             },
         });
         // ── create-template runtime ─────────────────────────────────────────────
@@ -562,4 +556,7 @@ export { ParameterRefusal, isSecretReference, resolveSecretReference, assertReso
 export { PRESET_PARAMETERS } from "./registry.js";
 export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 export { resolvedSeedsForPreset } from "./seeds.js";
+export { computeDesiredPresetState, compareDesiredPresetState } from "./desired-state.js";
+export { computePresetDiff, computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.js";
+export { requirePresetDefinition } from "./catalog.js";
 //# sourceMappingURL=index.js.map

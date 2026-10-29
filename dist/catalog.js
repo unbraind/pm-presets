@@ -78,6 +78,7 @@ export function projectPresetDefinition(descriptor, raw, supplied) {
         governance: descriptor.governance,
         settings: resolved.settings,
         templates,
+        templateDocuments: resolved.templates,
         itemTypes: projectItemTypeViews(raw.itemTypes),
         parameters: resolved.parameterViews,
         secretSettingPaths: collectSecretSettingPaths(raw.settings, raw.parameters),
@@ -152,8 +153,8 @@ function buildDefinition(descriptor, supplied) {
         throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
     }
     // Destination policy is authoring validation, even when no seeds are selected.
-    resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
-    return projectPresetDefinition(descriptor, raw, supplied);
+    const seedItems = resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
+    return { ...projectPresetDefinition(descriptor, raw, supplied), seedItems };
 }
 /** All preset definitions in registry order. */
 export function listPresetDefinitions() {

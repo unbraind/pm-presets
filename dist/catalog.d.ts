@@ -11,6 +11,7 @@
  * keeps it unit-testable with `node --test` and side-effect free.
  */
 import type { PresetSettingsPatch, PresetTemplateMap, StoredCreateTemplateDocument } from "./presets/shared.ts";
+import { type SeedItem } from "./seeds.ts";
 import { type PresetDescriptor, type PresetId } from "./registry.ts";
 import { type PresetParameterManifest, type PresetParameterView } from "./params.ts";
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
@@ -42,6 +43,10 @@ export interface PresetDefinition {
     settings: PresetSettingsPatch;
     /** Templates this preset installs. */
     templates: PresetTemplateView[];
+    /** Complete resolved template payloads used by application and drift detection. */
+    templateDocuments?: PresetTemplateMap;
+    /** Fully resolved starter-item payloads, selected when enrolled or requested. */
+    seedItems?: SeedItem[];
     /** Custom item types registered at activation (kanban only today). */
     itemTypes: PresetItemTypeView[];
     /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */

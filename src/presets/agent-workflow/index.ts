@@ -107,6 +107,7 @@ export const TEMPLATES = {
  */
 export async function runAgentWorkflowSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "agent-workflow",
     label: "Agent workflow",
     settings: SETTINGS,
     templates: TEMPLATES,
