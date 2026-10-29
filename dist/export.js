@@ -20,6 +20,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { resolveParameterizedPreset } from "./params.js";
 import { loadTemplateSdk } from "./presets/shared.js";
 const EXPORT_NOTE = "Custom item-field values are not captured: custom scalar fields have no " +
     "`pm create --<field>` setter (pm-cli #97). This snapshot reconstructs the " +
@@ -30,6 +31,12 @@ function isJsonObject(value) {
 /** Pure: assemble an ExportedPreset from already-read workspace inputs. */
 export function buildExportedPreset(input) {
     const settings = input.settings ?? {};
+    // Export is a tracked-file/output sink too. Refuse invalid reference storage
+    // and legacy unresolved bindings rather than publishing a new copy of them.
+    resolveParameterizedPreset([], {}, {
+        settings: settings,
+        templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])),
+    });
     const idPrefixRaw = settings["id_prefix"];
     const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
     const now = input.now ?? new Date();

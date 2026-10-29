@@ -38,7 +38,8 @@ import { buildListRows, requirePresetDefinition, requireValidPresets, validateAl
 import { computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.js";
 import { buildExportedPreset, readWorkspaceSettings, readWorkspaceTemplates, } from "./export.js";
 import { runPresetSeeds } from "./seeds.js";
-import { readSuppliedParameterValues } from "./params.js";
+import { parameterSafeApi } from "./command-errors.js";
+import { ParameterRefusal, parseParameterFlagEntries, readSuppliedParameterValues } from "./params.js";
 import { PRESET_PARAMETERS } from "./registry.js";
 import { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 import * as fs from "node:fs";
@@ -202,6 +203,7 @@ const PRESETS_FLAGS = [
 const defineExtension = (module) => module;
 export default defineExtension({
     activate(api) {
+        api = parameterSafeApi(api);
         registerUpgradeCommands(api);
         registerPlanCommand(api);
         registerStackCommand(api);
@@ -289,6 +291,10 @@ export default defineExtension({
                 const chosen = [list, Boolean(diffId), Boolean(customName)].filter(Boolean).length;
                 if (chosen > 1) {
                     throw new PresetError("Specify only one of --list, --diff, or --custom at a time.", EXIT_CODE_USAGE);
+                }
+                if (!diffId && (parseParameterFlagEntries(options.param).length > 0
+                    || [options.paramsFile, options["params-file"]].some((value) => value !== undefined && value !== null))) {
+                    throw new ParameterRefusal("invalid_param_flag", "Use parameter inputs only with --diff <preset>, presets apply, or a setup command.");
                 }
                 if (list) {
                     return {
@@ -552,7 +558,7 @@ export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulatio
 export { comparePresetUpgrade, planPresetUpgrade, executePresetUpgrade, parseUpgradeReceipt, summarizePresetUpgrade, UpgradeRefusal } from "./upgrade.js";
 export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanRefusal } from "./plan.js";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.js";
-export { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, collectParameterValues, collectSecretSettingPaths, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
+export { ParameterRefusal, isSecretReference, resolveSecretReference, assertResolvedParameterValues, buildParameterViews, collectParameterValues, collectSecretSettingPaths, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.js";
 export { PRESET_PARAMETERS } from "./registry.js";
 export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.js";
 export { resolvedSeedsForPreset } from "./seeds.js";

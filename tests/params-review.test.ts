@@ -4,7 +4,7 @@
  * class (not just the reported line):
  *
  *  1. Secret parameter values never enter ANY emitted surface (dry-run patch
- *     dumps, diff results, show output) — only the settings file apply writes.
+ *     dumps, diff results, show output) — references are stored, credentials stay external.
  *  2. Read surfaces display declarations; a required parameter without a
  *     default must not break `show`, and apply must honor `--param`.
  *  3. Seed bindings validate before the setup handler writes anything.
@@ -76,7 +76,7 @@ function context(pmDir: string, client: Client, options: Record<string, unknown>
 /** A parameterized preset shape for direct applyPreset calls. */
 const SECRET_PRESET = {
   label: "Review",
-  settings: { id_prefix: "${param:token}-" } as PresetSettingsPatch,
+  settings: { id_prefix: "review-", secret_references: { token: "${param:token}" } } as PresetSettingsPatch,
   templates: {} as PresetTemplateMap,
   parameters: [{ name: "token", type: "secret", required: true }] as PresetParameterManifest,
   nextSteps: [],
@@ -118,21 +118,22 @@ test("dry-run apply redacts secret values from every emitted line", async (t) =>
   const { pmDir } = await workspace(t);
   const client = new Client({ pmRoot: pmDir, noExtensions: true });
   const logs = await captureOutput(() =>
-    applyPreset(context(pmDir, client, { param: ["token=hunter-two"], dryRun: true }), SECRET_PRESET));
+    applyPreset(context(pmDir, client, { param: ["token=@REVIEW_TOKEN"], dryRun: true }), SECRET_PRESET));
   const joined = logs.join("\n");
   assert.ok(!joined.includes("hunter-two"), `the secret leaked into dry-run output: ${joined}`);
-  assert.ok(logs.some((line) => line.includes("<redacted>")), "the patch dump must show the redaction marker");
+  assert.ok(logs.some((line) => line.includes("@REVIEW_TOKEN")), "the patch dump must show the redaction marker");
   assert.ok(!existsSync(join(pmDir, "templates")), "dry-run must not write");
 });
 
-test("non-dry-run apply writes the secret only into settings, never output", async (t) => {
+test("non-dry-run apply writes only the secret reference, never its credential", async (t) => {
   const { pmDir } = await workspace(t);
   const client = new Client({ pmRoot: pmDir, noExtensions: true });
   const logs = await captureOutput(() =>
-    applyPreset(context(pmDir, client, { param: ["token=hunter-two"] }), SECRET_PRESET));
+    applyPreset(context(pmDir, client, { param: ["token=@REVIEW_TOKEN"] }), SECRET_PRESET));
   assert.ok(!logs.join("\n").includes("hunter-two"), "the secret leaked into apply output");
   const settings = await readSettings(pmDir);
-  assert.equal(settings.id_prefix, "hunter-two-", "the secret belongs only in the private settings file");
+  assert.equal(settings.id_prefix, "review-");
+  assert.equal(JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")).secret_references.token, "@REVIEW_TOKEN");
 });
 
 test("diff results redact secret values on both sides of every settings entry", () => {
@@ -146,6 +147,7 @@ test("diff results redact secret values on both sides of every settings entry", 
     settings: { id_prefix: "rev-", validation: { webhook_secret: "hunter2-secret" }, testing: { record_results_to_items: false } },
     templates: [],
     itemTypes: [],
+    secretSettingPaths: ["validation.webhook_secret"],
     parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }],
   } as unknown as PresetDefinition;
   const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
@@ -153,7 +155,7 @@ test("diff results redact secret values on both sides of every settings entry", 
     settings: { validation: { webhook_secret: "hunter2-secret" } } as Record<string, unknown>,
     templateNames: [],
   };
-  const result = computeParameterizedDiff(definition, manifest, { token: "hunter2-secret" }, snapshot);
+  const result = computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot);
   const serialized = JSON.stringify(result);
   assert.ok(!serialized.includes("hunter2-secret"), `the secret leaked into diff output: ${serialized}`);
   assert.ok(serialized.includes("<redacted>"), "diff entries must carry the redaction marker");
@@ -328,7 +330,7 @@ test("a valid secret seed binding refuses before writes when secrets are bound",
       () => h.runCommand({
         command: "presets apply",
         args: ["startup-roadmap"],
-        options: { withSeeds: true, param: ["projectKey=acme", "deployToken=hunter2-secret"] },
+        options: { withSeeds: true, param: ["projectKey=acme", "deployToken=@REVIEW_TOKEN"] },
         pmRoot: pmDir,
       }),
       /secret_in_public_prose/,
@@ -546,6 +548,7 @@ test("diff redacts the STORED credential at secret-bound paths during rotation",
     settings: { id_prefix: "rev-", validation: { webhook_secret: "new-secret" } },
     templates: [],
     itemTypes: [],
+    secretSettingPaths: ["validation.webhook_secret"],
     parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }],
   } as unknown as PresetDefinition;
   const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
@@ -558,7 +561,7 @@ test("diff redacts the STORED credential at secret-bound paths during rotation",
   const result = computeParameterizedDiff(
     definition,
     manifest,
-    { token: "new-secret" },
+    { token: "@REVIEW_TOKEN" },
     snapshot,
   );
   const serialized = JSON.stringify(result);
@@ -593,12 +596,12 @@ test("dry-run redaction survives quote and backslash bearing secrets (values, no
   const client = new Client({ pmRoot: pmDir, noExtensions: true });
   const tricky = 'abc"def\\ghi';
   const logs = await captureOutput(() =>
-    applyPreset(context(pmDir, client, { param: [`token=${tricky}`], dryRun: true }), SECRET_PRESET));
+    applyPreset(context(pmDir, client, { param: ["token=@REVIEW_TOKEN"], dryRun: true }), SECRET_PRESET));
   const joined = logs.join("\n");
   assert.ok(!joined.includes('abc"def'), `the quote-bearing secret leaked into dry-run output: ${joined}`);
   assert.ok(!joined.includes('abc\\"def'), "the JSON-escaped secret leaked into dry-run output");
   assert.ok(!joined.includes("abc\\\\"), "the backslash-bearing secret leaked into dry-run output");
-  assert.ok(logs.some((line) => line.includes("<redacted>")), "the patch dump must show the redaction marker");
+  assert.ok(logs.some((line) => line.includes("@REVIEW_TOKEN")), "the patch dump must show the redaction marker");
 });
 
 test("redactSecretValuesDeep redacts structured values before serialization", () => {
@@ -663,12 +666,13 @@ test("property: secret provenance protects rotated locations across scalar, arra
     const old = `old-${secret}`;
     const shape = ["Bearer ${param:token}", [null, 3, { token: "${param:token}" }]][index % 2];
     const raw = { settings: { id_prefix: "unit-", hook: { token: shape }, testing: { record_results_to_items: false } } as unknown as PresetSettingsPatch, templates: {}, parameters: manifest };
-    const definition = projectPresetDefinition(descriptor, raw, { token: secret });
+    const definition = { ...projectPresetDefinition(descriptor, { ...raw, settings: { id_prefix: "unit-", testing: { record_results_to_items: false } } }),
+      settings: { ...raw.settings, hook: { token: shape } }, secretSettingPaths: ["hook.token"] };
     const stored = [old, [old], { nested: old }, null, 42, undefined][index % 6];
     const snapshot = { settings: { hook: { token: stored }, testing: { record_results_to_items: false } }, templateNames: [] };
     const before = JSON.stringify({ raw, definition, snapshot });
-    for (const diff of [computeParameterizedDiff(definition, manifest, { token: secret }, snapshot), computePresetDiff(definition, snapshot),
-      computeParameterizedDiff(projectPresetDefinition(descriptor, raw), manifest, {}, snapshot)]) {
+    for (const diff of [computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, snapshot), computePresetDiff(definition, snapshot),
+      computeParameterizedDiff(definition, manifest, {}, snapshot)]) {
       const entry = diff.settings.find((entry) => entry.path === "hook.token");
       assert.equal(entry?.preset, "<redacted>");
       assert.equal(entry?.workspace, stored === undefined ? undefined : "<redacted>");
@@ -678,8 +682,10 @@ test("property: secret provenance protects rotated locations across scalar, arra
     }
     assert.equal(JSON.stringify({ raw, definition, snapshot }), before);
     // Direct SDK definitions without provenance still infer secrets in atomic arrays.
-    const direct = { ...definition, secretSettingPaths: undefined };
-    assert.equal(computeParameterizedDiff(direct, manifest, { token: secret }, snapshot).settings.find((entry) => entry.path === "hook.token")?.workspace, stored === undefined ? undefined : "<redacted>");
+    for (const token of [["@REVIEW_TOKEN"], [{ nested: [null, 5, false, { credential: "@REVIEW_TOKEN" }] }]]) {
+      const direct = { ...definition, settings: { ...definition.settings, hook: { token } }, secretSettingPaths: undefined };
+      assert.equal(computeParameterizedDiff(direct, manifest, { token: "@REVIEW_TOKEN" }, snapshot).settings.find((entry) => entry.path === "hook.token")?.workspace, stored === undefined ? undefined : "<redacted>");
+    }
   }
 });
 
@@ -688,10 +694,10 @@ test("property: every valid escaped secret is removed before dry-run JSON encodi
   const client = new Client({ pmRoot: pmDir, noExtensions: true });
   const before = readFileSync(join(pmDir, "settings.json"), "utf8");
   for (const secret of adversarialSecrets()) {
-    const logs = await captureOutput(() => applyPreset(context(pmDir, client, { param: [`token=${secret}`], dryRun: true }), SECRET_PRESET));
+    const logs = await captureOutput(() => applyPreset(context(pmDir, client, { param: ["token=@REVIEW_TOKEN"], dryRun: true }), SECRET_PRESET));
     const patch = logs.find((line) => line.startsWith("{\n"));
     assert.ok(patch, "the actual emitted patch must be tested");
-    assert.equal(JSON.parse(patch).id_prefix, "<redacted>-");
+    assert.equal(JSON.parse(patch).secret_references.token, "@REVIEW_TOKEN");
     assert.ok(!logs.join("\n").includes(secret));
     assert.ok(!logs.join("\n").includes(JSON.stringify(secret).slice(1, -1)));
     const input = { entries: [{ token: secret }, [secret, null, false]], plain: "retained" };
@@ -766,8 +772,8 @@ test("property: secret redaction preserves diff control fields for every status 
     const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
     const definition = { id: "startup-roadmap", settings: { id_prefix: "unit-", validation: { token }, testing: { record_results_to_items: false } },
       templates: [{ name: "token", type: "Issue", optionKeys: [] }], itemTypes: [{ name: "token", aliases: [], options: [] }],
-      parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }] } as unknown as PresetDefinition;
-    const diff = computeParameterizedDiff(definition, manifest, { token }, { settings: { id_prefix: "unit-", validation: { token: "previous-credential" } }, templateNames: [] });
+      secretSettingPaths: ["validation.token"], parameters: [{ name: "token", type: "secret", required: true, hasDefault: false, unanswered: false }] } as unknown as PresetDefinition;
+    const diff = computeParameterizedDiff(definition, manifest, { token: "@REVIEW_TOKEN" }, { settings: { id_prefix: "unit-", validation: { token: "previous-credential" } }, templateNames: [] });
     assert.equal(diff.presetId, "startup-roadmap");
     assert.deepEqual(diff.settings.map(({ path, status }) => ({ path, status })), [
       { path: "id_prefix", status: "match" }, { path: "validation.token", status: "change" }, { path: "testing.record_results_to_items", status: "add" },

@@ -8,7 +8,7 @@
  * `diff`, `show`, `plan`, `stack`, `validate`): each occurrence is substituted
  * with the same supplied-or-default value, unknown or unanswered parameters are
  * refused with typed refusals BEFORE any write, and secret-typed values can
- * never reach the public prose of templates or seed items.
+ * never enter tracker data: only external references are stored.
  *
  * Boundary contract (one strict validation, before any side effect):
  *  - parameter names match `[A-Za-z][A-Za-z0-9_-]{0,31}`;
@@ -34,7 +34,7 @@ export type PresetParameterType = "string" | "enum" | "secret";
 export interface PresetParameter {
     /** Stable parameter name used in `${param:<name>}` occurrences and `--param`. */
     readonly name: string;
-    /** Value domain; `secret` may bind ONLY into settings leaves. */
+    /** Value domain; `secret` accepts external references in secret_references only. */
     readonly type: PresetParameterType;
     /** True when apply refuses without a supplied value or default. */
     readonly required: boolean;
@@ -52,14 +52,14 @@ export interface PresetParameter {
 /** A preset's parameter manifest: every parameter declared exactly once. */
 export type PresetParameterManifest = readonly PresetParameter[];
 /** Stable refusal categories agents can branch on without parsing prose. */
-export type ParameterRefusalCode = "invalid_manifest" | "invalid_param_flag" | "invalid_params_file" | "unknown_parameter" | "unanswered_parameter" | "invalid_value" | "unknown_binding" | "malformed_binding" | "secret_in_public_prose" | "invalid_binding_location";
+export type ParameterRefusalCode = "invalid_manifest" | "invalid_param_flag" | "invalid_params_file" | "unknown_parameter" | "unanswered_parameter" | "invalid_value" | "invalid_secret_reference" | "unavailable_secret_reference" | "unknown_binding" | "malformed_binding" | "secret_in_public_prose" | "invalid_binding_location";
 /**
  * Actionable, privacy-safe refusal.
  *
  * Mirrors the package's established refusal pattern: a stable machine-readable
  * {@link code}, a concrete {@link remedy}, and a usage-class {@link exitCode}.
- * Refusals NEVER contain secret values (secrets render as `<redacted>` when a
- * parameter has to be named with its value class at all).
+ * Refusals NEVER contain secret values. Commands display external references
+ * and never dereference them.
  */
 export declare class ParameterRefusal extends Error {
     /** Machine-readable failure category. */
@@ -97,6 +97,13 @@ export interface PresetParameterView {
  * first precise problem.
  */
 export declare function validateParameterManifest(manifest: PresetParameterManifest): void;
+/** True only for an explicit environment reference; never inspect its value here. */
+export declare function isSecretReference(value: unknown): boolean;
+/** Resolve an external reference at the consuming operation, in memory only.
+ * Apply, catalog, diff and planning never call this function or need credentials.
+ * The caller must not persist or emit the result.
+ */
+export declare function resolveSecretReference(reference: string): string;
 /** The resolved outcome of a manifest against caller-supplied values. */
 export interface ResolvedParameterValues {
     /** Effective value per answered parameter (supplied or default). */
@@ -204,7 +211,7 @@ export interface ParameterBindingOccurrence {
  * Resolve a preset's settings patch against resolved parameter values.
  *
  * Returns a substituted deep copy; the input is never mutated. Secret
- * parameters are allowed here (settings are the private configuration surface).
+ * references are allowed only as entire leaves in the explicit secret_references map.
  */
 export declare function resolveSettingsWithParameters(manifest: PresetParameterManifest, values: Readonly<Record<string, string>>, settings: PresetSettingsPatch, allowUnresolved?: boolean): {
     settings: PresetSettingsPatch;

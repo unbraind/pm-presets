@@ -17,6 +17,7 @@ import type {
   PresetTemplateMap,
   StoredCreateTemplateDocument,
 } from "./presets/shared.ts";
+import { resolvedSeedsForPreset } from "./seeds.ts";
 import { CommandError, EXIT_CODE } from "./presets/shared.ts";
 import {
   PRESET_REGISTRY,
@@ -190,9 +191,6 @@ export function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocumen
   if (!raw) {
     throw new CommandError(`No definition exports for preset '${id}'.`);
   }
-  if (raw.parameters.length === 0) {
-    return structuredClone(Object.values(raw.templates));
-  }
   const substitution = resolveRawPreset(raw);
   return Object.values(substitution.templates).map((document) => structuredClone(document));
 }
@@ -263,6 +261,8 @@ function buildDefinition(
   if (!raw) {
     throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
   }
+  // Destination policy is authoring validation, even when no seeds are selected.
+  resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
   return projectPresetDefinition(descriptor, raw, supplied);
 }
 

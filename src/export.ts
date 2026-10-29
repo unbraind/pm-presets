@@ -22,6 +22,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { resolveParameterizedPreset } from "./params.ts";
+import type { PresetSettingsPatch, PresetTemplateMap } from "./presets/shared.ts";
 import { loadTemplateSdk } from "./presets/shared.ts";
 import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
 
@@ -71,6 +73,12 @@ export function buildExportedPreset(input: {
   now?: Date;
 }): ExportedPreset {
   const settings = input.settings ?? {};
+  // Export is a tracked-file/output sink too. Refuse invalid reference storage
+  // and legacy unresolved bindings rather than publishing a new copy of them.
+  resolveParameterizedPreset([], {}, {
+    settings: settings as PresetSettingsPatch,
+    templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])) as unknown as PresetTemplateMap,
+  });
   const idPrefixRaw = settings["id_prefix"];
   const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
   const now = input.now ?? new Date();

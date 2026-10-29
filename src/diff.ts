@@ -21,7 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { PresetDefinition } from "./catalog.ts";
-import { collectParameterValues, redactSecretValuesDeep, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
+import { isSecretReference, collectParameterValues, redactSecretValuesDeep, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
 
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
@@ -154,8 +154,8 @@ export function computePresetDiff(
 function redactSettingEntry(entry: SettingDiffEntry): SettingDiffEntry {
   return {
     ...entry,
-    preset: "<redacted>",
-    workspace: entry.workspace === undefined ? undefined : "<redacted>",
+    preset: isSecretReference(entry.preset) ? entry.preset : "<redacted>",
+    workspace: entry.workspace === undefined || isSecretReference(entry.workspace) ? entry.workspace : "<redacted>",
   };
 }
 

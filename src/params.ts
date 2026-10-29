@@ -8,7 +8,7 @@
  * `diff`, `show`, `plan`, `stack`, `validate`): each occurrence is substituted
  * with the same supplied-or-default value, unknown or unanswered parameters are
  * refused with typed refusals BEFORE any write, and secret-typed values can
- * never reach the public prose of templates or seed items.
+ * never enter tracker data: only external references are stored.
  *
  * Boundary contract (one strict validation, before any side effect):
  *  - parameter names match `[A-Za-z][A-Za-z0-9_-]{0,31}`;
@@ -38,7 +38,7 @@ export type PresetParameterType = "string" | "enum" | "secret";
 export interface PresetParameter {
   /** Stable parameter name used in `${param:<name>}` occurrences and `--param`. */
   readonly name: string;
-  /** Value domain; `secret` may bind ONLY into settings leaves. */
+  /** Value domain; `secret` accepts external references in secret_references only. */
   readonly type: PresetParameterType;
   /** True when apply refuses without a supplied value or default. */
   readonly required: boolean;
@@ -65,6 +65,8 @@ export type ParameterRefusalCode =
   | "unknown_parameter"
   | "unanswered_parameter"
   | "invalid_value"
+  | "invalid_secret_reference"
+  | "unavailable_secret_reference"
   | "unknown_binding"
   | "malformed_binding"
   | "secret_in_public_prose"
@@ -75,8 +77,8 @@ export type ParameterRefusalCode =
  *
  * Mirrors the package's established refusal pattern: a stable machine-readable
  * {@link code}, a concrete {@link remedy}, and a usage-class {@link exitCode}.
- * Refusals NEVER contain secret values (secrets render as `<redacted>` when a
- * parameter has to be named with its value class at all).
+ * Refusals NEVER contain secret values. Commands display external references
+ * and never dereference them.
  */
 export class ParameterRefusal extends Error {
   /** Machine-readable failure category. */
@@ -238,10 +240,37 @@ function assertValueConstraints(parameter: PresetParameter, value: string): void
   }
 }
 
+/** True only for an explicit environment reference; never inspect its value here. */
+export function isSecretReference(value: unknown): boolean {
+  return typeof value === "string" && value.trim() === value && /^@[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+}
+
+/** Resolve an external reference at the consuming operation, in memory only.
+ * Apply, catalog, diff and planning never call this function or need credentials.
+ * The caller must not persist or emit the result.
+ */
+export function resolveSecretReference(reference: string): string {
+  if (!isSecretReference(reference)) {
+    throw new ParameterRefusal("invalid_secret_reference", "Supply a secret reference as @ENV_NAME; keep the credential in the environment, outside the tracker.");
+  }
+  const name = reference.slice(1);
+  const value = Object.hasOwn(process.env, name) ? process.env[name] : undefined;
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ParameterRefusal("unavailable_secret_reference", "Set the referenced environment variable before the consuming operation; keep its value outside the tracker.");
+  }
+  return value;
+}
+
 /** Normalize and validate the exact value that every downstream consumer receives. */
 function normalizeParameterValue(parameter: PresetParameter, raw: string): string {
   const value = assertPlainValue(parameter.name, raw, parameter.type);
   assertValueConstraints(parameter, value);
+  if (parameter.type === "secret" && !isSecretReference(value)) {
+    throw new ParameterRefusal("invalid_secret_reference", "Supply a secret reference as @ENV_NAME; literal credentials are refused. Keep the credential outside the tracker.");
+  }
+  if (value.includes(BINDING_PREFIX)) {
+    throw new ParameterRefusal("invalid_value", "Parameter values must not contain parameter binding syntax.");
+  }
   return value;
 }
 
@@ -662,13 +691,10 @@ function substituteString(
       );
     }
     const name = result.slice(nameStart, end);
+    if (!declared.has(name)) {
+      throw new ParameterRefusal("unknown_binding", `Binding at ${location} is not declared by the preset's parameter manifest.`);
+    }
     if (!Object.hasOwn(values, name)) {
-      if (!declared.has(name)) {
-        throw new ParameterRefusal(
-          "unknown_binding",
-          `Binding \${param:${name}} at ${location} is not declared by the preset's parameter manifest; declare it or fix the name.`,
-        );
-      }
       if (!allowUnresolved) {
         throw new ParameterRefusal(
           "unanswered_parameter",
@@ -686,7 +712,7 @@ function substituteString(
   return { result, occurrences };
 }
 
-/** Walk a JSON-ish tree, substituting in every string leaf; arrays stay dense. */
+/** Substitute a tree whose field names were checked by collectOccurrences; arrays stay dense. */
 function substituteTree(
   value: unknown,
   location: string,
@@ -712,6 +738,9 @@ function substituteTree(
     }
     return copy;
   }
+  if (value !== null && typeof value === "object") {
+    throw new ParameterRefusal("invalid_manifest", "Bindings require plain JSON objects and arrays; unsupported objects cannot bypass validation.");
+  }
   return structuredClone(value);
 }
 
@@ -721,7 +750,7 @@ function refuseSecretsInProse(occurrences: ParameterBindingOccurrence[], secretN
     if (secretNames.has(occurrence.parameter)) {
       throw new ParameterRefusal(
         "secret_in_public_prose",
-        `Secret parameter '${occurrence.parameter}' is bound at ${occurrence.location}; ${target} are public. Bind secrets only into settings values, or change the parameter type.`,
+        `Secret parameter '${occurrence.parameter}' is bound at ${occurrence.location}; ${target} are public. Bind secret references only into settings.secret_references.<name>; public destinations are never secret-capable.`,
       );
     }
   }
@@ -753,6 +782,7 @@ function collectOccurrences(
   }
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     for (const [key, entry] of Object.entries(value)) {
+      if (key.includes(BINDING_PREFIX)) throw new ParameterRefusal("invalid_binding_location", "Parameter bindings cannot appear in field or file names.");
       collectOccurrences(entry, `${location}.${key}`, occurrences, malformedLocations);
     }
   }
@@ -762,7 +792,7 @@ function collectOccurrences(
  * Resolve a preset's settings patch against resolved parameter values.
  *
  * Returns a substituted deep copy; the input is never mutated. Secret
- * parameters are allowed here (settings are the private configuration surface).
+ * references are allowed only as entire leaves in the explicit secret_references map.
  */
 export function resolveSettingsWithParameters(
   manifest: PresetParameterManifest,
@@ -770,15 +800,47 @@ export function resolveSettingsWithParameters(
   settings: PresetSettingsPatch,
   allowUnresolved = false,
 ): { settings: PresetSettingsPatch; occurrences: number } {
+  const effectiveValues = collectParameterValues(manifest, values).values;
+  const occurrences: ParameterBindingOccurrence[] = [];
+  collectOccurrences(settings, "settings", occurrences, []);
+  const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
+  for (const occurrence of occurrences) {
+    if (secretNames.has(occurrence.parameter)) {
+      const key = occurrence.location.slice("settings.secret_references.".length);
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)
+        || occurrence.location !== `settings.secret_references.${key}`
+        || settings.secret_references?.[key] !== `\${param:${occurrence.parameter}}`) {
+        throw new ParameterRefusal("secret_in_public_prose", "Secret references may bind only as entire values in settings.secret_references.<name>; identifiers and tracked prose are never secret-capable.");
+      }
+    }
+  }
+  if (settings.secret_references !== undefined) {
+    if (settings.secret_references === null || typeof settings.secret_references !== "object" || Array.isArray(settings.secret_references)) {
+      throw new ParameterRefusal("invalid_secret_reference", "settings.secret_references must be a map of names to @ENV_NAME references.");
+    }
+    for (const [key, reference] of Object.entries(settings.secret_references)) {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || typeof reference !== "string") {
+        throw new ParameterRefusal("invalid_secret_reference", "settings.secret_references must use static names and string references.");
+      }
+      if (!isSecretReference(reference) && !/^\$\{param:[A-Za-z][A-Za-z0-9_-]{0,31}\}$/.test(reference)) {
+        throw new ParameterRefusal("invalid_secret_reference", "settings.secret_references accepts only @ENV_NAME references or secret parameter bindings.");
+      }
+    }
+  }
   const counter = { occurrences: 0 };
   const settingsResult = substituteTree(
     settings,
     "settings",
-    values,
+    effectiveValues,
     declaredNames(manifest),
     allowUnresolved,
     counter,
   ) as PresetSettingsPatch;
+  for (const reference of Object.values(settingsResult.secret_references ?? {})) {
+    if (!isSecretReference(reference) && !(allowUnresolved && reference.startsWith(BINDING_PREFIX))) {
+      throw new ParameterRefusal("invalid_secret_reference", "settings.secret_references accepts only @ENV_NAME references.");
+    }
+  }
   return { settings: settingsResult, occurrences: counter.occurrences };
 }
 
@@ -795,6 +857,7 @@ export function resolveTemplatesWithParameters(
   templates: PresetTemplateMap,
   allowUnresolved = false,
 ): { templates: PresetTemplateMap; occurrences: number } {
+  const effectiveValues = collectParameterValues(manifest, values).values;
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
   const malformed: string[] = [];
@@ -813,7 +876,7 @@ export function resolveTemplatesWithParameters(
   }
   refuseSecretsInProse(occurrences, secretNames, "templates");
   const counter = { occurrences: 0 };
-  const resolved = substituteTree(templates, "templates", values, declaredNames(manifest), allowUnresolved, counter) as PresetTemplateMap;
+  const resolved = substituteTree(templates, "templates", effectiveValues, declaredNames(manifest), allowUnresolved, counter) as PresetTemplateMap;
   return { templates: resolved, occurrences: counter.occurrences };
 }
 
@@ -829,6 +892,7 @@ export function resolveSeedsWithParameters(
   seeds: readonly SeedItem[],
   allowUnresolved = false,
 ): { seeds: SeedItem[]; occurrences: number } {
+  const effectiveValues = collectParameterValues(manifest, values).values;
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
   const malformed: string[] = [];
@@ -838,7 +902,7 @@ export function resolveSeedsWithParameters(
   }
   refuseSecretsInProse(occurrences, secretNames, "generated public seed prose");
   const counter = { occurrences: 0 };
-  const resolved = substituteTree(seeds, "seeds", values, declaredNames(manifest), allowUnresolved, counter) as SeedItem[];
+  const resolved = substituteTree(seeds, "seeds", effectiveValues, declaredNames(manifest), allowUnresolved, counter) as SeedItem[];
   return { seeds: resolved, occurrences: counter.occurrences };
 }
 
@@ -866,6 +930,7 @@ export function resolveParameterizedPreset(
   seeds?: SeedItem[];
   occurrences: number;
 } {
+  collectParameterValues(manifest, values);
   let occurrences = 0;
   const result: { settings?: PresetSettingsPatch; templates?: PresetTemplateMap; seeds?: SeedItem[] } = {};
   if (parts.settings !== undefined) {

@@ -222,22 +222,35 @@ read or written, with typed exit-2 refusals:
 - a binding that references a name the preset never declared is an authoring
   error and refuses (`unknown_binding`), as does a malformed `${param:...}`
   fragment (`malformed_binding`);
-- `secret`-typed parameters may only bind into **settings** values — a secret
-  occurrence in template or seed prose refuses (`secret_in_public_prose`)
-  before any file is written or item is created.
+- all manifests validate bindings, including an explicit empty `parameters: []`;
+  unresolved or malformed occurrences refuse before settings or template writes.
 
-**Secret handling.** A secret value reaches exactly one place: the private
-`settings.json` an apply writes. Every emitted surface — the apply summary
-line, `--dry-run` patch dumps, and both sides of every `presets diff` settings
-entry — renders it as `<redacted>`, and refusal messages never echo it. `show`
-displays the authored `${param:...}` occurrence without resolving secrets.
-Redaction is rotation-proof and serialization-proof: diff settings leaves that
-the preset binds a secret into are redacted wholesale whatever value they
-currently hold (a stored, rotated credential never shows), and redaction always
-runs on structured values before serialization, so quote- or backslash-bearing
-secrets cannot escape the match. Defaults and supplied values share the same
-trimming and constraint checks; seed previews resolve defaults before computing
-identities and ownership.
+**Secrets.** A `secret` parameter accepts only an external environment reference,
+for example `--param token=@DEPLOY_TOKEN`. Literal credentials are refused with
+`invalid_secret_reference` (exit 2); keep values in the environment, never in a
+params file or tracker. Secret defaults are forbidden.
+
+Secret-reference bindings must occupy an entire value in the explicit
+`settings.secret_references.<name>` map, for example
+`secret_references: { deploy: "${param:token}" }`. That map stores pointers only;
+it cannot receive credential values. Identifiers (`id_prefix`, seed
+IDs), titles, tags, filenames, templates and other settings are public tracked
+data; secret bindings there refuse at manifest projection, even without a
+supplied value. References cannot be interpolated into a larger string.
+
+Apply stores **only `@DEPLOY_TOKEN`**, including in audited append-only history.
+Dry-run, diff and parameter summaries display references, never credentials.
+Show may retain the authored occurrence for an unanswered declaration. Commands
+do not read credential environment variables. A consuming integration calls
+`resolveSecretReference("@DEPLOY_TOKEN")` only when the credential is needed;
+that API returns the current environment value in memory without logging or
+writing it. Missing or empty variables produce a privacy-safe typed refusal.
+Rotating the external value requires no tracker change. There is no automatic
+migration or rewrite of credentials already stored by older versions: revoke
+those credentials and review affected tracker history separately.
+
+Defaults and supplied public values share trimming and constraint checks; seed
+previews resolve defaults before computing identities and ownership.
 
 **One resolution, one read.** The unified apply reads your flags and params
 file exactly once, resolves every parameter at that boundary, pre-validates the

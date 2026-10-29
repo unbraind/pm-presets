@@ -315,7 +315,7 @@ test("synthetic manifests resolve to the generator's expected strings or typed r
       } else if (parameter.type === "enum") {
         expectedValues[parameter.name] = rng() < 0.5 ? "core" : "community";
       } else {
-        expectedValues[parameter.name] = randomKey(rng);
+        expectedValues[parameter.name] = parameter.type === "secret" ? `@TOKEN_${index}` : randomKey(rng);
       }
     }
     const manifest: PresetParameterManifest = declared;

@@ -399,21 +399,22 @@ test("runTemplatesShow recovers incomplete documents and rejects invalid ones", 
   await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["badval"] })), /invalid value for option "type"/);
 });
 
-test("applyPreset redacts secret parameter values in the resolution summary", async (t) => {
+test("applyPreset refuses literal secrets and summarizes only external references", async (t) => {
   const logs: string[] = [];
   t.mock.method(console, "log", (...args: unknown[]) => logs.push(args.map(String).join(" ")));
   t.mock.method(console, "warn", () => {});
   const pmDir = await workspace(t);
-  await applyPreset(context(pmDir, { options: { param: ["token=hunter2"] } }), {
-    label: "Parameterized",
-    settings: { id_prefix: "k-" },
-    templates: {},
-    parameters: [{ name: "token", type: "secret", required: true, description: "Webhook token." }],
-    nextSteps: [],
-  });
+  const input = {
+    label: "Parameterized", settings: { id_prefix: "k-" }, templates: {},
+    parameters: [{ name: "token", type: "secret" as const, required: true, description: "Webhook environment reference." }], nextSteps: [],
+  };
+  const before = readFileSync(join(pmDir, "settings.json"), "utf8");
+  await assert.rejects(() => applyPreset(context(pmDir, { options: { param: ["token=hunter2"] } }), input), { code: "invalid_secret_reference", exitCode: 2 });
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), before);
+  await applyPreset(context(pmDir, { options: { param: ["token=@WEBHOOK_TOKEN"] } }), input);
   const summary = logs.find((line) => line.includes("Resolved 1 parameter(s)"));
   assert.ok(summary, `expected a resolution summary line; got: ${logs.join(" | ")}`);
-  assert.match(summary, /token=<redacted> \(supplied\)/);
+  assert.match(summary, /token=@WEBHOOK_TOKEN \(supplied\)/);
   assert.ok(!logs.some((line) => line.includes("hunter2")), "the secret value must never be printed");
   const settings = JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")) as { id_prefix: string };
   assert.strictEqual(settings.id_prefix, "k-");

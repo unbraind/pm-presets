@@ -31,7 +31,7 @@ export const PARAMETERS: PresetParameterManifest = [
     name: "deployToken",
     type: "secret",
     required: false,
-    description: "Webhook token; may only bind into settings values.",
+    description: "Environment reference; binds only into settings.secret_references.",
   },
 ];
 ```
@@ -42,7 +42,8 @@ Rules the engine enforces on every manifest:
 - `enum` parameters declare unique allowed values; `string` parameters may
   declare a full-match pattern and a length bound (1–1024, default 256);
 - `secret` parameters never carry a default (a default secret would ship in
-  the package source) and may bind only into **settings** values.
+  the package source) and accept only `@ENV_NAME` references, bound as entire values in
+  `settings.secret_references.<name>`. Identifiers and tracked prose refuse secrets.
 
 ## 2. Reference parameters with binding occurrences
 
@@ -92,12 +93,15 @@ tracker state is read or written:
 | `invalid_value` | pattern/enum/length violation, control characters, line breaks | use a value that satisfies the declared constraint |
 | `invalid_param_flag` / `invalid_params_file` | malformed `k=v` entry, duplicate name, or a non-string JSON value | fix the flag or file |
 | `unknown_binding` / `malformed_binding` | authoring bug: a binding references an undeclared name or is not `${param:<name>}` | fix the manifest or the occurrence |
-| `secret_in_public_prose` | a `secret` parameter bound in template or seed text | bind secrets only into settings values |
+| `secret_in_public_prose` | a `secret` parameter bound in template or seed text | bind references only into settings.secret_references.<name> |
 
-Refusal messages never echo secret values (secrets render as `<redacted>`).
-Secret values reach exactly one place — the private `settings.json` an apply
-writes; the apply summary, `--dry-run` patch dumps and every `presets diff`
-settings entry render them as `<redacted>` on both sides.
+Literal secret inputs refuse with `invalid_secret_reference` (exit 2). Supply
+`--param deployToken=@DEPLOY_TOKEN` and author
+`secret_references: { deploy: "${param:deployToken}" }` in settings. Only the
+reference enters settings, append-only history, summaries and dry-run previews.
+Credentials remain outside the tracker. Consumers call `resolveSecretReference`
+at use time and must not emit or persist the returned value. Missing environment
+values refuse with `unavailable_secret_reference`; commands never dereference.
 
 ## 6. Resolution is computed once and holds under concurrency
 

@@ -68,6 +68,8 @@ export type PresetTemplateMap = Record<string, StoredCreateTemplateDocument>;
  * preservation of unrecognized stored fields.
  */
 export type PresetSettingsPatch = Pick<PmSettings, "id_prefix"> & {
+    /** External credential references only; values resolve at consumption, never during apply. */
+    secret_references?: Record<string, string>;
     /** Named governance presets own their derived knobs; custom presets specify overrides. */
     governance?: Partial<PmSettings["governance"]>;
     /** Validation policies accepted by the installed SDK; governance owns mirrored fields. */

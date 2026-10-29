@@ -10,6 +10,7 @@
  * Everything here is pure: no filesystem, no process exit, no SDK runtime. That
  * keeps it unit-testable with `node --test` and side-effect free.
  */
+import { resolvedSeedsForPreset } from "./seeds.js";
 import { CommandError, EXIT_CODE } from "./presets/shared.js";
 import { PRESET_REGISTRY, PRESET_PARAMETERS, bugTriageSettings, bugTriageTemplates, indieDevSettings, indieDevTemplates, openSourceSettings, openSourceTemplates, softwareSprintSettings, softwareSprintTemplates, startupRoadmapSettings, startupRoadmapTemplates, kanbanSettings, kanbanTemplates, kanbanItemTypes, agentWorkflowSettings, agentWorkflowTemplates, agentWorkflowItemTypes, } from "./registry.js";
 import { buildParameterViews, collectParameterValues, collectSecretSettingPaths, resolveParameterizedPreset, } from "./params.js";
@@ -88,9 +89,6 @@ export function presetTemplateEntries(id) {
     if (!raw) {
         throw new CommandError(`No definition exports for preset '${id}'.`);
     }
-    if (raw.parameters.length === 0) {
-        return structuredClone(Object.values(raw.templates));
-    }
     const substitution = resolveRawPreset(raw);
     return Object.values(substitution.templates).map((document) => structuredClone(document));
 }
@@ -153,6 +151,8 @@ function buildDefinition(descriptor, supplied) {
     if (!raw) {
         throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
     }
+    // Destination policy is authoring validation, even when no seeds are selected.
+    resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
     return projectPresetDefinition(descriptor, raw, supplied);
 }
 /** All preset definitions in registry order. */

@@ -51,7 +51,8 @@ import {
   readWorkspaceTemplates,
 } from "./export.ts";
 import { runPresetSeeds } from "./seeds.ts";
-import { readSuppliedParameterValues } from "./params.ts";
+import { parameterSafeApi } from "./command-errors.ts";
+import { ParameterRefusal, parseParameterFlagEntries, readSuppliedParameterValues } from "./params.ts";
 import { PRESET_PARAMETERS } from "./registry.ts";
 import { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
 import * as fs from "node:fs";
@@ -229,6 +230,7 @@ const defineExtension = <TModule extends ExtensionModule>(module: TModule): TMod
 
 export default defineExtension({
   activate(api: ExtensionApi) {
+    api = parameterSafeApi(api);
     registerUpgradeCommands(api);
     registerPlanCommand(api);
     registerStackCommand(api);
@@ -342,6 +344,11 @@ export default defineExtension({
             "Specify only one of --list, --diff, or --custom at a time.",
             EXIT_CODE_USAGE,
           );
+        }
+
+        if (!diffId && (parseParameterFlagEntries(options.param).length > 0
+          || [options.paramsFile, options["params-file"]].some((value) => value !== undefined && value !== null))) {
+          throw new ParameterRefusal("invalid_param_flag", "Use parameter inputs only with --diff <preset>, presets apply, or a setup command.");
         }
 
         if (list) {
@@ -656,6 +663,8 @@ export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, Pres
 
 export {
   ParameterRefusal,
+  isSecretReference,
+  resolveSecretReference,
   assertResolvedParameterValues,
   buildParameterViews,
   collectParameterValues,

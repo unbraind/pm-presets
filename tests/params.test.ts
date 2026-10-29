@@ -287,20 +287,13 @@ test("resolveSeedsWithParameters substitutes seed prose and refuses malformed an
     resolveSeedsWithParameters(manifest, {}, [{ type: "Task", title: "Token ${param:token}" }]));
 });
 
-test("a supplied value containing binding syntax is not recursively substituted", () => {
-  const resolved = resolveParameterizedPreset(
-    [KEY_PARAMETER],
-    { projectKey: "${param:projectKey}" },
-    {
-      settings: { id_prefix: "${param:projectKey}-" } as PresetSettingsPatch,
-      templates: { "card.json": storedTemplate("card", { body: "${param:projectKey}" }) } as PresetTemplateMap,
-      seeds: [{ type: "Task", title: "${param:projectKey}" }],
-    },
-  );
-  assert.equal(resolved.settings?.id_prefix, "${param:projectKey}-");
-  assert.equal(resolved.templates?.["card.json"].options.body, "${param:projectKey}");
-  assert.equal(resolved.seeds?.[0].title, "${param:projectKey}");
-  assert.equal(resolved.occurrences, 3);
+test("supplied binding syntax refuses instead of entering tracked files", () => {
+  refuses("invalid_value", () => resolveParameterValues([KEY_PARAMETER], { projectKey: "${param:projectKey}" }));
+  refuses("invalid_value", () => resolveParameterizedPreset([KEY_PARAMETER], { projectKey: "${param:projectKey}" }, {
+    settings: { id_prefix: "${param:projectKey}-" } as PresetSettingsPatch,
+    templates: { "card.json": storedTemplate("card", { body: "${param:projectKey}" }) },
+    seeds: [{ type: "Task", title: "${param:projectKey}" }],
+  }));
 });
 
 test("resolveParameterizedPreset resolves only the parts it is given", () => {
@@ -324,16 +317,17 @@ test("resolveParameterizedPreset resolves only the parts it is given", () => {
   assert.equal(seedsOnly.templates, undefined);
 });
 
-test("secret values may bind into settings but the refusal never echoes the value", () => {
+test("secret references bind only into explicit settings and refusals never echo credentials", () => {
   const manifest: PresetParameterManifest = [{ name: "token", type: "secret", required: true }];
-  const values = resolveParameterValues(manifest, { token: "super-secret-value" }).values;
+  refuses("invalid_secret_reference", () => resolveParameterValues(manifest, { token: "super-secret-value" }));
+  const values = resolveParameterValues(manifest, { token: "@DEPLOY_TOKEN" }).values;
   const resolved = resolveSettingsWithParameters(manifest, values, {
     id_prefix: "k-",
-    validation: { webhook_secret: "${param:token}" },
+    secret_references: { webhook: "${param:token}" },
   } as unknown as PresetSettingsPatch);
   assert.equal(
-    (resolved.settings as unknown as Record<string, Record<string, unknown>>).validation.webhook_secret,
-    "super-secret-value",
+    (resolved.settings as unknown as Record<string, Record<string, unknown>>).secret_references.webhook,
+    "@DEPLOY_TOKEN",
   );
   try {
     resolveSeedsWithParameters(manifest, values, [{ type: "Task", title: "${param:token}" }]);

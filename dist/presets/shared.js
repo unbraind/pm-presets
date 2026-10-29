@@ -15,7 +15,7 @@ import { acquireApplyAdmission } from "../apply-admission.js";
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
 import { randomUUID } from "node:crypto";
-import { assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, } from "../params.js";
+import { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, resolveSettingsWithParameters, } from "../params.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 // pm's extension command runtime only treats a thrown error as a cleanly
@@ -266,8 +266,7 @@ export async function applyPreset(context, input) {
     let effectiveSettings = input.settings;
     let effectiveTemplates = input.templates;
     let occurrenceCount = 0;
-    let secretValues = [];
-    if (manifest.length > 0) {
+    try {
         const injected = options.resolvedParameterValues;
         const resolved = injected === undefined
             ? resolveParameterValues(manifest, readSuppliedParameterValues(options))
@@ -279,22 +278,17 @@ export async function applyPreset(context, input) {
         effectiveSettings = substitution.settings;
         effectiveTemplates = substitution.templates;
         occurrenceCount = substitution.occurrences;
-        secretValues = manifest
-            .filter((parameter) => parameter.type === "secret" && Object.hasOwn(resolved.values, parameter.name))
-            .map((parameter) => resolved.values[parameter.name]);
         const views = buildParameterViews(manifest, resolved.values);
         const summary = views
-            .map((view) => `${view.name}=${view.type === "secret" ? "<redacted>" : resolved.values[view.name]} (${resolved.sources[view.name]})`)
+            .map((view) => `${view.name}=${resolved.values[view.name]} (${resolved.sources[view.name]})`)
             .join(", ");
-        console.log(`Resolved ${views.length} parameter(s), ${occurrenceCount} binding occurrence(s): ${summary}`);
+        if (views.length > 0)
+            console.log(`Resolved ${views.length} parameter(s), ${occurrenceCount} binding occurrence(s): ${summary}`);
     }
-    else {
-        const supplied = readSuppliedParameterValues(options);
-        if (Object.keys(supplied).length > 0) {
-            // A parameterized flag against a parameterless preset is an unknown
-            // binding: refuse before any read or write.
-            resolveParameterValues([], supplied);
-        }
+    catch (error) {
+        if (error instanceof ParameterRefusal)
+            throw error;
+        throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     const pmDir = resolvePmDir(context);
     const settingsPath = path.join(pmDir, "settings.json");
@@ -303,11 +297,13 @@ export async function applyPreset(context, input) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
             `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
-    readJsonObject(settingsPath, "settings.json");
+    resolveSettingsWithParameters([], {}, readJsonObject(settingsPath, "settings.json"));
     const effectivePatch = {
         ...effectiveSettings,
         id_prefix: prefixOverride ?? effectiveSettings.id_prefix,
     };
+    // Overrides are final settings input too: they must not reintroduce bindings.
+    resolveSettingsWithParameters([], {}, effectivePatch);
     const templates = Object.entries(effectiveTemplates).map(([filename, template]) => {
         const normalizedName = normalizeTemplateName(template.name);
         if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
@@ -327,6 +323,10 @@ export async function applyPreset(context, input) {
                 operationId: `pm-presets-${randomUUID()}`,
                 dryRun,
                 mutate: (current) => {
+                    // The host owns this settings audit lock. Inspect its same raw file:
+                    // the typed host projection omits extension reference fields. Never
+                    // rotate a pre-existing literal into append-only before/after history.
+                    resolveSettingsWithParameters([], {}, readJsonObject(settingsPath, "settings.json"));
                     const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
                     if (dryRun && replace) {
                         for (const tree of REPLACE_SETTINGS_TREES) {
@@ -347,17 +347,17 @@ export async function applyPreset(context, input) {
             });
         }
         catch (error) {
+            if (error instanceof ParameterRefusal)
+                throw error;
             throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
         }
         const verb = replace ? "replace" : "merge";
         if (dryRun) {
             console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
             console.log("Preset patch (the host derives governance policies and canonical storage):");
-            // Emitted output is a public surface: secret parameter values are
-            // redacted from the patch dump exactly like from the summary line —
-            // on the structured VALUES before serialization, never on the JSON
-            // text, so quote/backslash-bearing secrets cannot escape the match.
-            console.log(JSON.stringify(redactSecretValuesDeep(effectivePatch, secretValues), null, 2));
+            // Resolution stores external references only. Never dereference a
+            // credential for previews or audited tracker mutation.
+            console.log(JSON.stringify(effectivePatch, null, 2));
             if (replace) {
                 console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
             }

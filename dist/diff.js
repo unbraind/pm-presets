@@ -18,7 +18,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { collectParameterValues, redactSecretValuesDeep, ParameterRefusal } from "./params.js";
+import { isSecretReference, collectParameterValues, redactSecretValuesDeep, ParameterRefusal } from "./params.js";
 function isJsonObject(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -98,8 +98,8 @@ export function computePresetDiff(definition, snapshot) {
 function redactSettingEntry(entry) {
     return {
         ...entry,
-        preset: "<redacted>",
-        workspace: entry.workspace === undefined ? undefined : "<redacted>",
+        preset: isSecretReference(entry.preset) ? entry.preset : "<redacted>",
+        workspace: entry.workspace === undefined || isSecretReference(entry.workspace) ? entry.workspace : "<redacted>",
     };
 }
 /** Detect supplied secrets anywhere in a resolved leaf, including atomic arrays. */
