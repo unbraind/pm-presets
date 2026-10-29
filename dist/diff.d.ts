@@ -4,7 +4,7 @@
  * Captured snapshots use read-only public SDK readers; replacement normalization
  * runs only against isolated synthetic public settings, never the target tracker.
  */
-import type { PresetArtifactRecord } from "./desired-state.ts";
+import type { PresetArtifactRecord, SeedTypeDefinition } from "./desired-state.ts";
 import type { PmClient } from "@unbrained/pm-cli/sdk";
 import type { PresetDefinition } from "./catalog.ts";
 import { type PresetParameterManifest } from "./params.ts";
@@ -25,6 +25,8 @@ export interface WorkspaceSnapshot {
     templateDocuments?: Record<string, unknown>;
     /** Authoritatively read managed seed items keyed by their stable id. */
     seeds?: Record<string, Record<string, unknown>>;
+    /** Active native aliases captured alongside managed seed contents. */
+    seedTypes?: readonly SeedTypeDefinition[];
     /** Unverifiable ownership records remain named drift, never synchronization. */
     artifactErrors?: string[];
     /** Ownership recovered from the last verified package application in native history. */

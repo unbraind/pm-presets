@@ -3,6 +3,37 @@ import type { PresetSettingsPatch, PresetTemplateMap, StoredCreateTemplateDocume
 import type { SeedItem } from "./seeds.ts";
 import { replacementSettings } from "./settings-replacement.ts";
 import { ParameterRefusal, resolveParameterizedPreset } from "./params.ts";
+import { createRequire } from "node:module";
+import { resolveSimulationSdk } from "./sdk-loader.ts";
+import type * as Host from "@unbrained/pm-cli/sdk";
+
+/** Active native type names and aliases used by both artifact planning and writes. */
+export interface SeedTypeDefinition { name: string; aliases?: readonly string[] }
+
+/** Normalize every controlled seed field with the native writer's public helpers. */
+export function normalizeSeedArtifact(seed: SeedItem, types: readonly SeedTypeDefinition[] = []): SeedItem {
+  const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof Host;
+  const aliases: Record<string, string> = Object.fromEntries([
+    ...Object.entries(sdk.resolveItemTypeRegistry(sdk.SETTINGS_DEFAULTS).alias_to_type),
+    ...types.flatMap(({ name, aliases }) => [name, ...(aliases ?? [])].map((alias): [string, string] => [alias.trim().toLowerCase(), name])),
+  ]);
+  const key = seed.type.trim().toLowerCase();
+  // Older host synonym tables can inherit names such as constructor. Only a
+  // string returned by the public contract can participate in a lookup.
+  const candidate = sdk.resolveTypeSynonym(seed.type);
+  const synonym = typeof candidate === "string" ? candidate.toLowerCase() : undefined;
+  const type = ownArtifact(aliases, key) ?? (synonym === undefined ? undefined : ownArtifact(aliases, synonym)) ?? seed.type.trim();
+  const title = seed.title.trim();
+  if (!title) throw new ParameterRefusal("invalid_manifest", "Seed titles must contain non-whitespace text before planning or applying.");
+  const document = sdk.emptyImportedDocument();
+  document.body = seed.body ?? "";
+  return {
+    type, title,
+    priority: String(sdk.resolvePriority(seed.priority ?? "2")),
+    tags: JSON.stringify(sdk.parseTags(seed.tags ?? "")),
+    body: sdk.canonicalDocument(document).body,
+  };
+}
 
 /** Durable seed ownership; item ids survive later parameter/prefix changes. */
 export interface PresetArtifactRecord {
@@ -51,6 +82,7 @@ export async function computeDesiredPresetState(input: {
   templates: PresetTemplateMap;
   presetId?: string;
   seeds?: readonly SeedItem[];
+  seedTypes?: readonly SeedTypeDefinition[];
   record?: PresetArtifactRecord;
   replace?: boolean;
 }): Promise<DesiredPresetState> {
@@ -73,7 +105,7 @@ export async function computeDesiredPresetState(input: {
     if (input.record && input.record.seedIds.some((id, index) => !id.endsWith(`preset-${input.presetId}-${index}`))) throw new ParameterRefusal("invalid_artifact_record", "Managed seed ids must retain their preset and slot identity; restore ownership before reconciling any item.");
     const seeds = (input.seeds ?? []).map((item, index) => ({
       id: input.record?.seedIds[index] ?? `${settings.id_prefix}preset-${input.presetId}-${index}`,
-      item: structuredClone(item),
+      item: normalizeSeedArtifact(item, input.seedTypes),
     }));
     if (seeds.some(({ id }) => !/^[a-z0-9][a-z0-9-]{0,127}$/.test(id))) throw new ParameterRefusal("invalid_artifact_record", "Use a lowercase letter/digit/hyphen prefix before enrolling managed seeds.");
     if (input.record && input.record.seedIds.length !== seeds.length) throw new ParameterRefusal("invalid_artifact_record", "The managed seed inventory changed; inspect the preset's seed ownership before migrating it.");
@@ -98,11 +130,12 @@ export function artifactValuesEqual(left: unknown, right: unknown): boolean {
 }
 
 /** Compare all seed fields application controls while preserving unrelated user metadata. */
-export function seedArtifactMatches(seed: SeedItem, current: Record<string, unknown> | undefined): boolean {
-  return current !== undefined && ownArtifact(current, "type") === seed.type && ownArtifact(current, "title") === seed.title
-    && String(ownArtifact(current, "priority")) === String(seed.priority ?? 2)
-    && artifactValuesEqual(ownArtifact(current, "tags") ?? [], (seed.tags ?? "").split(",").filter(Boolean).sort())
-    && (ownArtifact(current, "body") ?? "") === (seed.body ?? "") && ownArtifact(current, "parent") === undefined;
+export function seedArtifactMatches(seed: SeedItem, current: Record<string, unknown> | undefined, types: readonly SeedTypeDefinition[] = []): boolean {
+  const expected = normalizeSeedArtifact(seed, types);
+  return current !== undefined && ownArtifact(current, "type") === expected.type && ownArtifact(current, "title") === expected.title
+    && String(ownArtifact(current, "priority")) === expected.priority
+    && artifactValuesEqual(ownArtifact(current, "tags") ?? [], JSON.parse(expected.tags!))
+    && (ownArtifact(current, "body") ?? "") === expected.body && ownArtifact(current, "parent") === undefined;
 }
 
 /** Name every controlled setting, complete template or seed that differs. */

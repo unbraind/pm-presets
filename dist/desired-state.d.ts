@@ -1,6 +1,13 @@
 /** One complete artifact plan shared by preset application and synchronization. */
 import type { PresetSettingsPatch, PresetTemplateMap, StoredCreateTemplateDocument } from "./presets/shared.ts";
 import type { SeedItem } from "./seeds.ts";
+/** Active native type names and aliases used by both artifact planning and writes. */
+export interface SeedTypeDefinition {
+    name: string;
+    aliases?: readonly string[];
+}
+/** Normalize every controlled seed field with the native writer's public helpers. */
+export declare function normalizeSeedArtifact(seed: SeedItem, types?: readonly SeedTypeDefinition[]): SeedItem;
 /** Durable seed ownership; item ids survive later parameter/prefix changes. */
 export interface PresetArtifactRecord {
     version: 1;
@@ -35,13 +42,14 @@ export declare function computeDesiredPresetState(input: {
     templates: PresetTemplateMap;
     presetId?: string;
     seeds?: readonly SeedItem[];
+    seedTypes?: readonly SeedTypeDefinition[];
     record?: PresetArtifactRecord;
     replace?: boolean;
 }): Promise<DesiredPresetState>;
 /** Structural JSON equality ignores object insertion order and retains own-key semantics. */
 export declare function artifactValuesEqual(left: unknown, right: unknown): boolean;
 /** Compare all seed fields application controls while preserving unrelated user metadata. */
-export declare function seedArtifactMatches(seed: SeedItem, current: Record<string, unknown> | undefined): boolean;
+export declare function seedArtifactMatches(seed: SeedItem, current: Record<string, unknown> | undefined, types?: readonly SeedTypeDefinition[]): boolean;
 /** Name every controlled setting, complete template or seed that differs. */
 export declare function compareDesiredPresetState(desired: DesiredPresetState, current: {
     settings: Record<string, unknown> | undefined;

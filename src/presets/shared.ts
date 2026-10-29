@@ -18,7 +18,7 @@ import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.ts";
 import { computeDesiredPresetState, compareDesiredPresetState, ownArtifact, presetArtifactRecord, artifactValuesEqual, seedArtifactMatches } from "../desired-state.ts";
 import { readPresetApplicationHistory } from "../application-history.ts";
-import { readSeedArtifacts } from "../artifact-reader.ts";
+import { readSeedArtifacts, readSeedTypes } from "../artifact-reader.ts";
 import { setJsonProperty } from "../json-object.ts";
 import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
 import { randomUUID } from "node:crypto";
@@ -417,10 +417,11 @@ export async function applyPreset(
   let admittedRecord = record;
   const seeds = input.presetId && (readBooleanOption(options, "withSeeds", "with-seeds") || record)
     ? (await import("../seeds.ts")).resolvedSeedsForPreset(input.presetId, parameterValues) : undefined;
-  let desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds, record, replace });
-  let effectivePatch = desired.settings;
   const client = context.sdk?.client;
-  requireSeedCapabilities(desired.seeds.length, client);
+  requireSeedCapabilities(seeds?.length ?? 0, client);
+  const seedTypes = seeds?.length ? await readSeedTypes(pmDir, client) : undefined;
+  let desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds, record, replace, seedTypes });
+  let effectivePatch = desired.settings;
   // Overrides are final settings input too: they must not reintroduce bindings.
   resolveSettingsWithParameters([], {}, effectivePatch);
   assertWritableReferenceKeys(storedSettings, mergePresetSettings(storedSettings, effectivePatch as unknown as JsonObject, replace));
@@ -456,7 +457,7 @@ export async function applyPreset(
       if (!artifactValuesEqual(record, currentRecord)) {
         if (record) throw new ParameterRefusal("invalid_artifact_record", `Ownership changed while waiting: settings.json#preset_artifacts.${input.presetId}. Re-diff before retrying.`);
         const currentSeeds = (await import("../seeds.ts")).resolvedSeedsForPreset(input.presetId, parameterValues);
-        desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds: currentSeeds, record: currentRecord, replace });
+        desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds: currentSeeds, record: currentRecord, replace, seedTypes: await readSeedTypes(pmDir, client) });
         effectivePatch = desired.settings;
         requireSeedCapabilities(desired.seeds.length, client);
       }

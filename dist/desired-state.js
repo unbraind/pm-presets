@@ -1,5 +1,32 @@
 import { replacementSettings } from "./settings-replacement.js";
 import { ParameterRefusal, resolveParameterizedPreset } from "./params.js";
+import { createRequire } from "node:module";
+import { resolveSimulationSdk } from "./sdk-loader.js";
+/** Normalize every controlled seed field with the native writer's public helpers. */
+export function normalizeSeedArtifact(seed, types = []) {
+    const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]]));
+    const aliases = Object.fromEntries([
+        ...Object.entries(sdk.resolveItemTypeRegistry(sdk.SETTINGS_DEFAULTS).alias_to_type),
+        ...types.flatMap(({ name, aliases }) => [name, ...(aliases ?? [])].map((alias) => [alias.trim().toLowerCase(), name])),
+    ]);
+    const key = seed.type.trim().toLowerCase();
+    // Older host synonym tables can inherit names such as constructor. Only a
+    // string returned by the public contract can participate in a lookup.
+    const candidate = sdk.resolveTypeSynonym(seed.type);
+    const synonym = typeof candidate === "string" ? candidate.toLowerCase() : undefined;
+    const type = ownArtifact(aliases, key) ?? (synonym === undefined ? undefined : ownArtifact(aliases, synonym)) ?? seed.type.trim();
+    const title = seed.title.trim();
+    if (!title)
+        throw new ParameterRefusal("invalid_manifest", "Seed titles must contain non-whitespace text before planning or applying.");
+    const document = sdk.emptyImportedDocument();
+    document.body = seed.body ?? "";
+    return {
+        type, title,
+        priority: String(sdk.resolvePriority(seed.priority ?? "2")),
+        tags: JSON.stringify(sdk.parseTags(seed.tags ?? "")),
+        body: sdk.canonicalDocument(document).body,
+    };
+}
 /** Read only an artifact map's own entry, including when a prototype is polluted. */
 export function ownArtifact(map, key) {
     return map && Object.hasOwn(map, key) ? map[key] : undefined;
@@ -50,7 +77,7 @@ export async function computeDesiredPresetState(input) {
             throw new ParameterRefusal("invalid_artifact_record", "Managed seed ids must retain their preset and slot identity; restore ownership before reconciling any item.");
         const seeds = (input.seeds ?? []).map((item, index) => ({
             id: input.record?.seedIds[index] ?? `${settings.id_prefix}preset-${input.presetId}-${index}`,
-            item: structuredClone(item),
+            item: normalizeSeedArtifact(item, input.seedTypes),
         }));
         if (seeds.some(({ id }) => !/^[a-z0-9][a-z0-9-]{0,127}$/.test(id)))
             throw new ParameterRefusal("invalid_artifact_record", "Use a lowercase letter/digit/hyphen prefix before enrolling managed seeds.");
@@ -80,11 +107,12 @@ export function artifactValuesEqual(left, right) {
     return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && artifactValuesEqual(left[key], right[key]));
 }
 /** Compare all seed fields application controls while preserving unrelated user metadata. */
-export function seedArtifactMatches(seed, current) {
-    return current !== undefined && ownArtifact(current, "type") === seed.type && ownArtifact(current, "title") === seed.title
-        && String(ownArtifact(current, "priority")) === String(seed.priority ?? 2)
-        && artifactValuesEqual(ownArtifact(current, "tags") ?? [], (seed.tags ?? "").split(",").filter(Boolean).sort())
-        && (ownArtifact(current, "body") ?? "") === (seed.body ?? "") && ownArtifact(current, "parent") === undefined;
+export function seedArtifactMatches(seed, current, types = []) {
+    const expected = normalizeSeedArtifact(seed, types);
+    return current !== undefined && ownArtifact(current, "type") === expected.type && ownArtifact(current, "title") === expected.title
+        && String(ownArtifact(current, "priority")) === expected.priority
+        && artifactValuesEqual(ownArtifact(current, "tags") ?? [], JSON.parse(expected.tags))
+        && (ownArtifact(current, "body") ?? "") === expected.body && ownArtifact(current, "parent") === undefined;
 }
 /** Name every controlled setting, complete template or seed that differs. */
 export function compareDesiredPresetState(desired, current) {

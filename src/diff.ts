@@ -10,8 +10,8 @@ import * as path from "node:path";
 
 import { computeDesiredPresetState, compareDesiredPresetState, ownArtifact, presetArtifactRecord, artifactValuesEqual, seedArtifactMatches } from "./desired-state.ts";
 import { readPresetApplicationHistory } from "./application-history.ts";
-import type { PresetArtifactRecord } from "./desired-state.ts";
-import { readSeedArtifacts } from "./artifact-reader.ts";
+import type { PresetArtifactRecord, SeedTypeDefinition } from "./desired-state.ts";
+import { readSeedArtifacts, readSeedTypes } from "./artifact-reader.ts";
 import type { PmClient } from "@unbrained/pm-cli/sdk";
 import type { PresetDefinition } from "./catalog.ts";
 import { isSecretReference, collectParameterValues, collectSecretSettingPaths, redactSecretValuesDeep, resolveSettingsWithParameters, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
@@ -34,6 +34,8 @@ export interface WorkspaceSnapshot {
   templateDocuments?: Record<string, unknown>;
   /** Authoritatively read managed seed items keyed by their stable id. */
   seeds?: Record<string, Record<string, unknown>>;
+  /** Active native aliases captured alongside managed seed contents. */
+  seedTypes?: readonly SeedTypeDefinition[];
   /** Unverifiable ownership records remain named drift, never synchronization. */
   artifactErrors?: string[];
   /** Ownership recovered from the last verified package application in native history. */
@@ -145,7 +147,7 @@ export async function computePresetDiff(
     settings: { ...definition.settings, id_prefix: options.prefix ?? definition.settings.id_prefix },
     templates: definition.templateDocuments ?? {},
     seeds: options.withSeeds || record ? definition.seedItems ?? [] : undefined,
-    record, replace: options.replace,
+    record, replace: options.replace, seedTypes: snapshot.seedTypes,
   };
   let desired;
   try { desired = await computeDesiredPresetState(planInput); }
@@ -287,7 +289,8 @@ export async function readWorkspaceSnapshot(pmDir: string, client?: PmClient): P
     catch { seedEntries.push([id, {}]); }
   }
   const seeds = Object.fromEntries(seedEntries);
-  return { settings, templateNames, templateDocuments, seeds, artifactErrors, applicationRecords: history.records };
+  const seedTypes = ids.length > 0 ? await readSeedTypes(pmDir, client) : undefined;
+  return { settings, templateNames, templateDocuments, seeds, seedTypes, artifactErrors, applicationRecords: history.records };
 }
 
 /**

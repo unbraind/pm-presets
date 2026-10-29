@@ -191,6 +191,9 @@ diffs include those seeds even without repeating `--with-seeds`; prefix changes
 keep their established ids and update the controlled type/title/priority/tags/body
 and explicit no-parent state. Existing item lifecycle and unrelated user metadata
 remain host-owned. Reapplying matching content creates no duplicate seeds.
+Seed plans use the native writer's type aliases, trimmed titles, named priorities,
+canonical tag lists and body normalization. Equivalent authored values therefore
+agree across apply, strict diff, stack previews and prerequisite plans.
 
 Settings, template and seed writes share one apply admission. A preflight checks
 overwrite conflicts before settings/history mutation. Native write failures exit

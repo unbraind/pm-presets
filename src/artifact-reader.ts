@@ -3,6 +3,27 @@ import { createRequire } from "node:module";
 import type { PmClient } from "@unbrained/pm-cli/sdk";
 import { resolveSimulationSdk } from "./sdk-loader.ts";
 import { ParameterRefusal } from "./params.ts";
+import type { SeedTypeDefinition } from "./desired-state.ts";
+import type * as Host from "@unbrained/pm-cli/sdk";
+
+/** Require one complete native inventory for alias planning and item location alike. */
+async function readSeedSchema(pmRoot: string, client?: PmClient) {
+  try {
+    const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof Host;
+    const schema = await (client ?? new sdk.PmClient({ pmRoot, noExtensions: true })).schemaList();
+    const types = [...schema.builtin, ...schema.custom, ...schema.extension];
+    if (types.length !== schema.counts.total) throw new Error("Incomplete active schema");
+    return types;
+  } catch {
+    throw new ParameterRefusal("artifact_unreadable", "Cannot read the complete active seed type inventory; check the host schema before applying or diffing.");
+  }
+}
+
+/** Capture complete active native names and aliases, including extension-defined types. */
+export async function readSeedTypes(pmRoot: string, client?: PmClient): Promise<SeedTypeDefinition[]> {
+  const types = await readSeedSchema(pmRoot, client);
+  return types.map(({ name, aliases }) => ({ name, aliases }));
+}
 
 /** Read complete managed items; absent ids differ, and other read failures refuse. */
 export async function readSeedArtifacts(pmRoot: string, ids: readonly string[], client?: PmClient): Promise<Record<string, Record<string, unknown>>> {
@@ -11,9 +32,7 @@ export async function readSeedArtifacts(pmRoot: string, ids: readonly string[], 
     const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof import("@unbrained/pm-cli/sdk");
     const settings = await sdk.readSettings(pmRoot);
     const registry = sdk.resolveItemTypeRegistry(settings);
-    const schema = await (client ?? new sdk.PmClient({ pmRoot, noExtensions: true })).schemaList();
-    const types = [...schema.builtin, ...schema.custom, ...schema.extension];
-    if (types.length !== schema.counts.total) throw new Error("Incomplete active schema");
+    const types = await readSeedSchema(pmRoot, client);
     const folders = Object.fromEntries([...Object.entries(registry.type_to_folder), ...types.map(({ name, folder }) => [name, folder])]);
     const entries: Array<[string, Record<string, unknown>]> = [];
     for (const id of ids) {

@@ -6,11 +6,11 @@ status: in_progress
 priority: 1
 tags[8]: authoring,bindings,"gh:unbraind/pm-presets#170","gh:unbraind/pm-presets#171","gh:unbraind/pm-presets#173",parameters,presets,sdk
 created_at: "2026-10-27T12:08:56.144Z"
-updated_at: "2026-10-29T14:15:37.732Z"
-assignee: codex-sol
-claim_principal: codex-sol
+updated_at: "2026-10-29T18:08:37.639Z"
+assignee: codex-agent
+claim_principal: codex-agent
 author: pi-agent
-comments[67]{created_at,author,text}:
+comments[73]{created_at,author,text}:
   "2026-10-27T12:09:22.235Z",pi-agent,"Overlap check (re-run 2026-10-27 against pm CLI 2026.10.20 SDK and sibling packages): (a) pm-cli SDK has no parameter/interpolation capability — grep over the installed SDK declarations shows settings mutations are literal audited patches (mutateWorkspaceSettings), templates are literal option maps (loadCreateTemplateOptions/runTemplatesShow), client.create takes literal fields; no 'parameter|interpolat|substitut' matches in templates/workspace-contracts/schema declarations. (b) gh search issues --repo unbraind/pm-cli 'parameter binding'/'preset parameter'/'template parameter': no open upstream work. (c) Fleet sibling scan (src/docs) for parameter-binding/interpolation features: no hits. (d) In-package status: presets accept only a few CLI overrides (--prefix, --force, --dry-run, --replace, --with-seeds) and upgrades of known settings; seed and template values are static literals. Conclusion: no overlap — this adds parameter propagation as an explicit authoring contract while the resolved native fields are still validated by the existing core path (preset validation + the host's audited settings mutation), so no core schema change is required."
   "2026-10-27T14:07:02.392Z",pi-agent,"Revert proof (2026-10-27): behaviourally reverted the parameter handling in applyPreset (resolution disabled; raw binding syntax passes through) and re-ran the focused new tests: 8 of 11 fail (one-value-reaches-every-occurrence, default resolution, refusal-before-writes, params-file, diff parity, dry-run, property round-trip, concurrent applies). Restored the implementation: 8/8 params-cli tests pass again. Full suite before the gate: 238 tests pass, 0 fail (node --test --test-concurrency=2 on a saturated 4-core host)."
   "2026-10-27T14:56:36.277Z",pi-agent,"Real-data validation (2026-10-27), on byte-identical temp copies of this repository's public pm tracker in non-git temp dirs (GIT_CEILING set; the repo tracker itself was never touched): (1) READ-ONLY copy (chmod a-w): parameterized diff with projectKey=acme compared 13 settings leaves -> 1 add, 6 change, id_prefix 'acme-' vs stored 'pm-'; default-resolution diff reported the 'road-' default; supplying an undeclared parameter refused with typed code unknown_parameter listing the declared parameter; a full-file digest proved every tracker byte unchanged afterwards. (2) Writable temp copy: dry-run apply resolved 1 parameter into 3 binding occurrences (id_prefix + two template bodies, all showing acme); an invalid value (uppercase) refused with invalid_value before any write; a real --with-seeds apply read back through the SDK as id_prefix 'acme-', 2/2 template bodies carrying the occurrence, seed item titled 'Define the acme first roadmap initiative', 85 items after seeding (84 tracked items + 1 seed). (3) Note: the audited settings mutation takes a workspace-history lock, so a dry-run apply against the read-only copy refuses with a lock conflict - expected host behavior, mirrored by presets diff which reads without locks."
@@ -78,7 +78,13 @@ comments[67]{created_at,author,text}:
   "2026-10-29T13:36:10.760Z",codex-sol,"Final class audit is complete. Eight isolated behavioral reversions now fail at intended assertions: complete template comparison, complete seed comparison, pre-write stale refusal, required template payloads, required seed inventory, per-id read isolation, strict final prefix/template/seed validation, and the invalid-settings uncertainty guard. Each source mutation is restored byte-for-byte. The SDK inventory property also proves an invalid settings projection cannot report inSync even when matching the stored invalid state, while existing legacy redaction remains available. The 120-test PM-linked focus passes with all six changed modules at 100% lines/branches/functions; final SDK/redaction focus passes 4/4 and packed complete-artifact focus passes Node+Bun. Repeating the final focus after the last uncertainty guard, then both complete release gates under CI=true with two workers. No further code changes are planned unless a check fails."
   "2026-10-29T13:54:11.655Z",codex-sol,"The complete frozen npm gate passes: CI=true npm run release:check exits 0; 317/317 tests, zero failures/skips/cancellations, and 100% lines/branches/functions across all 35 required sources. Typecheck, compiler lint, docstrings (88 files/212 declarations), production audit (zero vulnerabilities), pack dry-run, changelog and both release verifiers pass. The final PM-linked source focus also passes 120/120 at 100% for all six artifact modules. All 96 source/test/document/generated-output hashes match the gated candidate; README only clarifies that unowned top-level settings are preserved while id_prefix is controlled. The full Bun gate is now running sequentially with the same two-worker cap. Claim remains held through publication and the bounded CI watch."
   "2026-10-29T14:15:37.729Z",codex-sol,"Final local acceptance is complete: CI=true npm run release:check AND CI=true bun run release:check both exit 0 on the same frozen implementation. Each passes 317/317 tests with zero failures/skips/cancellations and 100% lines/branches/functions across all 35 required source files. Both pass typecheck, compiler lint, complete docstrings (88 files/212 declarations), zero-vulnerability production audit, package dry-run, changelog and both release verifiers. The final linked focus passes 120/120, and real packed Node/Bun artifact acceptance passes. Eight behavioral reversions fail and are restored exactly. Fresh main is fully contained (zero behind), the published PR head is still the expected parent, and no rebase/history rewrite is used. All 96 frozen source/test/document/artifact hashes will be checked before explicit staging. Publishing the code plus this tracker/history evidence, retaining the claim for the requested CI observation with a shared 45-minute maximum. Upstream template SDK follow-up pm-7km8 remains open and unchanged; the package enforces explicit guards."
-files[51]{path,scope}:
+  "2026-10-29T17:53:09.235Z",codex-agent,"Review round resumed from authoritative remote head 40312d4; inspected the abandoned merge and preserved uncommitted work outside tracked files before reset. Merged current origin/main. GraphQL returned zero review threads (pagination complete); no CodeRabbit review body exists, only a skipped-review conversation notice. Reverify blocking template drift and issue 171 normalization / issue 173 serialized secret protection across SDK, CLI, JSON/TOON, packed Node/Bun and non-git trackers. No thread replies or resolutions."
+  "2026-10-29T17:53:19.611Z",codex-agent,"Coordinated continuation of the timed-out prior agent: took over its codex-sol claim as codex-agent. Defect classes: synchronization must compare every controlled artifact using apply's desired state; secret protection must occur on structured data before serialization and cover rotated legacy destinations; defaults and supplied inputs must share one normalization/validation path. Current remote already contains substantial fixes; verify them rather than reapply stale code."
+  "2026-10-29T17:57:36.271Z",codex-agent,"Hostile class review reproduced additional normalization drift in seedArtifactMatches: native create accepts lowercase type names, padded titles/bodies, named priorities and JSON/CSV tag lists, but raw comparison rejects equivalent stored fields. Native examples: tags ' RoadMap, roadmap, ALPHA ' and JSON tag arrays both store ['alpha','roadmap'] while comparison returned false. Fix shares native resolvePriority/parseTags/canonicalDocument and active schema aliases through the desired-state planner. Baseline artifact-state + params-review focus passed 37/37 before changes."
+  "2026-10-29T18:02:51.913Z",codex-agent,"Revert proof in a disposable source copy (reviewed worktree untouched): reverting canonical defaults fails 1/1; reverting redaction to serialized-text matching fails 1/1; exposing legacy destination workspace values fails 1/1; ignoring template contents in inSync fails 1/1; bypassing stale-artifact preflight fails 1/1 on byte-preservation; returning raw seed fields fails 1/1; dropping active schema aliases fails 1/1. Restored implementation passes the five combined targeted properties (5/5, zero skips). Source command matrix passed 2/2 before extending whole-template and stack/prerequisite coverage. Changes now use the same seed normalization for application, diff, stack seed identities and plan prerequisites."
+  "2026-10-29T18:06:22.854Z",codex-agent,"Extended the native-value class sweep to stack seed ownership and prerequisite type names. Nine targeted mutations now cover defaults, escaped structured redaction, legacy destination redaction, complete-template synchronization, pre-write stale refusal, native seed field normalization, active aliases, stack fields and plan type names. A new fallback-corpus assertion initially assumed malformed optional schema must reject; the native SDK instead returns a fallback inventory. The test now requires exact parity with that public native inventory, retaining complete-count checks. Pinned health reports valid history and no merge receipts; its unrelated local pm-github host-version skew is left unchanged under the dependency-pin rule."
+  "2026-10-29T18:08:37.636Z",codex-agent,Current linked native normalization/template class focus passes 3/3 (zero failures/skips). Its adversarial canonical type check caught the remaining Card/AgentRun prerequisite casing path; fixed using the preset's declared native item-type inventory. Pinned pm --no-extensions health --strict-exit passes with valid append-only history. Packed Node/Bun complete-artifact consumer passed; remaining packed parameter checks continue. Preparing the native normalization fix push; unchanged full npm/Bun release gates follow.
+files[52]{path,scope}:
   docs/params-example.md,project
   manifest.json,project
   package-lock.json,project
@@ -129,27 +135,150 @@ files[51]{path,scope}:
   tests/params-review.test.ts,project
   tests/params-secrets.test.ts,project
   tests/params.test.ts,project
+  tests/seed-normalization.test.ts,project
   tests/shared.test.ts,project
-tests[19]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
-  node --test --test-concurrency=2 tests/params.test.ts tests/params-cli.test.ts tests/catalog.test.ts,project,pi-agent,"2026-10-27T15:04:47.800Z",local_mutation,feat/typed-parameter-binding-manifests
-  node --test --test-concurrency=2 tests/params.test.ts tests/params-review.test.ts tests/params-cli.test.ts,project,pi-agent,"2026-10-27T23:54:20.731Z",local_mutation,feat/typed-parameter-binding-manifests
-  node --test --test-concurrency=2 tests/params.test.ts tests/params-review.test.ts tests/params-cli.test.ts tests/params-packed.test.ts,project,codex-sol,"2026-10-28T22:13:11.152Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 tests/seeds.test.ts tests/params-review.test.ts,project,codex-sol,"2026-10-28T22:31:01.417Z",local_mutation,fix/typed-parameter-binding-review
-  "npm run release:check",project,codex-sol,"2026-10-28T22:49:14.897Z",local_mutation,fix/typed-parameter-binding-review
-  "bun run release:check",project,codex-sol,"2026-10-28T23:33:48.042Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 tests/params-io-lock.test.ts tests/params.test.ts tests/params-review.test.ts tests/params-packed.test.ts,project,codex-sol,"2026-10-29T00:18:51.212Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/params-packed.test.ts tests/params-io-lock.test.ts,project,codex-sol,"2026-10-29T01:22:50.561Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/command-errors.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts,project,codex-sol,"2026-10-29T01:54:18.786Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/command-errors.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts,project,codex-sol,"2026-10-29T01:57:28.285Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/diff.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/diff.test.ts,project,codex-sol,"2026-10-29T05:21:44.608Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/json-object.ts tests/params-keys.test.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/shared.test.ts tests/templates-sdk.test.ts,project,codex-sol,"2026-10-29T07:24:55.264Z",local_mutation,fix/typed-parameter-binding-review
-  node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/json-object.ts --test-coverage-include=src/presets/shared.ts tests/params-keys.test.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/shared.test.ts tests/templates-sdk.test.ts,project,codex-sol,"2026-10-29T09:16:45.138Z",local_mutation,fix/typed-parameter-binding-review
-  env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts,project,codex-sol,"2026-10-29T11:29:45.683Z",local_mutation,fix/typed-parameter-binding-review
-  env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts,project,codex-sol,"2026-10-29T11:47:03.508Z",local_mutation,fix/typed-parameter-binding-review
-  "env CI=true npm run release:check",project,codex-sol,"2026-10-29T12:56:33.904Z",local_mutation,fix/typed-parameter-binding-review
-  "env CI=true bun run release:check",project,codex-sol,"2026-10-29T12:56:35.364Z",local_mutation,fix/typed-parameter-binding-review
-  env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts tests/commands.test.ts tests/audited-settings.test.ts tests/seeds-sdk.test.ts,project,codex-sol,"2026-10-29T13:25:46.500Z",local_mutation,fix/typed-parameter-binding-review
-  env -u PM_PATH -u PM_GLOBAL_PATH CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts tests/commands.test.ts tests/audited-settings.test.ts tests/seeds-sdk.test.ts,project,codex-sol,"2026-10-29T13:31:00.541Z",local_mutation,fix/typed-parameter-binding-review
+tests[20]:
+  - command: node --test --test-concurrency=2 tests/params.test.ts tests/params-cli.test.ts tests/catalog.test.ts
+    scope: project
+    provenance:
+      author: pi-agent
+      created_at: "2026-10-27T15:04:47.800Z"
+      source_kind: local_mutation
+      source_ref: feat/typed-parameter-binding-manifests
+  - command: node --test --test-concurrency=2 tests/params.test.ts tests/params-review.test.ts tests/params-cli.test.ts
+    scope: project
+    provenance:
+      author: pi-agent
+      created_at: "2026-10-27T23:54:20.731Z"
+      source_kind: local_mutation
+      source_ref: feat/typed-parameter-binding-manifests
+  - command: node --test --test-concurrency=2 tests/params.test.ts tests/params-review.test.ts tests/params-cli.test.ts tests/params-packed.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-28T22:13:11.152Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 tests/seeds.test.ts tests/params-review.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-28T22:31:01.417Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: "npm run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-28T22:49:14.897Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: "bun run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-28T23:33:48.042Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 tests/params-io-lock.test.ts tests/params.test.ts tests/params-review.test.ts tests/params-packed.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T00:18:51.212Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/params-packed.test.ts tests/params-io-lock.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T01:22:50.561Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/command-errors.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T01:54:18.786Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/command-errors.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T01:57:28.285Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/diff.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/diff.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T05:21:44.608Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/json-object.ts tests/params-keys.test.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/shared.test.ts tests/templates-sdk.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T07:24:55.264Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/params.ts --test-coverage-include=src/json-object.ts --test-coverage-include=src/presets/shared.ts tests/params-keys.test.ts tests/params-boundaries.test.ts tests/params-secrets.test.ts tests/params.test.ts tests/params-review.test.ts tests/catalog.test.ts tests/seeds.test.ts tests/export.test.ts tests/params-io-lock.test.ts tests/shared.test.ts tests/templates-sdk.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T09:16:45.138Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T11:29:45.683Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T11:47:03.508Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: "env CI=true npm run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T12:56:33.904Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: "env CI=true bun run release:check"
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T12:56:35.364Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: env CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts tests/commands.test.ts tests/audited-settings.test.ts tests/seeds-sdk.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T13:25:46.500Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: env -u PM_PATH -u PM_GLOBAL_PATH CI=true node --test --test-concurrency=2 --experimental-test-coverage --test-coverage-include=src/desired-state.ts --test-coverage-include=src/application-history.ts --test-coverage-include=src/artifact-reader.ts --test-coverage-include=src/settings-replacement.ts --test-coverage-include=src/diff.ts --test-coverage-include=src/presets/shared.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/artifact-focus.lcov tests/artifact-state.test.ts tests/diff.test.ts tests/shared.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/params-cli.test.ts tests/params-keys.test.ts tests/params-io-lock.test.ts tests/params-secrets.test.ts tests/commands.test.ts tests/audited-settings.test.ts tests/seeds-sdk.test.ts
+    scope: project
+    provenance:
+      author: codex-sol
+      created_at: "2026-10-29T13:31:00.541Z"
+      source_kind: local_mutation
+      source_ref: fix/typed-parameter-binding-review
+  - command: node --test --test-concurrency=2 tests/seed-normalization.test.ts
+    scope: project
+    timeout_seconds: 1200
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-29T17:59:35.660Z"
+      source_kind: local_mutation
+      source_ref: feat/typed-parameter-binding-manifests
 docs[2]{path,scope}:
   docs/params-example.md,project
   README.md,project

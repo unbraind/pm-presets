@@ -32,6 +32,10 @@ test("packed applies and both strict diff forms agree on complete artifacts unde
       return result.stdout + result.stderr;
     }
     run(["package", "install", archive, "--project"]);
+    // Adversarial authoring fixture in the installed consumer only: every seed
+    // field must agree with native normalization in SDK and both CLI renderers.
+    const seedsEntry = join(pmRoot, "extensions", "pm-presets", "dist", "seeds.js");
+    appendFileSync(seedsEntry, '\nfor (const seeds of Object.values(PRESET_SEEDS)) for (const seed of seeds) { seed.type = seed.type.toLowerCase(); seed.title = " \\u2003" + seed.title + " "; seed.priority = "MEDIUM"; seed.tags = \'["Review","review","ALPHA"]\'; seed.body = "\\n\\n" + seed.body + "\\n\\n"; }\n');
     // Card and AgentRun are supplied by the active host schema, rather than a
     // manually persisted schema fixture. Their complete seed state must agree.
     for (const preset of ["startup-roadmap", "kanban", "agent-workflow"]) {

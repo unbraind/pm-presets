@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { computeDesiredPresetState, compareDesiredPresetState, ownArtifact, presetArtifactRecord, artifactValuesEqual, seedArtifactMatches } from "./desired-state.js";
 import { readPresetApplicationHistory } from "./application-history.js";
-import { readSeedArtifacts } from "./artifact-reader.js";
+import { readSeedArtifacts, readSeedTypes } from "./artifact-reader.js";
 import { isSecretReference, collectParameterValues, collectSecretSettingPaths, redactSecretValuesDeep, resolveSettingsWithParameters, ParameterRefusal } from "./params.js";
 function isJsonObject(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -83,7 +83,7 @@ export async function computePresetDiff(definition, snapshot, options = {}) {
         settings: { ...definition.settings, id_prefix: options.prefix ?? definition.settings.id_prefix },
         templates: definition.templateDocuments ?? {},
         seeds: options.withSeeds || record ? definition.seedItems ?? [] : undefined,
-        record, replace: options.replace,
+        record, replace: options.replace, seedTypes: snapshot.seedTypes,
     };
     let desired;
     try {
@@ -244,7 +244,8 @@ export async function readWorkspaceSnapshot(pmDir, client) {
         }
     }
     const seeds = Object.fromEntries(seedEntries);
-    return { settings, templateNames, templateDocuments, seeds, artifactErrors, applicationRecords: history.records };
+    const seedTypes = ids.length > 0 ? await readSeedTypes(pmDir, client) : undefined;
+    return { settings, templateNames, templateDocuments, seeds, seedTypes, artifactErrors, applicationRecords: history.records };
 }
 /**
  * The parameterized diff surface both diff commands share.

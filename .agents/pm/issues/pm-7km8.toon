@@ -6,7 +6,7 @@ status: open
 priority: 2
 tags[4]: host-sdk,own-keys,templates,upstream
 created_at: "2026-10-29T07:06:09.014Z"
-updated_at: "2026-10-29T08:32:19.072Z"
+updated_at: "2026-10-29T18:02:56.796Z"
 author: codex-sol
 acceptance_criteria: "Add adversarial own-key properties for SDK template parse/save/show and real CLI JSON/TOON, including Object.prototype names and prototype integrity on nongit trackers. Preserve expected SDK error identity. Revisit the pm-presets compatibility refusals after supported host versions preserve these keys."
 repro_steps: "Initialize a scratch tracker using PmClient with noExtensions. Write templates/own-key.json using JSON.parse for {\"name\":\"own-key\",\"options\":{\"__proto__\":\"public-data\",\"ordinary\":\"kept\",\"constructor\":\"kept\"}}. Call loadCreateTemplateOptions and runTemplatesShow through the pinned SDK. Both successful results omit __proto__ although the stored file retains the field. All data is synthetic."
@@ -14,10 +14,11 @@ expected_result: "Preserve every accepted option as an own data property, or ret
 actual_result: Both SDK reads omit __proto__; ordinary and constructor controls remain. SDK source confirms unsafe indexed assignment in template option cloning.
 affected_version: 2026.10.25
 component: upstream template SDK
-comments[3]{created_at,author,text}:
+comments[4]{created_at,author,text}:
   "2026-10-29T07:19:27.672Z",codex-sol,Confirmed against the pinned 2026.10.25 SDK using synthetic user-template JSON. The package compatibility tests now require explicit refusal for unsupported public-document fields before writes and for partial legacy projections before output/export. The SDK parser/flag-extractor fix remains upstream work; this follow-up stays open and unclaimed. No private data or tracker history was rewritten.
   "2026-10-29T08:14:04.385Z",codex-sol,"Additional host compatibility evidence: audited settings callbacks project only native fields, so package merges preserve extension fields from the locked raw snapshot. The host intentionally rejects nested __proto__ JSON-Patch edits; the package now emits typed preflight/locked refusals instead of relying on that generic audit failure. This follow-up remains focused on silent SDK template option loss; do not disable host prototype protections."
   "2026-10-29T08:32:19.068Z",codex-sol,"Confirmed the related builtin lookup defect with an isolated SDK workspace: constructor-like inherited names resolve successfully as phantom builtins even though the native inventory omits them. The package adapter now verifies builtin results against the own SDK inventory and still accepts a real user template named constructor. Removing that guard fails the new missing-refusal property. Upstream acceptance should cover own-key cloning and own inventory membership together, preserving native expected errors."
+  "2026-10-29T18:02:56.796Z",codex-agent,"Additional evidence for the upstream own-property lookup class: the pinned public resolveTypeSynonym('constructor') returns an inherited function instead of its declared string-or-undefined result. The package seed normalizer now checks the return type and uses own-entry lookups before applying any synonym; an adversarial constructor case covers it. This is a host implementation bug, not a missing SDK signature; no upstream repository changes were made."
 files[2]{path,scope}:
   src/presets/shared.ts,project
   tests/params-keys.test.ts,project

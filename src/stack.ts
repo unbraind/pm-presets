@@ -13,6 +13,8 @@ import { loadTemplateSdk, mergePresetSettings } from "./presets/shared.ts";
 import { ParameterRefusal } from "./params.ts";
 import { resolveSimulationSdk } from "./sdk-loader.ts";
 import { setJsonProperty } from "./json-object.ts";
+import { normalizeSeedArtifact } from "./desired-state.ts";
+import { readSeedTypes } from "./artifact-reader.ts";
 
 /** Select whole catalog surfaces; omitted flags select settings/templates but omit seeds. */
 export interface PresetStackSelection {
@@ -144,6 +146,7 @@ export function stackSettingsPreview(result: Awaited<ReturnType<ExtensionCommand
 /** Adapt bundled contributions into a canonical host profile preview; never apply or persist a plan. */
 export async function planPresetStack(pmRoot: string, sdk: ExtensionCommandSdk, input: PresetStackInput): Promise<PresetStackPlan> {
   const request = parseInput(input);
+  const seedTypes = request.selections.some((selection) => selection.seeds) && sdk?.client ? await readSeedTypes(pmRoot, sdk.client) : [];
   const candidates = new Map<string, { owner: PresetId; value: unknown }[]>();
   /** Accumulate catalog ownership without assigning precedence to selection order. */
   function add(path: string, owner: PresetId, value: unknown): void {
@@ -154,7 +157,10 @@ export async function planPresetStack(pmRoot: string, sdk: ExtensionCommandSdk, 
     const id = selection.preset;
     if (selection.settings) for (const [path, value] of leaves(requirePresetDefinition(id).settings)) add(`/settings${path}`, id, value);
     if (selection.templates) for (const template of presetTemplateEntries(id)) add(`/templates/${escape(template.name)}`, id, template.options);
-    if (selection.seeds) for (const seed of resolvedSeedsForPreset(id, {}, true)) add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
+    if (selection.seeds) for (const authored of resolvedSeedsForPreset(id, {}, true)) {
+      const seed = JSON.stringify(authored).includes("${param:") ? authored : normalizeSeedArtifact(authored, seedTypes);
+      add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
+    }
   }
   const ownership: PresetStackOwnership[] = [];
   const resolved = new Map<string, { owner: PresetId; value: unknown }>();

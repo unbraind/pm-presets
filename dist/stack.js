@@ -11,6 +11,8 @@ import { loadTemplateSdk, mergePresetSettings } from "./presets/shared.js";
 import { ParameterRefusal } from "./params.js";
 import { resolveSimulationSdk } from "./sdk-loader.js";
 import { setJsonProperty } from "./json-object.js";
+import { normalizeSeedArtifact } from "./desired-state.js";
+import { readSeedTypes } from "./artifact-reader.js";
 /** A usage refusal carries a stable category and a concrete corrective action. */
 export class StackRefusal extends Error {
     /** Machine-readable failure category. */
@@ -118,6 +120,7 @@ export function stackSettingsPreview(result) {
 /** Adapt bundled contributions into a canonical host profile preview; never apply or persist a plan. */
 export async function planPresetStack(pmRoot, sdk, input) {
     const request = parseInput(input);
+    const seedTypes = request.selections.some((selection) => selection.seeds) && sdk?.client ? await readSeedTypes(pmRoot, sdk.client) : [];
     const candidates = new Map();
     /** Accumulate catalog ownership without assigning precedence to selection order. */
     function add(path, owner, value) {
@@ -134,8 +137,10 @@ export async function planPresetStack(pmRoot, sdk, input) {
             for (const template of presetTemplateEntries(id))
                 add(`/templates/${escape(template.name)}`, id, template.options);
         if (selection.seeds)
-            for (const seed of resolvedSeedsForPreset(id, {}, true))
+            for (const authored of resolvedSeedsForPreset(id, {}, true)) {
+                const seed = JSON.stringify(authored).includes("${param:") ? authored : normalizeSeedArtifact(authored, seedTypes);
                 add(`/seeds/${escape(`${seed.type}:${seed.title}`)}`, id, seed);
+            }
     }
     const ownership = [];
     const resolved = new Map();
