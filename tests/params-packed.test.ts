@@ -35,7 +35,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   const settingsFile = join(pmRoot, "settings.json");
   const stored = 'old-synthetic"credential\\value';
   const settings = JSON.parse(readFileSync(settingsFile, "utf8"));
-  settings.secret_references = { deploy: "@PREVIOUS_TOKEN" };
+  settings.secret_references = Object.fromEntries(["deploy", ...Object.getOwnPropertyNames(Object.prototype), "prototype"].map((key) => [key, key === "deploy" ? "@PREVIOUS_TOKEN" : "@PRESET_PACKED_TOKEN"]));
   writeFileSync(settingsFile, JSON.stringify(settings));
   let before = readFileSync(settingsFile, "utf8");
   const runtimes = [process.execPath];
@@ -270,6 +270,88 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
           }
         }
       } finally { writeFileSync(entry, fixture); writeFileSync(seedModule, originalSeeds); }
+      const ownKeys = ["deploy", ...Object.getOwnPropertyNames(Object.prototype), "prototype"];
+      const keyFixture = fixture + '\nSETTINGS.secret_references = Object.fromEntries(["deploy", ...Object.getOwnPropertyNames(Object.prototype), "prototype"].map((key) => [key, "${param:token}"]));\nObject.defineProperty(Object.values(TEMPLATES)[0].options, "constructor", { value: "public-own-data", enumerable: true, configurable: true, writable: true });\n';
+      const keyParams = join(root, "key-params.json");
+      writeFileSync(keyParams, JSON.stringify({ token: "@PRESET_PACKED_TOKEN" }));
+      try {
+        writeFileSync(entry, keyFixture + '\nObject.defineProperty(Object.values(TEMPLATES)[0].options, "__proto__", { value: "unsupported-own-data", enumerable: true, configurable: true });\n');
+        const invalidBefore = trackerBytes(pmRoot);
+        for (const json of [[], ["--json"]]) {
+          for (const command of [["presets", "apply", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"], ["roadmap-setup", "--params-file", keyParams]]) {
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            assert.equal(result.status, 2, "unsupported native keys must refuse before writing");
+            assert.match(result.stdout + result.stderr, /invalid_manifest/);
+            assert.equal(trackerBytes(pmRoot), invalidBefore);
+          }
+        }
+        writeFileSync(entry, keyFixture);
+        for (const json of [[], ["--json"]]) {
+          for (const command of [["presets", "apply", "startup-roadmap", "--with-seeds", "--force", "--param", "token=@PRESET_PACKED_TOKEN"],
+            ["roadmap-setup", "--force", "--params-file", keyParams]]) {
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            assert.equal(result.status, 0, result.stdout + result.stderr);
+            const refs = JSON.parse(readFileSync(settingsFile, "utf8")).secret_references;
+            assert.deepEqual(refs, Object.fromEntries(ownKeys.map((key) => [key, "@PRESET_PACKED_TOKEN"])));
+            assert.ok(Object.hasOwn(refs, "__proto__"));
+            const options = JSON.parse(readFileSync(join(pmRoot, "templates", "initiative.json"), "utf8")).options;
+            assert.ok(Object.hasOwn(options, "constructor"));
+            assert.equal(options.constructor, "public-own-data");
+            assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
+          }
+          const ownBefore = trackerBytes(pmRoot);
+          const absent = spawnSync(runtime, [cli, "--path", pmRoot, "templates", "show", "constructor", ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          assert.equal(absent.status, 3, "template names must come from the own SDK inventory");
+          assert.equal(trackerBytes(pmRoot), ownBefore);
+          for (const command of [["presets", "show", "startup-roadmap"], ["presets", "diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"],
+            ["presets", "--diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"], ["presets", "export", "own-key-copy"],
+            ["presets", "--custom", "own-key-copy"], ["templates", "show", "initiative"]]) {
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            assert.equal(result.status, 0, result.stdout + result.stderr);
+            assert.ok(result.stdout.includes(command[0] === "templates" ? "constructor" : "__proto__"), "the output must preserve the accepted own key");
+            if (json.length) {
+              const value = JSON.parse(result.stdout);
+              if (command[0] === "templates") {
+                assert.ok(Object.hasOwn(value.options, "constructor"));
+                assert.equal(value.options.constructor, "public-own-data");
+              } else if (command[1] === "diff" || command[1] === "--diff") {
+                assert.ok(ownKeys.every((key) => value.settings.some((entry: any) => entry.path === `secret_references.${key}` && entry.preset === "@PRESET_PACKED_TOKEN")));
+              } else {
+                assert.deepEqual(value.settings.secret_references, Object.fromEntries(ownKeys.map((key) => [key, command[1] === "show" ? "${param:token}" : "@PRESET_PACKED_TOKEN"])));
+              }
+            } else if (command[0] === "templates") {
+              assert.match(result.stdout, /"?constructor"?:\s*"?public-own-data"?/);
+            } else if (command[1] !== "diff" && command[1] !== "--diff") {
+              for (const key of ownKeys) assert.ok(result.stdout.includes(`${key}:`) || result.stdout.includes(`"${key}":`), "TOON must retain each actual map key, not only metadata paths");
+            } else {
+              for (const key of ownKeys) assert.ok(result.stdout.includes(`secret_references.${key}`));
+            }
+            assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
+            assert.equal(trackerBytes(pmRoot), ownBefore);
+          }
+        }
+        const history = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
+        for (const key of ownKeys) assert.ok(history.includes(JSON.stringify(key)));
+        const templateFile = join(pmRoot, "templates", "initiative.json"), originalTemplate = readFileSync(templateFile, "utf8");
+        const unsupported = JSON.parse(originalTemplate);
+        Object.defineProperty(unsupported.options, "__proto__", { value: "legacy-public-data", enumerable: true, configurable: true });
+        writeFileSync(templateFile, JSON.stringify(unsupported));
+        try {
+          const legacyBefore = trackerBytes(pmRoot), refusedOutput = join(pmRoot, "refused-own-export.json");
+          for (const json of [[], ["--json"]]) {
+            for (const command of [["presets", "export", "refused-copy", "--output", refusedOutput], ["presets", "--custom", "refused-copy", "--output", refusedOutput], ["templates", "show", "initiative"]]) {
+              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+              assert.equal(result.status, 2, "legacy template loss must refuse instead of producing a partial projection");
+              assert.match(result.stdout + result.stderr, /invalid_manifest/);
+              assert.ok(!existsSync(refusedOutput));
+              assert.equal(trackerBytes(pmRoot), legacyBefore);
+            }
+          }
+        } finally { writeFileSync(templateFile, originalTemplate); }
+      } finally {
+        writeFileSync(entry, fixture);
+      }
+      assertNoCredentials(trackerBytes(pmRoot), credentials);
     } finally { for (const [file, source] of otherEntries) writeFileSync(file, source); }
     // Each runtime starts from the previous audited result. Never restore raw
     // settings behind append-only history; read-only assertions above compare

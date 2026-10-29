@@ -85,7 +85,7 @@ export function projectPresetDefinition(descriptor, raw, supplied) {
 }
 /** Copy bundled template payloads for adaptation into host profile definitions. */
 export function presetTemplateEntries(id) {
-    const raw = RAW_PRESETS[id];
+    const raw = Object.hasOwn(RAW_PRESETS, id) ? RAW_PRESETS[id] : undefined;
     if (!raw) {
         throw new CommandError(`No definition exports for preset '${id}'.`);
     }
@@ -147,7 +147,7 @@ export function projectItemTypeViews(itemTypes) {
  * @throws {CommandError} When no raw export exists for the descriptor's id.
  */
 function buildDefinition(descriptor, supplied) {
-    const raw = RAW_PRESETS[descriptor.id];
+    const raw = Object.hasOwn(RAW_PRESETS, descriptor.id) ? RAW_PRESETS[descriptor.id] : undefined;
     if (!raw) {
         throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
     }

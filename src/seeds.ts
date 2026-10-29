@@ -108,7 +108,7 @@ export const PRESET_SEEDS: Record<string, SeedItem[]> = {
  * simply a no-op rather than an error.
  */
 export function seedsForPreset(presetId: string): SeedItem[] {
-  return PRESET_SEEDS[presetId] ?? [];
+  return Object.hasOwn(PRESET_SEEDS, presetId) ? PRESET_SEEDS[presetId] ?? [] : [];
 }
 
 /**
@@ -129,7 +129,8 @@ export function resolvedSeedsForPreset(
   allowUnresolved = false,
 ): SeedItem[] {
   const seeds = seedsForPreset(presetId);
-  const manifest: PresetParameterManifest = PRESET_PARAMETERS[presetId as keyof typeof PRESET_PARAMETERS] ?? [];
+  const manifest: PresetParameterManifest = Object.hasOwn(PRESET_PARAMETERS, presetId)
+    ? PRESET_PARAMETERS[presetId as keyof typeof PRESET_PARAMETERS] ?? [] : [];
   if (seeds.length === 0) {
     return seeds;
   }

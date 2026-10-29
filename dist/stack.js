@@ -7,8 +7,10 @@ import { join } from "node:path";
 import { requirePresetDefinition, presetTemplateEntries } from "./catalog.js";
 import { PRESET_REGISTRY } from "./registry.js";
 import { resolvedSeedsForPreset } from "./seeds.js";
-import { mergePresetSettings } from "./presets/shared.js";
+import { loadTemplateSdk, mergePresetSettings } from "./presets/shared.js";
+import { ParameterRefusal } from "./params.js";
 import { resolveSimulationSdk } from "./sdk-loader.js";
+import { setJsonProperty } from "./json-object.js";
 /** A usage refusal carries a stable category and a concrete corrective action. */
 export class StackRefusal extends Error {
     /** Machine-readable failure category. */
@@ -101,10 +103,11 @@ function put(patch, path, value) {
     const keys = path.slice("/settings/".length).split("/").map((key) => key.replaceAll("~1", "/").replaceAll("~0", "~"));
     let cursor = patch;
     for (const key of keys.slice(0, -1)) {
-        cursor[key] ??= {};
+        if (!Object.hasOwn(cursor, key))
+            setJsonProperty(cursor, key, {});
         cursor = cursor[key];
     }
-    cursor[keys[keys.length - 1]] = structuredClone(value);
+    setJsonProperty(cursor, keys[keys.length - 1], structuredClone(value));
 }
 /** Require the host's canonical preview; ordinary replay receipts cannot substitute for settings. */
 export function stackSettingsPreview(result) {
@@ -176,7 +179,7 @@ export async function planPresetStack(pmRoot, sdk, input) {
         const inventory = await host.runTemplatesList({ path: pmRoot, noExtensions: true });
         for (const name of inventory.user_templates)
             if (templates.some((template) => template.name === name))
-                currentTemplates.set(name, await host.loadCreateTemplateOptions(pmRoot, name));
+                currentTemplates.set(name, await loadTemplateSdk().loadCreateTemplateOptions(pmRoot, name));
         const sourceSettings = await host.readFileIfExists(join(pmRoot, "settings.json"));
         // Host dry-runs acquire a workspace lock. Normalize an isolated settings copy
         // so a read-only source needs no lock directory, receipt or runtime writes.
@@ -206,7 +209,7 @@ export async function planPresetStack(pmRoot, sdk, input) {
         return { ...base, profile, hostPlan, settingsPatch: patch, settingsChanges, seeds };
     }
     catch (error) {
-        if (error instanceof StackRefusal)
+        if (error instanceof StackRefusal || error instanceof ParameterRefusal)
             throw error;
         throw new StackRefusal("target_unavailable", "Initialize a tracker, check pm health and template validity, and retry with a compatible host. Preview never applies a partial stack.");
     }

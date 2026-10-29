@@ -94,7 +94,7 @@ export const PRESET_SEEDS = {
  * simply a no-op rather than an error.
  */
 export function seedsForPreset(presetId) {
-    return PRESET_SEEDS[presetId] ?? [];
+    return Object.hasOwn(PRESET_SEEDS, presetId) ? PRESET_SEEDS[presetId] ?? [] : [];
 }
 /**
  * Resolve a preset's seed items with supplied values and declared defaults.
@@ -110,7 +110,8 @@ export function seedsForPreset(presetId) {
  */
 export function resolvedSeedsForPreset(presetId, supplied = {}, allowUnresolved = false) {
     const seeds = seedsForPreset(presetId);
-    const manifest = PRESET_PARAMETERS[presetId] ?? [];
+    const manifest = Object.hasOwn(PRESET_PARAMETERS, presetId)
+        ? PRESET_PARAMETERS[presetId] ?? [] : [];
     if (seeds.length === 0) {
         return seeds;
     }

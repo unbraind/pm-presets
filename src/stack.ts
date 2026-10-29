@@ -9,8 +9,10 @@ import type { ExtensionCommandSdk } from "@unbrained/pm-cli/sdk/authoring";
 import { requirePresetDefinition, presetTemplateEntries } from "./catalog.ts";
 import { PRESET_REGISTRY, type PresetId } from "./registry.ts";
 import { resolvedSeedsForPreset, type SeedItem } from "./seeds.ts";
-import { mergePresetSettings } from "./presets/shared.ts";
+import { loadTemplateSdk, mergePresetSettings } from "./presets/shared.ts";
+import { ParameterRefusal } from "./params.ts";
 import { resolveSimulationSdk } from "./sdk-loader.ts";
+import { setJsonProperty } from "./json-object.ts";
 
 /** Select whole catalog surfaces; omitted flags select settings/templates but omit seeds. */
 export interface PresetStackSelection {
@@ -126,8 +128,11 @@ function leaves(value: unknown, prefix = ""): Map<string, unknown> {
 function put(patch: Record<string, unknown>, path: string, value: unknown): void {
   const keys = path.slice("/settings/".length).split("/").map((key) => key.replaceAll("~1", "/").replaceAll("~0", "~"));
   let cursor = patch;
-  for (const key of keys.slice(0, -1)) { cursor[key] ??= {}; cursor = cursor[key] as Record<string, unknown>; }
-  cursor[keys[keys.length - 1]] = structuredClone(value);
+  for (const key of keys.slice(0, -1)) {
+    if (!Object.hasOwn(cursor, key)) setJsonProperty(cursor, key, {});
+    cursor = cursor[key] as Record<string, unknown>;
+  }
+  setJsonProperty(cursor, keys[keys.length - 1], structuredClone(value));
 }
 
 /** Require the host's canonical preview; ordinary replay receipts cannot substitute for settings. */
@@ -184,7 +189,7 @@ export async function planPresetStack(pmRoot: string, sdk: ExtensionCommandSdk, 
     const host = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, join(process.cwd(), "package.json"), process.argv[1]])) as typeof Host;
     const currentTemplates = new Map<string, Host.ProfileTemplateOptions>();
     const inventory = await host.runTemplatesList({ path: pmRoot, noExtensions: true });
-    for (const name of inventory.user_templates) if (templates.some((template) => template.name === name)) currentTemplates.set(name, await host.loadCreateTemplateOptions(pmRoot, name));
+    for (const name of inventory.user_templates) if (templates.some((template) => template.name === name)) currentTemplates.set(name, await loadTemplateSdk().loadCreateTemplateOptions(pmRoot, name));
     const sourceSettings = await host.readFileIfExists(join(pmRoot, "settings.json"));
     // Host dry-runs acquire a workspace lock. Normalize an isolated settings copy
     // so a read-only source needs no lock directory, receipt or runtime writes.
@@ -210,7 +215,7 @@ export async function planPresetStack(pmRoot: string, sdk: ExtensionCommandSdk, 
     const hostPlan = host.planProfileApplication(profile, { typesRaw: null, statusesRaw: null, fieldsRaw: null, workflows: [], settings: before, templates: currentTemplates, installedPackages: new Set() });
     return { ...base, profile, hostPlan, settingsPatch: patch, settingsChanges, seeds };
   } catch (error) {
-    if (error instanceof StackRefusal) throw error;
+    if (error instanceof StackRefusal || error instanceof ParameterRefusal) throw error;
     throw new StackRefusal("target_unavailable", "Initialize a tracker, check pm health and template validity, and retry with a compatible host. Preview never applies a partial stack.");
   }
 }

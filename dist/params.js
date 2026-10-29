@@ -20,6 +20,7 @@
  *    through as literal prose.
  */
 import { readBoundedInputFile } from "./input-file.js";
+import { setJsonProperty } from "./json-object.js";
 /**
  * Actionable, privacy-safe refusal.
  *
@@ -269,7 +270,7 @@ export function assertResolvedParameterValues(manifest, resolved) {
         if (normalizeParameterValue(parameter, value) !== value) {
             throw new ParameterRefusal("invalid_value", `Parameter '${name}' must already be normalized in an injected resolution.`);
         }
-        const source = resolved.sources[name];
+        const source = Object.hasOwn(resolved.sources, name) ? resolved.sources[name] : undefined;
         if (source !== "supplied" && source !== "default") {
             throw new ParameterRefusal("invalid_value", `Parameter '${name}' has an invalid resolution source.`);
         }
@@ -315,7 +316,7 @@ export function redactSecretValuesDeep(value, secretValues) {
     if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
         const copy = {};
         for (const [key, entry] of Object.entries(value)) {
-            copy[key] = redactSecretValuesDeep(entry, secretValues);
+            setJsonProperty(copy, key, redactSecretValuesDeep(entry, secretValues));
         }
         return copy;
     }
@@ -589,7 +590,7 @@ function substituteTree(value, location, values, declared, allowUnresolved, coun
     if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
         const copy = {};
         for (const [key, entry] of Object.entries(value)) {
-            copy[key] = substituteTree(entry, `${location}.${key}`, values, declared, allowUnresolved, counter);
+            setJsonProperty(copy, key, substituteTree(entry, `${location}.${key}`, values, declared, allowUnresolved, counter));
         }
         return copy;
     }
@@ -611,7 +612,7 @@ function declaredNames(manifest) {
     return new Set(manifest.map((parameter) => parameter.name));
 }
 /** Collect all binding occurrences in a preset part for reporting and refusal. */
-function collectOccurrences(value, location, occurrences, malformedLocations) {
+function collectOccurrences(value, location, occurrences, malformedLocations, nativeKeys = false) {
     if (typeof value === "string") {
         const scan = scanString(value, location);
         occurrences.push(...scan.occurrences);
@@ -621,14 +622,17 @@ function collectOccurrences(value, location, occurrences, malformedLocations) {
         return;
     }
     if (Array.isArray(value)) {
-        value.forEach((entry, index) => collectOccurrences(entry, `${location}[${index}]`, occurrences, malformedLocations));
+        value.forEach((entry, index) => collectOccurrences(entry, `${location}[${index}]`, occurrences, malformedLocations, nativeKeys));
         return;
     }
     if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
         for (const [key, entry] of Object.entries(value)) {
+            if (nativeKeys && (key.length === 0 || key.trim() !== key || key === "__proto__")) {
+                throw new ParameterRefusal("invalid_manifest", "Use nonempty trimmed template/seed field names; rename '__proto__' because supported host readers cannot preserve it.");
+            }
             if (key.includes(BINDING_PREFIX))
                 throw new ParameterRefusal("invalid_binding_location", "Parameter bindings cannot appear in field or file names.");
-            collectOccurrences(entry, `${location}.${key}`, occurrences, malformedLocations);
+            collectOccurrences(entry, `${location}.${key}`, occurrences, malformedLocations, nativeKeys);
         }
     }
 }
@@ -687,7 +691,7 @@ export function resolveTemplatesWithParameters(manifest, values, templates, allo
     const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
     const occurrences = [];
     const malformed = [];
-    collectOccurrences(templates, "templates", occurrences, malformed);
+    collectOccurrences(templates, "templates", occurrences, malformed, true);
     if (malformed.length > 0) {
         throw new ParameterRefusal("malformed_binding", `Malformed parameter binding in template(s): ${malformed.join(", ")}.`);
     }
@@ -713,7 +717,7 @@ export function resolveSeedsWithParameters(manifest, values, seeds, allowUnresol
     const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
     const occurrences = [];
     const malformed = [];
-    collectOccurrences(seeds, "seeds", occurrences, malformed);
+    collectOccurrences(seeds, "seeds", occurrences, malformed, true);
     if (malformed.length > 0) {
         throw new ParameterRefusal("malformed_binding", `Malformed parameter binding in seed(s): ${malformed.join(", ")}.`);
     }

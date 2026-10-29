@@ -240,6 +240,16 @@ IDs), titles, tags, filenames, templates and other settings are public tracked
 data; secret bindings there refuse at manifest projection, even without a
 supplied value. References cannot be interpolated into a larger string.
 
+Reference maps preserve accepted JSON names, including `__proto__` and
+`constructor`, through resolution, previews and audited storage.
+Once a reference map exists, the host audit protocol cannot add or change its
+`__proto__` entry. Such updates refuse before writes; keep a stable reference
+and rotate the external environment value.
+Public templates and seeds require nonempty trimmed field names and refuse
+`__proto__` before writes because supported host readers lose that field.
+Existing templates that would lose option names refuse reads/exports with a
+typed remedy instead of returning partial data.
+
 Apply stores **only `@DEPLOY_TOKEN`**, including in audited append-only history.
 Dry-run, diff and parameter summaries display references, never credentials.
 Static references such as `secret_references: { deploy: "@DEPLOY_TOKEN" }`

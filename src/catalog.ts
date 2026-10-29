@@ -187,7 +187,7 @@ export function projectPresetDefinition(
 
 /** Copy bundled template payloads for adaptation into host profile definitions. */
 export function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[] {
-  const raw = RAW_PRESETS[id] as RawPreset | undefined;
+  const raw = Object.hasOwn(RAW_PRESETS, id) ? RAW_PRESETS[id] : undefined;
   if (!raw) {
     throw new CommandError(`No definition exports for preset '${id}'.`);
   }
@@ -257,7 +257,7 @@ function buildDefinition(
   descriptor: PresetDescriptor,
   supplied?: Readonly<Record<string, string>>,
 ): PresetDefinition {
-  const raw = RAW_PRESETS[descriptor.id] as RawPreset | undefined;
+  const raw = Object.hasOwn(RAW_PRESETS, descriptor.id) ? RAW_PRESETS[descriptor.id] : undefined;
   if (!raw) {
     throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
   }

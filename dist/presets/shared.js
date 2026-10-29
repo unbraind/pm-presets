@@ -14,6 +14,7 @@
 import { acquireApplyAdmission } from "../apply-admission.js";
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
+import { setJsonProperty } from "../json-object.js";
 import { randomUUID } from "node:crypto";
 import { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, resolveSettingsWithParameters, } from "../params.js";
 import * as fs from "node:fs";
@@ -278,7 +279,7 @@ export async function applyPreset(context, input) {
         effectiveSettings = substitution.settings;
         effectiveTemplates = substitution.templates;
         occurrenceCount = substitution.occurrences;
-        const views = buildParameterViews(manifest, resolved.values);
+        const views = buildParameterViews(manifest, resolved.values).filter((view) => Object.hasOwn(resolved.values, view.name));
         const summary = views
             .map((view) => `${view.name}=${resolved.values[view.name]} (${resolved.sources[view.name]})`)
             .join(", ");
@@ -297,13 +298,15 @@ export async function applyPreset(context, input) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
             `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
-    resolveSettingsWithParameters([], {}, readJsonObject(settingsPath, "settings.json"));
+    const storedSettings = readJsonObject(settingsPath, "settings.json");
+    resolveSettingsWithParameters([], {}, storedSettings);
     const effectivePatch = {
         ...effectiveSettings,
         id_prefix: prefixOverride ?? effectiveSettings.id_prefix,
     };
     // Overrides are final settings input too: they must not reintroduce bindings.
     resolveSettingsWithParameters([], {}, effectivePatch);
+    assertWritableReferenceKeys(storedSettings, mergePresetSettings(storedSettings, effectivePatch, replace));
     const templates = Object.entries(effectiveTemplates).map(([filename, template]) => {
         const normalizedName = normalizeTemplateName(template.name);
         if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
@@ -326,8 +329,10 @@ export async function applyPreset(context, input) {
                     // The host owns this settings audit lock. Inspect its same raw file:
                     // the typed host projection omits extension reference fields. Never
                     // rotate a pre-existing literal into append-only before/after history.
-                    resolveSettingsWithParameters([], {}, readJsonObject(settingsPath, "settings.json"));
-                    const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
+                    const stored = readJsonObject(settingsPath, "settings.json");
+                    resolveSettingsWithParameters([], {}, stored);
+                    const mergedSettings = mergePresetSettings({ ...stored, ...current }, effectivePatch, replace);
+                    assertWritableReferenceKeys(stored, mergedSettings);
                     if (dryRun && replace) {
                         for (const tree of REPLACE_SETTINGS_TREES) {
                             const patch = effectivePatch[tree];
@@ -388,6 +393,18 @@ export async function applyPreset(context, input) {
         console.warn(input.warning);
     }
 }
+/** Refuse nested prototype-key edits that the host audit protocol cannot apply safely. */
+function assertWritableReferenceKeys(before, after) {
+    const previous = before.secret_references;
+    if (!isJsonObject(previous))
+        return; // A new map is written as one safe parent value.
+    const next = after.secret_references;
+    const priorReference = Object.hasOwn(previous, "__proto__") ? previous["__proto__"] : undefined;
+    const nextReference = isJsonObject(next) && Object.hasOwn(next, "__proto__") ? next["__proto__"] : undefined;
+    if (priorReference !== nextReference) {
+        throw new ParameterRefusal("invalid_secret_reference", "This host cannot add or change a nested '__proto__' reference key. Keep the existing reference and rotate its environment value; use a compatible host for a key migration.");
+    }
+}
 /**
  * Write (or, under `dryRun`, print) one apply's resolved template documents.
  *
@@ -420,7 +437,35 @@ function writePresetTemplates(templatesDir, templates, options) {
 /** Resolve template reads through the existing package-or-host SDK loader. */
 export function loadTemplateSdk() {
     const sdkPath = resolveSimulationSdk([import.meta.url, path.join(process.cwd(), "package.json"), process.argv[1]]);
-    return createRequire(import.meta.url)(sdkPath);
+    const sdk = createRequire(import.meta.url)(sdkPath);
+    /** Delegate native validation first, preserving its expected-error identity. */
+    const show = async (name, global) => {
+        const result = await sdk.runTemplatesShow(name, global);
+        if (result.source === "builtin" && !(await sdk.runTemplatesList(global)).builtin_templates.includes(result.name)) {
+            throw new CommandError("Template not found. Choose a name reported by 'pm templates list'.", EXIT_CODE.NOT_FOUND);
+        }
+        if (result.source === "user")
+            assertLoadedTemplateKeys(result.path, result.options);
+        return result;
+    };
+    return {
+        runTemplatesList: sdk.runTemplatesList,
+        runTemplatesShow: show,
+        loadCreateTemplateOptions: async (pmDir, name) => (await show(name, { path: pmDir, noExtensions: true })).options,
+    };
+}
+/** Refuse a host projection that loses raw JSON keys instead of exporting partial data. */
+function assertLoadedTemplateKeys(filePath, options) {
+    let keys;
+    try {
+        keys = Object.keys(JSON.parse(fs.readFileSync(filePath, "utf8")).options);
+    }
+    catch {
+        throw new ParameterRefusal("invalid_manifest", "The template changed during validation; inspect its JSON and retry without exporting partial data.");
+    }
+    if (keys.some((key) => !Object.hasOwn(options, key))) {
+        throw new ParameterRefusal("invalid_manifest", "The host cannot preserve this template's option names; use nonempty trimmed names and rename '__proto__' before reading or exporting.");
+    }
 }
 /** List SDK templates with invocation globals and the active tracker taking precedence. */
 export function runTemplatesList(context) {
@@ -460,11 +505,11 @@ function readJsonObject(filePath, label) {
 function deepMergeJson(base, patch) {
     const result = { ...base };
     for (const [key, value] of Object.entries(patch)) {
-        if (isJsonObject(value) && isJsonObject(result[key])) {
-            result[key] = deepMergeJson(result[key], value);
+        if (isJsonObject(value) && Object.hasOwn(result, key) && isJsonObject(result[key])) {
+            setJsonProperty(result, key, deepMergeJson(result[key], value));
             continue;
         }
-        result[key] = value;
+        setJsonProperty(result, key, value);
     }
     return result;
 }

@@ -21,6 +21,7 @@
  */
 
 import { readBoundedInputFile } from "./input-file.ts";
+import { setJsonProperty } from "./json-object.ts";
 import type { PresetSettingsPatch, PresetTemplateMap } from "./presets/shared.ts";
 import type { SeedItem } from "./seeds.ts";
 
@@ -381,7 +382,7 @@ export function assertResolvedParameterValues(
     if (normalizeParameterValue(parameter, value) !== value) {
       throw new ParameterRefusal("invalid_value", `Parameter '${name}' must already be normalized in an injected resolution.`);
     }
-    const source = resolved.sources[name];
+    const source = Object.hasOwn(resolved.sources, name) ? resolved.sources[name] : undefined;
     if (source !== "supplied" && source !== "default") {
       throw new ParameterRefusal("invalid_value", `Parameter '${name}' has an invalid resolution source.`);
     }
@@ -432,7 +433,7 @@ export function redactSecretValuesDeep(value: unknown, secretValues: readonly st
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     const copy: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      copy[key] = redactSecretValuesDeep(entry, secretValues);
+      setJsonProperty(copy, key, redactSecretValuesDeep(entry, secretValues));
     }
     return copy;
   }
@@ -748,7 +749,7 @@ function substituteTree(
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     const copy: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      copy[key] = substituteTree(entry, `${location}.${key}`, values, declared, allowUnresolved, counter);
+      setJsonProperty(copy, key, substituteTree(entry, `${location}.${key}`, values, declared, allowUnresolved, counter));
     }
     return copy;
   }
@@ -781,6 +782,7 @@ function collectOccurrences(
   location: string,
   occurrences: ParameterBindingOccurrence[],
   malformedLocations: string[],
+  nativeKeys = false,
 ): void {
   if (typeof value === "string") {
     const scan = scanString(value, location);
@@ -791,13 +793,16 @@ function collectOccurrences(
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => collectOccurrences(entry, `${location}[${index}]`, occurrences, malformedLocations));
+    value.forEach((entry, index) => collectOccurrences(entry, `${location}[${index}]`, occurrences, malformedLocations, nativeKeys));
     return;
   }
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     for (const [key, entry] of Object.entries(value)) {
+      if (nativeKeys && (key.length === 0 || key.trim() !== key || key === "__proto__")) {
+        throw new ParameterRefusal("invalid_manifest", "Use nonempty trimmed template/seed field names; rename '__proto__' because supported host readers cannot preserve it.");
+      }
       if (key.includes(BINDING_PREFIX)) throw new ParameterRefusal("invalid_binding_location", "Parameter bindings cannot appear in field or file names.");
-      collectOccurrences(entry, `${location}.${key}`, occurrences, malformedLocations);
+      collectOccurrences(entry, `${location}.${key}`, occurrences, malformedLocations, nativeKeys);
     }
   }
 }
@@ -875,7 +880,7 @@ export function resolveTemplatesWithParameters(
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
   const malformed: string[] = [];
-  collectOccurrences(templates, "templates", occurrences, malformed);
+  collectOccurrences(templates, "templates", occurrences, malformed, true);
   if (malformed.length > 0) {
     throw new ParameterRefusal("malformed_binding", `Malformed parameter binding in template(s): ${malformed.join(", ")}.`);
   }
@@ -910,7 +915,7 @@ export function resolveSeedsWithParameters(
   const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
   const occurrences: ParameterBindingOccurrence[] = [];
   const malformed: string[] = [];
-  collectOccurrences(seeds, "seeds", occurrences, malformed);
+  collectOccurrences(seeds, "seeds", occurrences, malformed, true);
   if (malformed.length > 0) {
     throw new ParameterRefusal("malformed_binding", `Malformed parameter binding in seed(s): ${malformed.join(", ")}.`);
   }
