@@ -322,22 +322,24 @@ export function redactSecretValuesDeep(value, secretValues) {
     return structuredClone(value);
 }
 /**
- * Dotted settings paths whose authored content binds a secret parameter.
+ * Dotted settings paths that are secret-capable or bind a secret parameter.
  *
  * Value-based redaction alone cannot protect a rotated credential: the stored
  * workspace value is a DIFFERENT string than the currently supplied secret, so
  * nothing matches it. These paths identify every settings leaf the preset's
- * authored content binds a `secret`-typed parameter into, so emitted surfaces
- * can redact those leaves wholesale regardless of the value they currently
- * hold. Arrays are atomic (mirroring the settings diff's leaf model).
+ * authored content binds a `secret`-typed parameter into, plus every leaf of
+ * the explicit secret_references destination even for static references and
+ * empty manifests. Emitted surfaces redact those leaves regardless of the
+ * value they currently hold. Arrays are atomic (mirroring the diff's model).
  */
 export function collectSecretSettingPaths(settings, manifest) {
     const secretNames = new Set(manifest.filter((parameter) => parameter.type === "secret").map((parameter) => parameter.name));
     const paths = [];
     const walk = (value, prefix) => {
+        const secretDestination = prefix === "secret_references" || prefix.startsWith("secret_references.");
         if (typeof value === "string") {
             const scan = scanString(value, prefix);
-            if (scan.occurrences.some((occurrence) => secretNames.has(occurrence.parameter))) {
+            if (secretDestination || scan.occurrences.some((occurrence) => secretNames.has(occurrence.parameter))) {
                 paths.push(prefix);
             }
             return;
@@ -345,7 +347,7 @@ export function collectSecretSettingPaths(settings, manifest) {
         if (Array.isArray(value)) {
             // Arrays are atomic leaves in the settings model: a secret bound
             // anywhere inside one marks the WHOLE leaf for wholesale redaction.
-            if (containsSecretBinding(value, secretNames)) {
+            if (secretDestination || containsSecretBinding(value, secretNames)) {
                 paths.push(prefix);
             }
             return;
@@ -354,6 +356,9 @@ export function collectSecretSettingPaths(settings, manifest) {
             for (const [key, entry] of Object.entries(value)) {
                 walk(entry, prefix ? `${prefix}.${key}` : key);
             }
+        }
+        else if (secretDestination) {
+            paths.push(prefix);
         }
     };
     walk(settings, "");
@@ -532,11 +537,14 @@ function scanString(value, location) {
  * name that IS declared but has no effective value refuses in write mode
  * (`unanswered_parameter` — a missing binding must never reach a write) and is
  * left untouched in declaration mode, so inspection surfaces can display the
- * preset's authored content without answering its parameters.
+ * preset's authored content without answering its parameters. Final strings
+ * may retain only those authored unanswered tokens: substitution must never
+ * assemble new binding syntax across value or literal boundaries.
  */
 function substituteString(value, location, values, declared, allowUnresolved) {
     let result = value;
     let occurrences = 0;
+    const authoredUnresolvedOffsets = new Set();
     let cursor = result.indexOf(BINDING_PREFIX);
     while (cursor >= 0) {
         const nameStart = cursor + BINDING_PREFIX.length;
@@ -553,12 +561,18 @@ function substituteString(value, location, values, declared, allowUnresolved) {
                 throw new ParameterRefusal("unanswered_parameter", `Binding \${param:${name}} at ${location} has no supplied value or default. Supply --param ${name}=<value> (or a --params-file) before applying.`);
             }
             // Declaration mode: keep the authored occurrence for inspection.
+            authoredUnresolvedOffsets.add(cursor);
             cursor = result.indexOf(BINDING_PREFIX, end + 1);
             continue;
         }
         result = result.slice(0, cursor) + values[name] + result.slice(end + 1);
         occurrences += 1;
         cursor = result.indexOf(BINDING_PREFIX, cursor + values[name].length);
+    }
+    for (let remaining = result.indexOf(BINDING_PREFIX); remaining >= 0; remaining = result.indexOf(BINDING_PREFIX, remaining + BINDING_PREFIX.length)) {
+        if (!authoredUnresolvedOffsets.has(remaining)) {
+            throw new ParameterRefusal("invalid_value", "Parameter substitution must not assemble new binding syntax; change the values or surrounding text.");
+        }
     }
     return { result, occurrences };
 }

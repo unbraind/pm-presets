@@ -161,14 +161,15 @@ export declare function redactSecretValues(text: string, secretValues: readonly 
  */
 export declare function redactSecretValuesDeep(value: unknown, secretValues: readonly string[]): unknown;
 /**
- * Dotted settings paths whose authored content binds a secret parameter.
+ * Dotted settings paths that are secret-capable or bind a secret parameter.
  *
  * Value-based redaction alone cannot protect a rotated credential: the stored
  * workspace value is a DIFFERENT string than the currently supplied secret, so
  * nothing matches it. These paths identify every settings leaf the preset's
- * authored content binds a `secret`-typed parameter into, so emitted surfaces
- * can redact those leaves wholesale regardless of the value they currently
- * hold. Arrays are atomic (mirroring the settings diff's leaf model).
+ * authored content binds a `secret`-typed parameter into, plus every leaf of
+ * the explicit secret_references destination even for static references and
+ * empty manifests. Emitted surfaces redact those leaves regardless of the
+ * value they currently hold. Arrays are atomic (mirroring the diff's model).
  */
 export declare function collectSecretSettingPaths(settings: PresetSettingsPatch, manifest: PresetParameterManifest): string[];
 /** Build the compact parameter views for `presets show` (secrets never show defaults). */

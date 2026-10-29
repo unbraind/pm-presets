@@ -219,6 +219,8 @@ read or written, with typed exit-2 refusals:
   parameterized `diff`, while `show` keeps displaying the declaration;
 - values that violate the declared pattern, enum or length bound are refused
   (`invalid_value`); control characters and line breaks never enter prose;
+- joining values or surrounding text must not assemble new `${param:...}`
+  syntax (`invalid_value`); parameter substitution never evaluates generated bindings;
 - a binding that references a name the preset never declared is an authoring
   error and refuses (`unknown_binding`), as does a malformed `${param:...}`
   fragment (`malformed_binding`);
@@ -240,6 +242,8 @@ supplied value. References cannot be interpolated into a larger string.
 
 Apply stores **only `@DEPLOY_TOKEN`**, including in audited append-only history.
 Dry-run, diff and parameter summaries display references, never credentials.
+Static references such as `secret_references: { deploy: "@DEPLOY_TOKEN" }`
+receive the same protection: diffs hide legacy credentials at those destinations.
 Show may retain the authored occurrence for an unanswered declaration. Commands
 do not read credential environment variables. A consuming integration calls
 `resolveSecretReference("@DEPLOY_TOKEN")` only when the credential is needed;

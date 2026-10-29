@@ -21,7 +21,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { PresetDefinition } from "./catalog.ts";
-import { isSecretReference, collectParameterValues, redactSecretValuesDeep, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
+import { isSecretReference, collectParameterValues, collectSecretSettingPaths, redactSecretValuesDeep, ParameterRefusal, type PresetParameterManifest } from "./params.ts";
 
 type JsonValue = unknown;
 type JsonObject = Record<string, unknown>;
@@ -135,7 +135,12 @@ export function computePresetDiff(
   const settingsToAdd = settings.filter((entry) => entry.status === "add").length;
   const settingsToChange = settings.filter((entry) => entry.status === "change").length;
 
-  const secretPaths = new Set(definition.secretSettingPaths ?? []);
+  // Destination sensitivity is mandatory even for direct SDK definitions
+  // without authored parameter provenance or with an empty manifest.
+  const secretPaths = new Set([
+    ...collectSecretSettingPaths(definition.settings, []),
+    ...(definition.secretSettingPaths ?? []),
+  ]);
   return {
     presetId: definition.id,
     inSync: settingsToAdd === 0 && settingsToChange === 0 && missing.length === 0,

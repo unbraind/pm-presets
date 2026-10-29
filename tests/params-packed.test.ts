@@ -87,6 +87,38 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
       }
     }
     writeFileSync(entry, fixture);
+    // A literal external reference is a secret-capable destination even when
+    // no secret parameter supplies it. Read-only legacy fixtures must redact
+    // every shape without modifying settings, history or any other tracker byte.
+    const referenceBaseline = readFileSync(settingsFile, "utf8");
+    try {
+      for (const declaration of [fixture, fixture + '\nPARAMETERS.pop();\n']) {
+        writeFileSync(entry, declaration + '\nSETTINGS.secret_references = { deploy: "@NEW_STATIC_TOKEN" };\n');
+        let variant = 0;
+        for (const json of [[], ["--json"]]) {
+          for (const args of [["diff", "startup-roadmap"], ["--diff", "startup-roadmap"]]) {
+            const credential = credentials[variant % credentials.length];
+            const legacy = JSON.parse(referenceBaseline);
+            legacy.secret_references = { deploy: variant % 2 ? { nested: [credential] } : credential };
+            writeFileSync(settingsFile, JSON.stringify(legacy));
+            const trackerBefore = trackerBytes(pmRoot);
+            const output = spawnSync(runtime, [cli, "--path", pmRoot, "presets", ...args, ...json], { cwd: root, encoding: "utf8", timeout: 60_000,
+              env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" } });
+            assert.equal(output.status, 0, "static-reference diff must remain available for legacy values");
+            assertNoCredentials(output.stdout + output.stderr, credentials);
+            assert.ok((output.stdout + output.stderr).includes("@NEW_STATIC_TOKEN"));
+            assert.match(output.stdout + output.stderr, /<redacted>/);
+            assert.equal(trackerBytes(pmRoot), trackerBefore);
+            variant += 1;
+          }
+        }
+      }
+    } finally {
+      // Only read commands ran against the legacy fixture; restore its exact
+      // reference-only baseline before any audited mutation can run.
+      writeFileSync(settingsFile, referenceBaseline); writeFileSync(entry, fixture);
+    }
+    assertNoCredentials(trackerBytes(pmRoot), credentials);
     const secret = "@PRESET_PACKED_TOKEN";
     for (const json of [[], ["--json"]]) {
       for (const args of [["diff", "startup-roadmap"], ["--diff", "startup-roadmap"]]) {
@@ -211,6 +243,33 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         }
       }
       writeFileSync(entry, fixture);
+      const seedModule = join(pmRoot, "extensions", "pm-presets", "dist", "seeds.js");
+      const originalSeeds = readFileSync(seedModule, "utf8");
+      const compositionFixture = fixture + '\nPARAMETERS.push({ name: "left", type: "string", required: false, default: "${param" }, { name: "right", type: "string", required: false, default: ":missing}" });\nSETTINGS.secret_references = { deploy: "@PRESET_PACKED_TOKEN" };\n';
+      const fragmentsFile = join(root, "fragments.json");
+      writeFileSync(fragmentsFile, JSON.stringify({ left: "${param", right: ":missing}" }));
+      try {
+        for (const destination of ["settings", "templates", "seeds"]) {
+          const change = destination === "settings" ? '\nSETTINGS.id_prefix = "${param:left}${param:right}";\n'
+            : destination === "templates" ? '\nObject.values(TEMPLATES)[0].options.body = "${param:left}${param:right}";\n' : "";
+          writeFileSync(entry, compositionFixture + change);
+          writeFileSync(seedModule, originalSeeds + (destination === "seeds" ? '\nPRESET_SEEDS["startup-roadmap"] = [{ type: "Task", title: "${param:left}${param:right}" }];\n' : ""));
+          const compositionBefore = trackerBytes(pmRoot);
+          for (const json of [[], ["--json"]]) {
+            const commands = [["presets", "apply", "startup-roadmap", "--with-seeds", ...(json.length ? ["--params-file", fragmentsFile] : [])],
+              ["presets", "diff", "startup-roadmap", "--param", "left=${param", "--param", "right=:missing}"],
+              ["presets", "--diff", "startup-roadmap"], ["presets", "show", "startup-roadmap"]];
+            if (destination !== "seeds") commands.push(["roadmap-setup"]);
+            for (const command of commands) {
+              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+              assert.equal(result.status, 2, "composed bindings must refuse before output or mutation");
+              assert.match(result.stdout + result.stderr, /invalid_value/);
+              assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
+              assert.equal(trackerBytes(pmRoot), compositionBefore);
+            }
+          }
+        }
+      } finally { writeFileSync(entry, fixture); writeFileSync(seedModule, originalSeeds); }
     } finally { for (const [file, source] of otherEntries) writeFileSync(file, source); }
     // Each runtime starts from the previous audited result. Never restore raw
     // settings behind append-only history; read-only assertions above compare

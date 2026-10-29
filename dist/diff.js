@@ -18,7 +18,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { isSecretReference, collectParameterValues, redactSecretValuesDeep, ParameterRefusal } from "./params.js";
+import { isSecretReference, collectParameterValues, collectSecretSettingPaths, redactSecretValuesDeep, ParameterRefusal } from "./params.js";
 function isJsonObject(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -80,7 +80,12 @@ export function computePresetDiff(definition, snapshot) {
     }
     const settingsToAdd = settings.filter((entry) => entry.status === "add").length;
     const settingsToChange = settings.filter((entry) => entry.status === "change").length;
-    const secretPaths = new Set(definition.secretSettingPaths ?? []);
+    // Destination sensitivity is mandatory even for direct SDK definitions
+    // without authored parameter provenance or with an empty manifest.
+    const secretPaths = new Set([
+        ...collectSecretSettingPaths(definition.settings, []),
+        ...(definition.secretSettingPaths ?? []),
+    ]);
     return {
         presetId: definition.id,
         inSync: settingsToAdd === 0 && settingsToChange === 0 && missing.length === 0,
