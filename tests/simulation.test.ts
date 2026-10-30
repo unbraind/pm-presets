@@ -233,4 +233,21 @@ test("built output works through the real CLI in a non-git tracker with git abse
   assert.equal(toon.status, 0, toon.stderr);
   assert.match(toon.stdout, /scenarios\[4\]/);
   assert.ok(toon.stdout.length < 2500);
+  // PM-CLI-3Q: a global install reaches cli.js through a bin symlink, and a
+  // standalone extension copy has no node_modules, so only the entry anchor
+  // can locate the host SDK.
+  const link = join(root, "bin", "pm");
+  mkdirSync(join(root, "bin"));
+  try {
+    symlinkSync(cli, link);
+  } catch (error) {
+    t.diagnostic(`symlinked entry skipped: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  rmSync(join(pmRoot, "extensions", "pm-presets", "node_modules"), { recursive: true, force: true });
+  const linked = spawnSync(process.execPath, [link, "--path", pmRoot, "presets", "simulate", "bug-triage", "--json"], {
+    cwd: root, encoding: "utf8", env: { ...process.env, PATH: "", GIT_CEILING_DIRECTORIES: root, DO_NOT_TRACK: "1" },
+  });
+  assert.equal(linked.status, 0, linked.stderr + linked.stdout);
+  assert.equal((JSON.parse(linked.stdout) as { ok: boolean }).ok, true);
 });
