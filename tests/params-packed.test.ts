@@ -8,6 +8,7 @@ import test from "node:test";
 import { verifyLockInterleavings } from "./fixtures/params-lock-scenario.ts";
 import { assertNoCredentials, secretCorpus, trackerBytes } from "./fixtures/params-secret-oracle.ts";
 import { PmClient } from "@unbrained/pm-cli/sdk";
+import { packedArchiveFilename } from "./fixtures/npm-pack.ts";
 
 test("packed applies and both strict diff forms agree on complete artifacts under Node and Bun", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-artifacts-packed-"));
@@ -15,7 +16,7 @@ test("packed applies and both strict diff forms agree on complete artifacts unde
   const consumerEnv = { ...process.env, NODE_V8_COVERAGE: "", PM_AUTHOR: "packed-artifact-test", PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" };
   const packed = spawnSync("npm", ["pack", "--ignore-scripts", "--pack-destination", root, "--json"], { encoding: "utf8", env: consumerEnv });
   assert.equal(packed.status, 0, packed.stderr);
-  const archive = join(root, JSON.parse(packed.stdout)[0].filename);
+  const archive = join(root, packedArchiveFilename(packed.stdout));
   const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
   const runtimes = [process.execPath];
   if (spawnSync("bun", ["--version"], { encoding: "utf8" }).status === 0) runtimes.push("bun");
@@ -76,7 +77,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
   const packed = spawnSync("npm", ["pack", "--ignore-scripts", "--pack-destination", root, "--json"], { encoding: "utf8", env: consumerEnv });
   assert.equal(packed.status, 0, packed.stderr);
-  const archive = join(root, JSON.parse(packed.stdout)[0].filename);
+  const archive = join(root, packedArchiveFilename(packed.stdout));
   const install = spawnSync(process.execPath, [cli, "--path", pmRoot, "package", "install", archive, "--project"], { cwd: root, encoding: "utf8", env: consumerEnv, timeout: 60_000 });
   assert.equal(install.status, 0, install.stderr + install.stdout);
   const entry = join(pmRoot, "extensions", "pm-presets", "dist", "presets", "startup-roadmap", "index.js");

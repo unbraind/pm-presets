@@ -2,13 +2,18 @@ id: pm-qz1k
 title: "Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 description: "From the 2026-10-21 fleet backlog audit item 2. Declare required preset parameters once in a typed manifest and resolve them consistently through settings, templates and seeds, returning unanswered choices before installation. Acceptance: (1) one supplied project parameter reaches every declared occurrence; (2) unknown/missing bindings refuse before any write; (3) secret values cannot enter generated public seed prose. Deliver typed SDK surface + CLI flags, compact TOON/JSON output, typed refusals with remedies, docs, property tests and real-data validation on a read-only copy of a public fleet tracker in a non-git temp dir."
 type: Feature
-status: in_progress
+status: closed
 priority: 1
 tags[8]: authoring,bindings,"gh:unbraind/pm-presets#170","gh:unbraind/pm-presets#171","gh:unbraind/pm-presets#173",parameters,presets,sdk
 created_at: "2026-10-27T12:08:56.144Z"
-updated_at: "2026-10-29T19:07:14.127Z"
+updated_at: "2026-10-30T09:00:25.834Z"
+closed_at: "2026-10-30T08:55:44.105Z"
+completed_at: "2026-10-30T08:55:44.105Z"
 author: pi-agent
-comments[79]{created_at,author,text}:
+resolution: "Resolve typed defaults and supplied parameters consistently across settings, full templates and managed seeds; retain typed pre-write refusals, secret-reference privacy, native normalization, fenced apply admission and canonical SDK anchor resolution. Verify installed Node/Bun consumers and both npm pack JSON formats."
+expected_result: One normalized supplied parameter reaches every declared binding; missing or unsafe bindings refuse before writes; secrets stay out of public artifacts; real SDK and CLI consumers retain complete native state on Node and Bun.
+actual_result: "Both release pipelines pass323/323 tests and unchanged100% lines/branches/functions across all35 required source files. Nine prior isolated mutations and retained native oracle receipts remain valid. npm12 pack format regressions are fixed in shared test fixtures; current main is merged, runtime artifacts are unchanged, and latest pm-changelog2026.10.28 is selected for the final generated changelog. Hosted checks and requested reviews on the pushed head remain merge requirements."
+comments[82]{created_at,author,text}:
   "2026-10-27T12:09:22.235Z",pi-agent,"Overlap check (re-run 2026-10-27 against pm CLI 2026.10.20 SDK and sibling packages): (a) pm-cli SDK has no parameter/interpolation capability — grep over the installed SDK declarations shows settings mutations are literal audited patches (mutateWorkspaceSettings), templates are literal option maps (loadCreateTemplateOptions/runTemplatesShow), client.create takes literal fields; no 'parameter|interpolat|substitut' matches in templates/workspace-contracts/schema declarations. (b) gh search issues --repo unbraind/pm-cli 'parameter binding'/'preset parameter'/'template parameter': no open upstream work. (c) Fleet sibling scan (src/docs) for parameter-binding/interpolation features: no hits. (d) In-package status: presets accept only a few CLI overrides (--prefix, --force, --dry-run, --replace, --with-seeds) and upgrades of known settings; seed and template values are static literals. Conclusion: no overlap — this adds parameter propagation as an explicit authoring contract while the resolved native fields are still validated by the existing core path (preset validation + the host's audited settings mutation), so no core schema change is required."
   "2026-10-27T14:07:02.392Z",pi-agent,"Revert proof (2026-10-27): behaviourally reverted the parameter handling in applyPreset (resolution disabled; raw binding syntax passes through) and re-ran the focused new tests: 8 of 11 fail (one-value-reaches-every-occurrence, default resolution, refusal-before-writes, params-file, diff parity, dry-run, property round-trip, concurrent applies). Restored the implementation: 8/8 params-cli tests pass again. Full suite before the gate: 238 tests pass, 0 fail (node --test --test-concurrency=2 on a saturated 4-core host)."
   "2026-10-27T14:56:36.277Z",pi-agent,"Real-data validation (2026-10-27), on byte-identical temp copies of this repository's public pm tracker in non-git temp dirs (GIT_CEILING set; the repo tracker itself was never touched): (1) READ-ONLY copy (chmod a-w): parameterized diff with projectKey=acme compared 13 settings leaves -> 1 add, 6 change, id_prefix 'acme-' vs stored 'pm-'; default-resolution diff reported the 'road-' default; supplying an undeclared parameter refused with typed code unknown_parameter listing the declared parameter; a full-file digest proved every tracker byte unchanged afterwards. (2) Writable temp copy: dry-run apply resolved 1 parameter into 3 binding occurrences (id_prefix + two template bodies, all showing acme); an invalid value (uppercase) refused with invalid_value before any write; a real --with-seeds apply read back through the SDK as id_prefix 'acme-', 2/2 template bodies carrying the occurrence, seed item titled 'Define the acme first roadmap initiative', 85 items after seeding (84 tracked items + 1 seed). (3) Note: the audited settings mutation takes a workspace-history lock, so a dry-run apply against the read-only copy refuses with a lock conflict - expected host behavior, mirrored by presets diff which reads without locks."
@@ -88,59 +93,123 @@ comments[79]{created_at,author,text}:
   "2026-10-29T19:00:01.884Z",codex-agent,"Source-head remote CI was queued beyond the 30-minute observation window while local release gates ran: simulation/Node 22/Node 26/Windows lifecycle checks at https://github.com/unbraind/pm-presets/actions/runs/40928251073 and CodeQL at https://github.com/unbraind/pm-presets/actions/runs/40928250716 (source head 8fa45a0). No CI approval is claimed. Sourcery is skipped, cubic is neutral, Greptile reports trial expiry, and CodeRabbit reports a skipped review with no review body. Final metadata push will require a fresh head/checks read; current status is also available at https://github.com/unbraind/pm-presets/pull/170/checks. Local Bun gate remains in progress; no source/artifact drift."
   "2026-10-29T19:00:28.255Z",codex-agent,"Current source-head check refresh corrects the pending-check list: Windows prepare/lifecycle now reports success; simulation-release-gates, Node 22, Node 26 and CodeQL remain queued. The run URLs in the preceding receipt remain valid. No substantive automated review approval is present."
   "2026-10-29T19:07:12.130Z",codex-agent,"Final local release evidence: npm run release:check AND bun run release:check both pass unchanged thresholds, each 320/320 tests with zero failures/skips/cancellations and 100.00% lines/branches/functions across all 35 required source files. Both include real packed Node/Bun consumers, JSON/TOON and non-git trackers; audit has zero production vulnerabilities, pack/changelog/type/lint/docstring/release verifiers pass. No release-gate timeout or retry was needed. All 215 frozen source/test/documentation/artifact hashes still match; both gate pack digests match the captured 143-file artifact. Nine isolated behavioral mutations fail; restored corpus passes 6/6 and linked class focus passes 3/3. Issues 171/173 are closed with commit/test evidence. Source fix 8fa45a0 and main merge 48db9cf will be accompanied by this tracker receipt. Releasing the codex-agent claim next; keep this item in_progress for orchestrator verification. Remote CI/review evidence remains separately bounded by the queued-check receipt and final PR checks read."
-files[52]{path,scope}:
-  docs/params-example.md,project
-  manifest.json,project
-  package-lock.json,project
-  package.json,project
-  README.md,project
-  scripts/coverage-gate.ts,project
-  src/application-history.ts,project
-  src/apply-admission.ts,project
-  src/apply-command.ts,project
-  src/artifact-reader.ts,project
-  src/catalog.ts,project
-  src/command-errors.ts,project
-  src/desired-state.ts,project
-  src/diff.ts,project
-  src/export.ts,project
-  src/index.ts,project
-  src/input-file.ts,project
-  src/json-object.ts,project
-  src/params.ts,project
-  src/plan.ts,project
-  src/presets/agent-workflow/index.ts,project
-  src/presets/bug-triage/index.ts,project
-  src/presets/indie-dev/index.ts,project
-  src/presets/kanban/index.ts,project
-  src/presets/open-source/index.ts,project
-  src/presets/shared.ts,project
-  src/presets/software-sprint/index.ts,project
-  src/presets/startup-roadmap/index.ts,project
-  src/registry.ts,project
-  src/sdk-loader.ts,project
-  src/seeds.ts,project
-  src/settings-replacement.ts,project
-  src/stack.ts,project
-  src/upgrade-command.ts,project
-  tests/artifact-state.test.ts,project
-  tests/audited-settings.test.ts,project
-  tests/commands.test.ts,project
-  tests/diff.test.ts,project
-  tests/fixtures/params-lock-scenario.ts,project
-  tests/fixtures/params-lock-worker.ts,project
-  tests/fixtures/params-secret-oracle.ts,project
-  tests/params-boundaries.test.ts,project
-  tests/params-cli.test.ts,project
-  tests/params-io-lock.test.ts,project
-  tests/params-keys.test.ts,project
-  tests/params-packed.test.ts,project
-  tests/params-property.test.ts,project
-  tests/params-review.test.ts,project
-  tests/params-secrets.test.ts,project
-  tests/params.test.ts,project
-  tests/seed-normalization.test.ts,project
-  tests/shared.test.ts,project
+  "2026-10-30T08:29:27.224Z","harness:codex","Resume the explicit released handoff for orchestrator verification. Current PR170 has8 successful checks, no unresolved review threads, and is behind main only by the two-line pm-github closeout-workflow SHA update. Its SDK realpath repair also owns the pm-cli release blocker PM-CLI-3Q / pm-gh1622. Merge current main without rewriting history, verify the complete existing runtime source and Node/Bun release gates, close/release this item and finish the existing PR instead of duplicating implementation."
+  "2026-10-30T08:36:06.140Z","harness:codex","Current-main merge changes only the pm-github workflow pin; runtime source and committed dist remain byte-identical to the handed-off source. Independent npm12.2.1 release verification reaches100% across all35 required files but3 packed-consumer fixtures fail because they assume npm pack JSON is an array. This npm emits an object keyed by package name. Preserve the317-pass/3-failure receipt and repair the shared test-side pack-result decoding for both supported npm shapes; do not change production source, coverage thresholds or deadlines."
+  "2026-10-30T08:55:43.341Z","harness:codex","Handoff verification completed: npm and Bun release pipelines each pass323/323 tests with zero failures/skips/cancellations and100% lines/branches/functions across all35 required source files. The3 npm12 packaging failures are repaired through one shared fixture decoder, with explicit array/object/missing-artifact cases. Runtime src/ and committed dist remain unchanged from the prior verified delivery. The initial changelog check exposed missing local historical tags; fetching the authoritative tags restores parity without a generator code change. Adopt latest pm-changelog2026.10.28 for final generation and verification; no timeout, coverage threshold or runtime source changed."
+files[55]:
+  - path: docs/params-example.md
+    scope: project
+  - path: manifest.json
+    scope: project
+  - path: package-lock.json
+    scope: project
+  - path: package.json
+    scope: project
+  - path: README.md
+    scope: project
+  - path: scripts/coverage-gate.ts
+    scope: project
+  - path: src/application-history.ts
+    scope: project
+  - path: src/apply-admission.ts
+    scope: project
+  - path: src/apply-command.ts
+    scope: project
+  - path: src/artifact-reader.ts
+    scope: project
+  - path: src/catalog.ts
+    scope: project
+  - path: src/command-errors.ts
+    scope: project
+  - path: src/desired-state.ts
+    scope: project
+  - path: src/diff.ts
+    scope: project
+  - path: src/export.ts
+    scope: project
+  - path: src/index.ts
+    scope: project
+  - path: src/input-file.ts
+    scope: project
+  - path: src/json-object.ts
+    scope: project
+  - path: src/params.ts
+    scope: project
+  - path: src/plan.ts
+    scope: project
+  - path: src/presets/agent-workflow/index.ts
+    scope: project
+  - path: src/presets/bug-triage/index.ts
+    scope: project
+  - path: src/presets/indie-dev/index.ts
+    scope: project
+  - path: src/presets/kanban/index.ts
+    scope: project
+  - path: src/presets/open-source/index.ts
+    scope: project
+  - path: src/presets/shared.ts
+    scope: project
+  - path: src/presets/software-sprint/index.ts
+    scope: project
+  - path: src/presets/startup-roadmap/index.ts
+    scope: project
+  - path: src/registry.ts
+    scope: project
+  - path: src/sdk-loader.ts
+    scope: project
+  - path: src/seeds.ts
+    scope: project
+  - path: src/settings-replacement.ts
+    scope: project
+  - path: src/stack.ts
+    scope: project
+  - path: src/upgrade-command.ts
+    scope: project
+  - path: tests/artifact-state.test.ts
+    scope: project
+  - path: tests/audited-settings.test.ts
+    scope: project
+  - path: tests/commands.test.ts
+    scope: project
+  - path: tests/diff.test.ts
+    scope: project
+  - path: tests/fixtures/npm-pack.ts
+    scope: project
+    note: Shared npm11 and npm12 pack-report decoding for installed consumer verification
+  - path: tests/fixtures/params-lock-scenario.ts
+    scope: project
+  - path: tests/fixtures/params-lock-worker.ts
+    scope: project
+  - path: tests/fixtures/params-secret-oracle.ts
+    scope: project
+  - path: tests/npm-pack.test.ts
+    scope: project
+    note: Preserve both actual npm report shapes and fail missing-archive reports before installation
+  - path: tests/params-boundaries.test.ts
+    scope: project
+  - path: tests/params-cli.test.ts
+    scope: project
+  - path: tests/params-io-lock.test.ts
+    scope: project
+  - path: tests/params-keys.test.ts
+    scope: project
+  - path: tests/params-packed.test.ts
+    scope: project
+  - path: tests/params-property.test.ts
+    scope: project
+  - path: tests/params-review.test.ts
+    scope: project
+  - path: tests/params-secrets.test.ts
+    scope: project
+  - path: tests/params.test.ts
+    scope: project
+  - path: tests/seed-normalization.test.ts
+    scope: project
+  - path: tests/shared.test.ts
+    scope: project
+  - path: tests/simulation.test.ts
+    scope: project
+    note: Use the shared npm report decoder for real installed simulation verification
 tests[20]:
   - command: node --test --test-concurrency=2 tests/params.test.ts tests/params-cli.test.ts tests/catalog.test.ts
     scope: project
@@ -286,4 +355,5 @@ tests[20]:
 docs[2]{path,scope}:
   docs/params-example.md,project
   README.md,project
+close_reason: Deliver complete typed preset parameter bindings and verified installed consumers.
 body: ""
