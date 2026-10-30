@@ -11,6 +11,6 @@ export declare class SimulationRefusal extends Error {
     /** Construct a refusal without exposing the caller's configuration or filesystem. */
     constructor(code: SimulationRefusalCode, remedy: string, exitCode?: number);
 }
-/** Resolve the peer from canonical package/CLI locations, including invocation symlinks. */
+/** Resolve the peer from the package, the workspace or the CLI host, including invocation symlinks. */
 export declare function resolveSimulationSdk(anchors: readonly string[]): string;
 //# sourceMappingURL=sdk-loader.d.ts.map

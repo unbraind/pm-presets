@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.10.30 - 2026-10-30
+
+### Fixed
+
+- Resolve the host SDK through symlinked pm entry points ([pm-jzy6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jzy6.toon))
+
 ## 2026.10.28 - 2026-10-28
 
 ### Other
