@@ -1,7 +1,7 @@
 /** Real SDK and subprocess regressions for isolated preset workflow simulation. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -126,6 +126,37 @@ test("a symlinked host entry resolves the SDK from its real location", (t) => {
   }
   assert.equal(resolveSimulationSdk([link]), sdkPath);
   assert.equal(resolveSimulationSdk([pathToFileURL(link).href]), sdkPath);
+  assert.equal(resolveSimulationSdk(["file://remote-host/share/pm", link]), sdkPath);
+});
+
+test("workspace anchors resolve where they are given; only the invoked entry follows its symlink first", (t) => {
+  // A different SDK beside the link stands for a workspace-local install. A
+  // workspace anchor must keep finding it, while the running CLI entry must
+  // reach the host it actually executes.
+  const root = mkdtempSync(join(tmpdir(), "preset-sdk-order-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const local = join(root, "node_modules", "@unbrained", "pm-cli");
+  mkdirSync(local, { recursive: true });
+  writeFileSync(join(local, "package.json"), JSON.stringify({ name: "@unbrained/pm-cli", exports: { "./sdk": "./sdk.js" } }));
+  writeFileSync(join(local, "sdk.js"), "");
+  mkdirSync(join(root, "bin"));
+  const link = join(root, "bin", "pm");
+  try {
+    symlinkSync(sdkPath, link);
+  } catch (error) {
+    t.skip(`symlinks unavailable: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  const localSdk = realpathSync(join(local, "sdk.js"));
+  assert.equal(resolveSimulationSdk([link]), localSdk);
+  const entry = process.argv[1];
+  process.argv[1] = link;
+  try {
+    assert.equal(resolveSimulationSdk([link]), sdkPath);
+    assert.equal(resolveSimulationSdk([pathToFileURL(link).href]), sdkPath);
+  } finally {
+    process.argv[1] = entry;
+  }
 });
 
 test("failed worker startup refuses and removes its disposable workspace", (t) => {
