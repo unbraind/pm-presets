@@ -91,8 +91,13 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   const settingsFile = join(pmRoot, "settings.json");
   const stored = 'old-synthetic"credential\\value';
   const settings = JSON.parse(readFileSync(settingsFile, "utf8"));
-  settings.secret_references = Object.fromEntries(["deploy", ...Object.getOwnPropertyNames(Object.prototype), "prototype"].map((key) => [key, key === "deploy" ? "@PREVIOUS_TOKEN" : "@PRESET_PACKED_TOKEN"]));
+  settings.secret_references = Object.fromEntries([...Object.getOwnPropertyNames(Object.prototype), "prototype"].map((key) => [key, key === "deploy" ? "@PREVIOUS_TOKEN" : "@PRESET_PACKED_TOKEN"]));
   writeFileSync(settingsFile, JSON.stringify(settings));
+  // Establish preset provenance before exercising audited credential-reference rotation.
+  const baselineApply = spawnSync(process.execPath, [cli, "--path", pmRoot, "presets", "apply", "startup-roadmap", "--param", "token=@PREVIOUS_TOKEN"], {
+    cwd: root, encoding: "utf8", timeout: 60_000, env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root },
+  });
+  assert.equal(baselineApply.status, 0, baselineApply.stdout + baselineApply.stderr);
   let before = readFileSync(settingsFile, "utf8");
   const runtimes = [process.execPath];
   const bun = spawnSync("bun", ["--version"], { encoding: "utf8" });
@@ -378,7 +383,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
             } else if (command[0] === "templates") {
               assert.match(result.stdout, /"?constructor"?:\s*"?public-own-data"?/);
             } else if (command[1] !== "diff" && command[1] !== "--diff") {
-              for (const key of ownKeys) assert.ok(result.stdout.includes(`${key}:`) || result.stdout.includes(`"${key}":`), "TOON must retain each actual map key, not only metadata paths");
+              for (const key of ownKeys) assert.ok(result.stdout.includes(`${key}:`) || result.stdout.includes(`"${key}":`), `TOON must retain actual map key ${key} for ${command.join(" ")}`);
             } else {
               for (const key of ownKeys) assert.ok(result.stdout.includes(`secret_references.${key}`));
             }

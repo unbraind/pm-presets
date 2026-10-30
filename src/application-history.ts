@@ -1,4 +1,6 @@
 /** Recover managed ownership from the host's verified append-only settings audit. */
+import type * as Host from "@unbrained/pm-cli/sdk";
+import type { ArtifactOwnership } from "./artifact-ownership.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
@@ -19,7 +21,7 @@ export async function readPresetApplicationHistory(pmRoot: string): Promise<Pres
   const file = join(pmRoot, "history", "_workspace.jsonl");
   if (!existsSync(file)) return { records: {}, errors: [] };
   try {
-    const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof import("@unbrained/pm-cli/sdk");
+    const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof Host;
     const { entries, raw } = await sdk.readHistorySnapshot(file, "_workspace");
     const digest = createHash("sha256").update(raw!).digest("hex");
     const cached = verified.get(pmRoot);
@@ -40,4 +42,20 @@ export async function readPresetApplicationHistory(pmRoot: string): Promise<Pres
     verified.set(pmRoot, { digest, value });
     return structuredClone(value);
   } catch { return { records: {}, errors: ["history/_workspace.jsonl"] }; }
+}
+
+/** Verify cumulative template/settings ownership against a recorded preset settings mutation. */
+export async function readPresetOwnership(pmRoot: string): Promise<ArtifactOwnership> {
+  const file = join(pmRoot, "history", "_workspace.jsonl");
+  if (!existsSync(file)) return {};
+  const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof Host;
+  const { entries } = await sdk.readHistorySnapshot(file, "_workspace");
+  for (let index = entries.length - 1; index >= 0; index--) {
+    if (!/^extension:(?:[^:]+:)*settings:(?:[^:]+:)*pm-presets-[a-z][a-z0-9-]*-[a-f0-9-]{36}$/.test(entries[index].op)) continue;
+    const replayed = sdk.replayHistoryToTarget(entries, index);
+    const documents = ownArtifact(replayed.metadata, "documents") as Record<string, unknown>;
+    const settings = ownArtifact(documents, "settings.json") as Record<string, unknown>;
+    return (ownArtifact(settings, "preset_ownership") ?? {}) as ArtifactOwnership;
+  }
+  return {};
 }

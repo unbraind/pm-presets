@@ -37,7 +37,7 @@ export function buildExportedPreset(input) {
         settings: sourceSettings,
         templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])),
     });
-    const settings = Object.fromEntries(Object.entries(sourceSettings).filter(([key]) => key !== "preset_artifacts"));
+    const settings = Object.fromEntries(Object.entries(sourceSettings).filter(([key]) => key !== "preset_artifacts" && key !== "preset_ownership"));
     const idPrefixRaw = Object.hasOwn(settings, "id_prefix") ? settings["id_prefix"] : undefined;
     const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
     const now = input.now ?? new Date();

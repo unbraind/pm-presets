@@ -2,11 +2,15 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { hostname } from "node:os";
 
 /** Identify a kernel/PID namespace; unverifiable realms deliberately cannot reap one another. */
 export function captureAdmissionRealm(): string {
   let realm: string;
   try {
+    // These platforms share the host PID domain. Reused/live PIDs still block;
+    // only ESRCH allows recovery, even across boots, without a rounded clock key.
+    if (process.platform !== "linux") return createHash("sha256").update(`host:${hostname()}`).digest("hex");
     realm = fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim()
       + ":" + fs.readlinkSync("/proc/self/ns/pid");
   } catch {
@@ -81,7 +85,7 @@ export async function acquireApplyAdmission(pmDir: string): Promise<() => void> 
         if (!admitted) removeClaim(file);
       }
       if (Date.now() >= deadline) throw new ApplyAdmissionRefusal();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 25 + Math.floor(Math.random() * 75)));
     }
   } catch {
     throw new ApplyAdmissionRefusal();

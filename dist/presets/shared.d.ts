@@ -120,7 +120,7 @@ export declare function mergePresetSettings(existing: JsonObject, patch: JsonObj
  * Merges (or, under `--replace`, swaps owned trees) against the settings read
  * under the host's audit lock, then writes the templates the preset ships
  * — unless `--dry-run`, which prints the planned result instead. Honours
- * `--force` to overwrite an existing user template, and `--prefix` to override
+ * `--force` to reconcile an existing preset-owned template, and `--prefix` to override
  * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
  * is present, with the expected settings path in the message.
  */

@@ -388,7 +388,11 @@ test("missing capabilities and incomplete native writes never report successful 
     if (fault === "no-update") (fake as any).update = undefined;
     if (fault === "seed-error") fake.create = async () => { throw new Error("synthetic-private-diagnostic"); };
     if (fault === "template-directory-error") fs.writeFileSync(join(pmRoot, "templates"), "blocked");
-    if (fault === "template-file-error") fs.mkdirSync(join(pmRoot, "templates", "initiative.json"), { recursive: true });
+    if (fault === "template-file-error") {
+      await applyPreset({ command: "baseline", args: [], options: {}, global: {}, pm_root: pmRoot, sdk: native }, { label: "Owned baseline", presetId: "startup-roadmap", settings: SETTINGS, templates: TEMPLATES, parameters: PARAMETERS, nextSteps: [] });
+      fs.rmSync(join(pmRoot, "templates", "initiative.json"));
+      fs.mkdirSync(join(pmRoot, "templates", "initiative.json"));
+    }
     if (["seed-missing", "template-missing", "template-corrupt"].includes(fault)) fake.create = async (options) => {
       if (fault === "seed-missing") return { item: { id: options!.id } } as any;
       const result = await client.create(options);

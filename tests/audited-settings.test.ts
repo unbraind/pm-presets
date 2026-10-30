@@ -29,6 +29,7 @@ test("all seven presets preserve audited settings history through merge, replace
     await applyPreset({ ...context, options: { dryRun: true, replace: true } }, input);
     assert.equal(readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
     assert.deepEqual(readdirSync(join(pmRoot, "history")).map((file) => [file, readFileSync(join(pmRoot, "history", file), "utf8")]), historyBefore);
+    await applyPreset(context, input);
     for (const replace of [false, true]) {
       await sdk.mutateWorkspaceSettings({ operationId: `audit-baseline-${preset.id}-${replace}`, mutate: (current) => ({ ...current, id_prefix: `baseline-${preset.id}-${replace}-` }) });
       const workspaceHistory = join(pmRoot, "history", "_workspace.jsonl");
@@ -96,9 +97,9 @@ test("a named-preset preview labels its patch and omits inherited custom policy 
   const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
   await client.init();
   const sdk = createExtensionCommandSdk(pmRoot, client);
-  await sdk.mutateWorkspaceSettings({ operationId: "custom-policy-baseline", mutate: (current) => ({
-    ...current, governance: { ...current.governance, preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" },
-  }) });
+  await applyPreset({ command: "baseline", args: [], options: {}, global: {}, pm_root: pmRoot, sdk }, {
+    label: "Owned baseline", settings: { id_prefix: "pm-", governance: { preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" } }, templates: {}, nextSteps: [],
+  });
   const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
   const historyBefore = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
   const output: string[] = [];
@@ -122,9 +123,9 @@ test("replace preview names omitted owned trees and keys without exposing their 
   const client = new PmClient({ pmRoot, cwd: root, noExtensions: true });
   await client.init();
   const sdk = createExtensionCommandSdk(pmRoot, client);
-  await sdk.mutateWorkspaceSettings({ operationId: "replace-custom-policy-baseline", mutate: (current) => ({
-    ...current, governance: { ...current.governance, preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" },
-  }) });
+  await applyPreset({ command: "baseline", args: [], options: {}, global: {}, pm_root: pmRoot, sdk }, {
+    label: "Owned baseline", settings: { id_prefix: "pm-", governance: { preset: "custom", ownership_enforcement: "strict", metadata_profile: "strict" } }, templates: {}, nextSteps: [],
+  });
   const before = readFileSync(join(pmRoot, "settings.json"), "utf8");
   const historyBefore = readFileSync(join(pmRoot, "history", "_workspace.jsonl"), "utf8");
   const output: string[] = [];

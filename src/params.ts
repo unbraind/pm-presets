@@ -60,6 +60,8 @@ export type PresetParameterManifest = readonly PresetParameter[];
 
 /** Stable refusal categories agents can branch on without parsing prose. */
 export type ParameterRefusalCode =
+  | "artifact_conflict"
+  | "artifact_recovery_required"
   | "stale_artifacts"
   | "invalid_artifact_record"
   | "artifact_unreadable"

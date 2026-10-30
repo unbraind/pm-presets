@@ -1,11 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Added
-
-- Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds ([pm-qz1k](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-qz1k.toon))
-
 ## 2026.10.28 - 2026-10-28
 
 ### Other

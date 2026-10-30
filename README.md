@@ -49,7 +49,7 @@ All setup commands share the same flags:
 | Flag | Short | Description |
 |---|---|---|
 | `--force` | `-f` | Reconcile changed preset templates and managed seed contents |
-| `--dry-run` | `-n` | Preview changes without writing any files |
+| `--dry-run` | `-n` | Preview artifacts; the host audit may create a lock file |
 | `--prefix` | `-p` | Override the id_prefix in settings.json |
 | `--param <name>=<value>` | | Supply a declared preset parameter (repeatable; see [Preset parameters](#preset-parameters)) |
 | `--params-file <file>` | | Read parameter values from a JSON object file |
@@ -222,12 +222,15 @@ initiative seed:
 # Default resolution (projectKey defaults to "road"):
 pm presets apply startup-roadmap
 
+# Inspect the changed templates before reconciling owned artifacts:
+pm presets diff startup-roadmap --param projectKey=acme
 # One supplied value reaches every occurrence (prefix becomes "acme-",
 # templates record "## Project: acme", the seed title names the acme project):
-pm presets apply startup-roadmap --param projectKey=acme --with-seeds
+pm presets apply startup-roadmap --param projectKey=acme --with-seeds --force
 
 # Values can also come from a JSON file:
-pm presets apply startup-roadmap --params-file params.json
+pm presets diff startup-roadmap --params-file params.json
+pm presets apply startup-roadmap --params-file params.json --force
 ```
 
 `pm presets show <id>` lists every declared parameter (type, constraints,
@@ -297,11 +300,21 @@ preset's seed bindings, and threads the same effective values through the
 settings merge, the template writes and the seed creation — editing the params
 file mid-apply cannot split your workspace across two values.
 
+**Ownership and recovery.** Existing item ids, template names and customized
+settings are preserved unless recorded preset provenance proves ownership.
+`--force` reconciles owned drift; an unowned collision returns `artifact_conflict`
+with its exact id or path. A missing managed seed with retained history returns
+`artifact_recovery_required` with a native `pm restore <id> <timestamp>` command
+for its latest verified materialized state. Run that
+command, inspect the restored item and retry; keep the history. Ownership metadata
+stays workspace-local and is omitted from exported presets.
+
 **Concurrent applies.** A real apply holds a workspace-scoped lock
 (`.agents/pm/locks/`) across the audited settings mutation *and* the template
 writes, so two concurrent parameterized applies can never leave the id prefix
 of one invocation next to the template prose of another. Dry-runs skip the
-lock and never create files.
+preset apply lock. The host audit may create its own lock file and may refuse
+on a read-only tracker. Dry-runs do not change preset artifacts.
 
 Publication, stale recovery and release also hold an admission claim with a
 unique per-process pathname. Cleanup targets that exact claim, so a delayed

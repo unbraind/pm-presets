@@ -55,20 +55,27 @@ options) and seed fields, reference a declared parameter with
 export const SETTINGS = { id_prefix: "${param:projectKey}-" };
 
 export const TEMPLATES = {
-  "initiative.json": storedTemplate("initiative", {
-    type: "Epic",
-    tags: ["initiative", "${param:projectKey}"],
-    body: "## Project\n${param:projectKey}\n",
-  }),
+  "initiative.json": {
+    name: "initiative",
+    created_at: "1970-01-01T00:00:00.000Z",
+    updated_at: "1970-01-01T00:00:00.000Z",
+    options: {
+      type: "Epic",
+      tags: ["initiative", "${param:projectKey}"],
+      body: "## Project\n${param:projectKey}\n",
+    },
+  },
 };
 
 // seeds reference the same declaration:
-{ type: "Feature", title: "Define the ${param:projectKey} first roadmap initiative" }
+export const SEEDS = [
+  { type: "Feature", title: "Define the ${param:projectKey} first roadmap initiative" },
+];
 ```
 
 One supplied value reaches every occurrence: apply substitutes the same
 resolved value into the settings leaf, both template values and the seed prose,
-and reports the count (`Resolved 1 parameter(s), 5 binding occurrence(s)`).
+and reports the count (`Resolved 1 parameter(s), 4 binding occurrence(s)`).
 
 ## 3. Supply values and read back the choices
 
@@ -83,8 +90,10 @@ Values can also come from a `--params-file <file>` (a JSON object of
 
 ## 4. The refusal contract (before any write)
 
-Every refusal is typed (`code: remedy`, exit code 2) and happens before any
-tracker state is read or written:
+The parameter and binding refusals below are typed (`code: remedy`, exit code 2)
+and happen before tracker state is read or written. Ownership and recovery
+refusals inspect tracker provenance first; write failures may retain earlier
+audited work:
 
 | Code | Cause | Remedy |
 |---|---|---|
@@ -111,7 +120,8 @@ threads the effective values through settings, templates and seeds — so
 editing the params file mid-apply cannot split the workspace across two
 values. Real applies hold a workspace-scoped lock across the settings mutation
 and the template writes, keeping concurrent applies internally consistent;
-dry-runs skip the lock and create no files.
+dry-runs skip the preset apply lock. The host audit may create its own lock
+file and may refuse on a read-only tracker; preset artifacts stay unchanged.
 
 ## 5. Programmatic use
 

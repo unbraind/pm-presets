@@ -12,7 +12,7 @@ function refuseCommand(error, parameters) {
     if (!(error instanceof Error) || !("exitCode" in error) || typeof error.exitCode !== "number")
         throw error;
     const code = "code" in error && typeof error.code === "string" ? error.code : "preset_refused";
-    const remedy = "remedy" in error && typeof error.remedy === "string" ? error.remedy : "Check the command help and retry with external secret references.";
+    const remedy = "remedy" in error && typeof error.remedy === "string" ? error.remedy : error instanceof ParameterRefusal ? "Check the command help and retry with external secret references." : "Check the command help and retry.";
     let refusal;
     try {
         const sdkPath = resolveSimulationSdk([process.argv[1], import.meta.url]);

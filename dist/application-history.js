@@ -1,4 +1,3 @@
-/** Recover managed ownership from the host's verified append-only settings audit. */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
@@ -39,5 +38,22 @@ export async function readPresetApplicationHistory(pmRoot) {
     catch {
         return { records: {}, errors: ["history/_workspace.jsonl"] };
     }
+}
+/** Verify cumulative template/settings ownership against a recorded preset settings mutation. */
+export async function readPresetOwnership(pmRoot) {
+    const file = join(pmRoot, "history", "_workspace.jsonl");
+    if (!existsSync(file))
+        return {};
+    const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]]));
+    const { entries } = await sdk.readHistorySnapshot(file, "_workspace");
+    for (let index = entries.length - 1; index >= 0; index--) {
+        if (!/^extension:(?:[^:]+:)*settings:(?:[^:]+:)*pm-presets-[a-z][a-z0-9-]*-[a-f0-9-]{36}$/.test(entries[index].op))
+            continue;
+        const replayed = sdk.replayHistoryToTarget(entries, index);
+        const documents = ownArtifact(replayed.metadata, "documents");
+        const settings = ownArtifact(documents, "settings.json");
+        return (ownArtifact(settings, "preset_ownership") ?? {});
+    }
+    return {};
 }
 //# sourceMappingURL=application-history.js.map

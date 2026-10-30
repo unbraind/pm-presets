@@ -86,7 +86,7 @@ export async function computeDesiredPresetState(input: {
   record?: PresetArtifactRecord;
   replace?: boolean;
 }): Promise<DesiredPresetState> {
-  if (Object.hasOwn(input.settings, "preset_artifacts")) throw new ParameterRefusal("invalid_manifest", "settings.preset_artifacts is workspace-local ownership managed by apply; omit it from authored preset settings.");
+  if (Object.hasOwn(input.settings, "preset_artifacts") || Object.hasOwn(input.settings, "preset_ownership")) throw new ParameterRefusal("invalid_manifest", "settings.preset_artifacts is workspace-local ownership managed by apply; omit it from authored preset settings.");
   if (input.record) presetArtifactRecord({ preset_artifacts: { [input.presetId!]: input.record } }, input.presetId!);
   if (input.seeds?.length && !input.presetId) throw new ParameterRefusal("invalid_artifact_record", "Provide a preset id before enrolling managed seeds.");
   try {

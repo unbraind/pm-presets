@@ -302,6 +302,10 @@ test("command refusal recovery uses the actual host error contract without retai
     api.registerCommand({ flags, name: "plain-async", run: () => Promise.reject(error) });
     await assert.rejects(() => Promise.resolve(registered!.run!(context)), (actual: unknown) => actual === error);
   }
+  const parameterWithoutRemedy = new ParameterRefusal("invalid_value", "temporary");
+  Reflect.deleteProperty(parameterWithoutRemedy, "remedy");
+  api.registerCommand({ flags, name: "parameter-fallback", run: () => { throw parameterWithoutRemedy; } });
+  assert.throws(() => registered!.run!(context), (actual: unknown) => (actual as { remedy: string }).remedy === "Check the command help and retry with external secret references.");
   for (const error of [Object.assign(new Error("safe refusal"), { exitCode: 2 }),
     Object.assign(new Error("safe refusal"), { exitCode: 2, code: 3, remedy: false }),
     Object.assign(new Error("safe refusal"), { exitCode: 2, code: "test_code", remedy: "Use external references." })]) {
@@ -309,6 +313,7 @@ test("command refusal recovery uses the actual host error contract without retai
     /** Check the same stable diagnostic for sync throws, promises and foreign thenables. */
     const inspect = (actual: any) => {
       assert.equal(actual.name, "PmCliError"); assert.equal(actual.exitCode, 2);
+      assert.equal(actual.remedy, "remedy" in error && typeof error.remedy === "string" ? error.remedy : "Check the command help and retry.");
       assert.equal(actual.code, "code" in error && typeof error.code === "string" ? error.code : "preset_refused");
       assert.deepEqual(actual.context.recovery.normalized_args, ["presets"]);
       assert.equal(actual.context.recovery.recovery_mode, "compact");

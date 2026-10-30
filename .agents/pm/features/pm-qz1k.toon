@@ -2,18 +2,13 @@ id: pm-qz1k
 title: "Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 description: "From the 2026-10-21 fleet backlog audit item 2. Declare required preset parameters once in a typed manifest and resolve them consistently through settings, templates and seeds, returning unanswered choices before installation. Acceptance: (1) one supplied project parameter reaches every declared occurrence; (2) unknown/missing bindings refuse before any write; (3) secret values cannot enter generated public seed prose. Deliver typed SDK surface + CLI flags, compact TOON/JSON output, typed refusals with remedies, docs, property tests and real-data validation on a read-only copy of a public fleet tracker in a non-git temp dir."
 type: Feature
-status: closed
+status: in_progress
 priority: 1
 tags[8]: authoring,bindings,"gh:unbraind/pm-presets#170","gh:unbraind/pm-presets#171","gh:unbraind/pm-presets#173",parameters,presets,sdk
 created_at: "2026-10-27T12:08:56.144Z"
-updated_at: "2026-10-30T09:00:25.834Z"
-closed_at: "2026-10-30T08:55:44.105Z"
-completed_at: "2026-10-30T08:55:44.105Z"
+updated_at: "2026-10-30T15:07:08.135Z"
 author: pi-agent
-resolution: "Resolve typed defaults and supplied parameters consistently across settings, full templates and managed seeds; retain typed pre-write refusals, secret-reference privacy, native normalization, fenced apply admission and canonical SDK anchor resolution. Verify installed Node/Bun consumers and both npm pack JSON formats."
-expected_result: One normalized supplied parameter reaches every declared binding; missing or unsafe bindings refuse before writes; secrets stay out of public artifacts; real SDK and CLI consumers retain complete native state on Node and Bun.
-actual_result: "Both release pipelines pass323/323 tests and unchanged100% lines/branches/functions across all35 required source files. Nine prior isolated mutations and retained native oracle receipts remain valid. npm12 pack format regressions are fixed in shared test fixtures; current main is merged, runtime artifacts are unchanged, and latest pm-changelog2026.10.28 is selected for the final generated changelog. Hosted checks and requested reviews on the pushed head remain merge requirements."
-comments[82]{created_at,author,text}:
+comments[90]{created_at,author,text}:
   "2026-10-27T12:09:22.235Z",pi-agent,"Overlap check (re-run 2026-10-27 against pm CLI 2026.10.20 SDK and sibling packages): (a) pm-cli SDK has no parameter/interpolation capability — grep over the installed SDK declarations shows settings mutations are literal audited patches (mutateWorkspaceSettings), templates are literal option maps (loadCreateTemplateOptions/runTemplatesShow), client.create takes literal fields; no 'parameter|interpolat|substitut' matches in templates/workspace-contracts/schema declarations. (b) gh search issues --repo unbraind/pm-cli 'parameter binding'/'preset parameter'/'template parameter': no open upstream work. (c) Fleet sibling scan (src/docs) for parameter-binding/interpolation features: no hits. (d) In-package status: presets accept only a few CLI overrides (--prefix, --force, --dry-run, --replace, --with-seeds) and upgrades of known settings; seed and template values are static literals. Conclusion: no overlap — this adds parameter propagation as an explicit authoring contract while the resolved native fields are still validated by the existing core path (preset validation + the host's audited settings mutation), so no core schema change is required."
   "2026-10-27T14:07:02.392Z",pi-agent,"Revert proof (2026-10-27): behaviourally reverted the parameter handling in applyPreset (resolution disabled; raw binding syntax passes through) and re-ran the focused new tests: 8 of 11 fail (one-value-reaches-every-occurrence, default resolution, refusal-before-writes, params-file, diff parity, dry-run, property round-trip, concurrent applies). Restored the implementation: 8/8 params-cli tests pass again. Full suite before the gate: 238 tests pass, 0 fail (node --test --test-concurrency=2 on a saturated 4-core host)."
   "2026-10-27T14:56:36.277Z",pi-agent,"Real-data validation (2026-10-27), on byte-identical temp copies of this repository's public pm tracker in non-git temp dirs (GIT_CEILING set; the repo tracker itself was never touched): (1) READ-ONLY copy (chmod a-w): parameterized diff with projectKey=acme compared 13 settings leaves -> 1 add, 6 change, id_prefix 'acme-' vs stored 'pm-'; default-resolution diff reported the 'road-' default; supplying an undeclared parameter refused with typed code unknown_parameter listing the declared parameter; a full-file digest proved every tracker byte unchanged afterwards. (2) Writable temp copy: dry-run apply resolved 1 parameter into 3 binding occurrences (id_prefix + two template bodies, all showing acme); an invalid value (uppercase) refused with invalid_value before any write; a real --with-seeds apply read back through the SDK as id_prefix 'acme-', 2/2 template bodies carrying the occurrence, seed item titled 'Define the acme first roadmap initiative', 85 items after seeding (84 tracked items + 1 seed). (3) Note: the audited settings mutation takes a workspace-history lock, so a dry-run apply against the read-only copy refuses with a lock conflict - expected host behavior, mirrored by presets diff which reads without locks."
@@ -96,7 +91,15 @@ comments[82]{created_at,author,text}:
   "2026-10-30T08:29:27.224Z","harness:codex","Resume the explicit released handoff for orchestrator verification. Current PR170 has8 successful checks, no unresolved review threads, and is behind main only by the two-line pm-github closeout-workflow SHA update. Its SDK realpath repair also owns the pm-cli release blocker PM-CLI-3Q / pm-gh1622. Merge current main without rewriting history, verify the complete existing runtime source and Node/Bun release gates, close/release this item and finish the existing PR instead of duplicating implementation."
   "2026-10-30T08:36:06.140Z","harness:codex","Current-main merge changes only the pm-github workflow pin; runtime source and committed dist remain byte-identical to the handed-off source. Independent npm12.2.1 release verification reaches100% across all35 required files but3 packed-consumer fixtures fail because they assume npm pack JSON is an array. This npm emits an object keyed by package name. Preserve the317-pass/3-failure receipt and repair the shared test-side pack-result decoding for both supported npm shapes; do not change production source, coverage thresholds or deadlines."
   "2026-10-30T08:55:43.341Z","harness:codex","Handoff verification completed: npm and Bun release pipelines each pass323/323 tests with zero failures/skips/cancellations and100% lines/branches/functions across all35 required source files. The3 npm12 packaging failures are repaired through one shared fixture decoder, with explicit array/object/missing-artifact cases. Runtime src/ and committed dist remain unchanged from the prior verified delivery. The initial changelog check exposed missing local historical tags; fetching the authoritative tags restores parity without a generator code change. Adopt latest pm-changelog2026.10.28 for final generation and verification; no timeout, coverage threshold or runtime source changed."
-files[55]:
+  "2026-10-30T13:50:14.611Z",codex-agent,"Review round: fetched all eight unresolved threads and every comment; latest CodeRabbit review has no outside-diff section. Branch contains origin/main. Verifying ownership before force reconciliation and supported recovery of missing documents with retained native history across all apply paths, plus review regressions and random pre-existing tracker coverage."
+  "2026-10-30T13:57:58.847Z",codex-agent,"Implemented preflight conflict refusals for unowned seed ids (including matching content and retained-history collisions), template names, and nondefault settings leaves. Force never grants ownership. Settings/template provenance is recorded in the existing audited settings mutation and checked against native replay before writes. Reserved managed ids emit artifact_recovery_required with the pinned CLI restore command; randomized non-git tracker tests execute that command and preserve history. Corrected catalog failure isolation, non-Linux claim realms, retry jitter, generic error guidance and documentation contracts."
+  "2026-10-30T14:15:36.675Z",codex-agent,"Behavioral revert proofs in a disposable copy: reverting applyPreset fails the random pre-existing-tracker, missing-document recovery and failed-native-create regressions; reverting template writes fails the late-collision regression. Catalog isolation, portable admission, retry jitter, neutral error guidance, documentation examples and birth-token ownership each fail their targeted regression when reverted. Restored implementations pass focused coverage. Native recovery now selects the latest verified materialized timestamp, preserving subsequent audit history. Full npm and Bun release checks retain the existing 100/100/100 thresholds."
+  "2026-10-30T14:27:31.138Z",codex-agent,"Additional class verification: real native create races cover both live documents and retained-history identities appearing after preflight, with typed artifact_conflict and no adoption on retry. Template publication faults preserve unverified files and refuse changed provenance. Forty randomized pre-existing non-git trackers exercise shared apply, unified apply and setup aliases; independent native recovery commands are executed. All ten disposable behavioral controls fail as intended, including the retained structured-value redactor property; fixed controls pass after restoration. Simulation workers now retain the known host SDK anchor, and the packed rotation fixture establishes preset ownership before adding audit history."
+  "2026-10-30T14:50:11.660Z",codex-agent,"Full npm release:check PASS: 334/334 tests; zero failures, skips or cancellations; 100% lines, branches and functions across all 36 required sources at unchanged thresholds. Isolated HOME and Git configuration were used. Typecheck, lint, docstrings, production audit, package-content dry run, canonical changelog and release-policy checks passed. The corrected packed corpus passes both Node and Bun consumers; no preservation assertion was removed. Starting the independent bun run release:check gate on the same code."
+  "2026-10-30T14:52:08.603Z",codex-agent,"Thread dispositions: PRRT_kwDOSp_1PM6x6Gv7 complete executable template and seed authoring snippet; PRRT_kwDOSp_1PM6x6GwF inspect drift and force only owned sequential parameter changes; PRRT_kwDOSp_1PM6x6GwJ qualify host audit lock writes in both docs; PRRT_kwDOSp_1PM6x6GwM stable non-Linux PID realm with absent-PID-only recovery; PRRT_kwDOSp_1PM6x6GwO randomized admission retry; PRRT_kwDOSp_1PM6x6Gwp per-descriptor catalog validation isolation; PRRT_kwDOSp_1PM6x6Gw4 neutral non-parameter remedy; PRRT_kwDOSp_1PM6x6GxF reference-only apply assertions and retained structured-value redaction property. All findings verified valid. No thread replies or resolutions were posted."
+  "2026-10-30T14:58:51.712Z",codex-agent,"Final revert receipts against baseline 97d5d1bf4672b92cb4268157ac294c17379041c2 were rerun in disposable copies. Function-only reversions of applyPreset, writePresetTemplates, validateAllPresets, captureAdmissionRealm and command refusal handling each fail their named regression (exit 1). Fixed-delay admission, disabled native birth proof, both original documentation files and an identity structured redactor also fail, for ten independent controls total. Restoring the final code passes the complete 12-test ownership-review corpus and the escaped-secret property. Reproducers use: node --test --test-concurrency=2 --test-name-pattern='random pre-existing|managed missing-document|failed native' tests/ownership-review.test.ts; the same command with patterns 'exclusive template', 'catalog validation isolates', 'non-Linux admission' or 'documented parameter'; node --test --test-concurrency=2 --test-name-pattern='command refusal recovery' tests/params-secrets.test.ts; node --test --test-concurrency=2 --test-name-pattern='every valid escaped secret' tests/params-review.test.ts. No revert or fixture mutation touched the package worktree. The pinned pm-linked final ownership suite also passes 12/12."
+  "2026-10-30T15:07:06.920Z",codex-agent,"Final release gates PASS on unchanged source/dist: npm run release:check 334/334 and bun run release:check 334/334; both have zero failures, skips or cancellations and 100% lines/branches/functions across all 36 required sources at unchanged thresholds. Typecheck, lint, docstrings, production audit, package-content dry run, canonical changelog and release-policy verifiers pass. Final source/dist digests are unchanged between gates. The pinned pm-linked class suite passes 12/12. Eleven behavioral controls fail their intended named regressions and pass after restoration: the prior ten controls plus disabled native collision classification, which fails the real native creation-race test. Tracker integrity and history drift pass; only two pre-existing unrelated stale items remain advisory. Releasing this claim for orchestrator verification; the item remains in_progress. Review threads are untouched and no merge or release was performed."
+files[58]:
   - path: docs/params-example.md
     scope: project
   - path: manifest.json
@@ -115,6 +118,9 @@ files[55]:
     scope: project
   - path: src/apply-command.ts
     scope: project
+  - path: src/artifact-ownership.ts
+    scope: project
+    note: Verified provenance and native recovery preflight
   - path: src/artifact-reader.ts
     scope: project
   - path: src/catalog.ts
@@ -161,6 +167,9 @@ files[55]:
     scope: project
   - path: src/settings-replacement.ts
     scope: project
+  - path: src/simulation.ts
+    scope: project
+    note: Use canonical initial settings and retain the host SDK anchor in isolated workers
   - path: src/stack.ts
     scope: project
   - path: src/upgrade-command.ts
@@ -185,6 +194,9 @@ files[55]:
   - path: tests/npm-pack.test.ts
     scope: project
     note: Preserve both actual npm report shapes and fail missing-archive reports before installation
+  - path: tests/ownership-review.test.ts
+    scope: project
+    note: Random pre-existing tracker state and review regressions
   - path: tests/params-boundaries.test.ts
     scope: project
   - path: tests/params-cli.test.ts
@@ -210,7 +222,7 @@ files[55]:
   - path: tests/simulation.test.ts
     scope: project
     note: Use the shared npm report decoder for real installed simulation verification
-tests[20]:
+tests[21]:
   - command: node --test --test-concurrency=2 tests/params.test.ts tests/params-cli.test.ts tests/catalog.test.ts
     scope: project
     provenance:
@@ -352,8 +364,17 @@ tests[20]:
       created_at: "2026-10-29T17:59:35.660Z"
       source_kind: local_mutation
       source_ref: feat/typed-parameter-binding-manifests
-docs[2]{path,scope}:
-  docs/params-example.md,project
-  README.md,project
-close_reason: Deliver complete typed preset parameter bindings and verified installed consumers.
+  - command: node --test --test-concurrency=2 tests/ownership-review.test.ts
+    scope: project
+    provenance:
+      author: codex-agent
+      created_at: "2026-10-30T14:13:55.139Z"
+      source_kind: local_mutation
+      source_ref: feat/typed-parameter-binding-manifests
+docs[2]:
+  - path: docs/params-example.md
+    scope: project
+    note: Executable authoring and dry-run contracts
+  - path: README.md
+    scope: project
 body: ""

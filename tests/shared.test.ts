@@ -38,6 +38,7 @@ import {
   runTemplatesList,
   runTemplatesShow,
   storedTemplate,
+  type PresetSettingsPatch,
 } from "../src/presets/shared.ts";
 
 /** Create an initialized temp pm root and delete it after the test. */
@@ -152,10 +153,11 @@ test("applyPreset dry-run previews merge output without writing templates", asyn
 
 test("applyPreset replace mode and force overwrite, and skips without force", async (t) => {
   const pmDir = await workspace(t);
-  writeFileSync(
-    join(pmDir, "settings.json"),
-    JSON.stringify({ ...JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")), governance: { preset: "custom", require_close_reason: false, workflow_enforcement: "strict" }, testing: { record_results_to_items: true } }, null, 2),
-  );
+  await applyPreset(context(pmDir), {
+    label: "Owned baseline",
+    settings: { id_prefix: "indie-", governance: { preset: "custom", require_close_reason: false, workflow_enforcement: "strict" }, testing: { record_results_to_items: true } } as PresetSettingsPatch,
+    templates: {}, nextSteps: [],
+  });
   const warns: string[] = [];
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "warn", (...args: unknown[]) => {
@@ -210,11 +212,9 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
 
 test("applyPreset preview respects existing templates and force without writes", async (t) => {
   const pmDir = await workspace(t);
-  const templatesDir = join(pmDir, "templates");
-  mkdirSync(templatesDir, { recursive: true });
-  const templatePath = join(templatesDir, "idea.json");
-  const original = JSON.stringify(storedTemplate("idea", { type: "Task", priority: "1" }));
-  writeFileSync(templatePath, original);
+  await applyPreset(context(pmDir), { label: "Owned baseline", settings: { id_prefix: "preview-" }, templates: { "idea.json": storedTemplate("idea", { type: "Task", priority: "1" }) }, nextSteps: [] });
+  const templatePath = join(pmDir, "templates", "idea.json");
+  const original = readFileSync(templatePath, "utf8");
   const before = readFileSync(join(pmDir, "settings.json"), "utf8");
   const lines: string[] = [];
   const warnings: string[] = [];

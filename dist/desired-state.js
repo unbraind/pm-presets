@@ -54,7 +54,7 @@ export function presetArtifactRecord(settings, presetId) {
 }
 /** Compute settings, complete template files, stable seeds and ownership together. */
 export async function computeDesiredPresetState(input) {
-    if (Object.hasOwn(input.settings, "preset_artifacts"))
+    if (Object.hasOwn(input.settings, "preset_artifacts") || Object.hasOwn(input.settings, "preset_ownership"))
         throw new ParameterRefusal("invalid_manifest", "settings.preset_artifacts is workspace-local ownership managed by apply; omit it from authored preset settings.");
     if (input.record)
         presetArtifactRecord({ preset_artifacts: { [input.presetId]: input.record } }, input.presetId);

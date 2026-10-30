@@ -150,7 +150,10 @@ test("property: composed defaults refuse across SDK commands and renderers witho
           // A seeds-only stack does not consume settings/templates. Exercise it
           // for the seed destination; other commands validate the whole preset.
           if (command === "presets stack" && destination !== "seeds") continue;
-          await assert.rejects(() => harness.runCommand({ command, args: [...args], options, pmRoot, sdk, global: { json } }), { code: "invalid_value", exitCode: 2 });
+          if (command === "presets validate") {
+            const result = await harness.runCommand({ command, args: [], options, pmRoot, sdk, global: { json } }).catch((error: Error) => error);
+            assert.match(String(result), /preset validation issue/);
+          } else await assert.rejects(() => harness.runCommand({ command, args: [...args], options, pmRoot, sdk, global: { json } }), { code: "invalid_value", exitCode: 2 });
           assert.equal(trackerBytes(pmRoot), before);
         }
       }
