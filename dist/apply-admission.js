@@ -57,6 +57,10 @@ function deadClaim(name) {
         return error.code === "ESRCH";
     }
 }
+/** Only claim files take part in admission; stray files such as `.DS_Store` or editor backups never block an apply. */
+function claims(directory) {
+    return fs.readdirSync(directory).filter((entry) => entry.endsWith(".claim"));
+}
 /**
  * Publish a unique claim and enter only when it is the sole surviving claim.
  *
@@ -78,11 +82,11 @@ export async function acquireApplyAdmission(pmDir) {
             fs.writeFileSync(file, "", { flag: "wx", mode: 0o600 });
             let admitted = false;
             try {
-                for (const observed of fs.readdirSync(directory)) {
+                for (const observed of claims(directory)) {
                     if (observed !== name && deadClaim(observed))
                         removeClaim(path.join(directory, observed));
                 }
-                const current = fs.readdirSync(directory);
+                const current = claims(directory);
                 if (current.length === 1 && current[0] === name) {
                     admitted = true;
                     return () => {
