@@ -27,7 +27,7 @@ export class ApplyAdmissionRefusal extends Error {
     exitCode = 1;
     /** Construct the same refusal for acquisition, cleanup and release faults. */
     constructor() {
-        super("Preset application ownership is unavailable; wait for other applies, or inspect abandoned claims only after confirming their writers have stopped. Verify lock-directory permissions and retry.");
+        super("Preset application ownership is unavailable; wait for other applies. Claims live in the tracker's locks/pm-presets-apply-claims directory; a claim left by another boot or PID namespace is never recovered automatically, so remove it only after confirming its writer has stopped. Verify lock-directory permissions and retry.");
         this.name = "ApplyAdmissionRefusal";
     }
 }

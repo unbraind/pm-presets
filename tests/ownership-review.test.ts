@@ -15,9 +15,9 @@ import type { PresetParameter } from "../src/params.ts";
 import { PRESET_PARAMETERS } from "../src/registry.ts";
 import { PRESET_SEEDS } from "../src/seeds.ts";
 import { trackerBytes } from "./fixtures/params-secret-oracle.ts";
-import { captureAdmissionRealm, acquireApplyAdmission } from "../src/apply-admission.ts";
+import { captureAdmissionRealm, acquireApplyAdmission, ApplyAdmissionRefusal } from "../src/apply-admission.ts";
 import { buildExportedPreset } from "../src/export.ts";
-import { admitSettingsOwnership, verifiedArtifactOwnership, seedOwnershipProven, refuseReservedSeedIdentity, isArtifactCollision } from "../src/artifact-ownership.ts";
+import { admitSettingsOwnership, verifiedArtifactOwnership, seedOwnershipProven, refuseReservedSeedIdentity, isArtifactCollision, requireArtifactOwnership } from "../src/artifact-ownership.ts";
 
 /** Independent seeded generator chooses payloads and unrelated tracker state. */
 function generator(seed: number): () => number {
@@ -155,6 +155,17 @@ test("documented parameter authoring example compiles as a complete consumer sni
   const readme = fs.readFileSync("README.md", "utf8");
   assert.match(readme, /apply startup-roadmap --param projectKey=acme --with-seeds --force/);
   for (const text of [readme, document]) assert.match(text, /host audit may create.*lock/s);
+});
+
+test("unowned collisions name a remedy that fits settings leaves and files", () => {
+  const refusal = (artifact: string) => { try { requireArtifactOwnership({}, artifact); } catch (error) { return error as { code: string; message: string }; } assert.fail(artifact); };
+  const setting = refusal("settings.json#/id_prefix");
+  assert.equal(setting.code, "artifact_conflict");
+  assert.match(setting.message, /Restore that setting to its host default.*same --prefix.*--force cannot adopt it/);
+  assert.doesNotMatch(setting.message, /rename/);
+  assert.match(refusal("templates/initiative.json").message, /Preserve or rename that artifact before retrying; --force cannot adopt it/);
+  assert.doesNotThrow(() => requireArtifactOwnership({ "templates/initiative.json": true }, "templates/initiative.json"));
+  assert.match(new ApplyAdmissionRefusal().message, /locks\/pm-presets-apply-claims.*another boot or PID namespace/);
 });
 
 test("documented programmatic example runs against the declarations from the earlier sections", () => {

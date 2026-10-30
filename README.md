@@ -197,8 +197,11 @@ agree across apply, strict diff, stack previews and prerequisite plans.
 
 Settings, template and seed writes share one apply admission. A preflight checks
 overwrite conflicts before settings/history mutation. Native write failures exit
-nonzero; completed audited writes remain recorded, and retrying reconciles missing
-artifacts. Seed reads use the SDK locator/parser and emit no usage/cache writes.
+nonzero; completed audited writes remain recorded, and retrying reconciles artifacts
+that were never written. Template ownership is recorded after the whole template
+write succeeds, so a template written before a later failure in the same run is
+unowned: a retry refuses it with `artifact_conflict` until you preserve, rename or
+remove it. Seed reads use the SDK locator/parser and emit no usage/cache writes.
 
 **Seeds and custom fields.** Starter items created by `--with-seeds` set only
 **built-in** fields (`type`, `title`, `priority`, `tags`, `body`). Custom scalar

@@ -25,7 +25,12 @@ export async function verifiedArtifactOwnership(pmRoot: string, stored: Record<s
 
 /** Reject an unowned collision even if its bytes happen to match the desired artifact. */
 export function requireArtifactOwnership(owned: ArtifactOwnership, artifact: string): void {
-  if (ownArtifact(owned, artifact) !== true) throw new ParameterRefusal("artifact_conflict", `Unowned collision: ${artifact}. Preserve or rename that artifact before retrying; --force cannot adopt it.`);
+  if (ownArtifact(owned, artifact) === true) return;
+  // A setting cannot be renamed: name the two ways to clear a settings-leaf collision instead.
+  const remedy = artifact.startsWith("settings.json#")
+    ? "Restore that setting to its host default, or keep its current value (for id_prefix, pass the same --prefix), before retrying"
+    : "Preserve or rename that artifact before retrying";
+  throw new ParameterRefusal("artifact_conflict", `Unowned collision: ${artifact}. ${remedy}; --force cannot adopt it.`);
 }
 
 let initialDefaults: Record<string, unknown> | undefined;
