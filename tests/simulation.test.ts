@@ -1,9 +1,10 @@
 /** Real SDK and subprocess regressions for isolated preset workflow simulation. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 import { createExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
 import { PmClient } from "@unbrained/pm-cli/sdk";
@@ -108,6 +109,23 @@ test("refusals carry stable codes, exit statuses and remedies", () => {
     return true;
   });
   assert.equal(resolveSimulationSdk(["invalid anchor", import.meta.url]), sdkPath);
+});
+
+test("a symlinked host entry resolves the SDK from its real location", (t) => {
+  // Global npm installs invoke pm through a bin symlink, so process.argv[1] lives
+  // beside no node_modules. A standalone extension copy has to resolve the host
+  // SDK through that anchor (PM-CLI-3Q: sdk_unavailable on a compatible host).
+  const root = mkdtempSync(join(tmpdir(), "preset-sdk-link-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const link = join(root, "pm");
+  try {
+    symlinkSync(sdkPath, link);
+  } catch (error) {
+    t.skip(`symlinks unavailable: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  assert.equal(resolveSimulationSdk([link]), sdkPath);
+  assert.equal(resolveSimulationSdk([pathToFileURL(link).href]), sdkPath);
 });
 
 test("failed worker startup refuses and removes its disposable workspace", (t) => {
