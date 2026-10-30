@@ -106,6 +106,22 @@ test("admission claims retain live and unknown owners and release only their uni
   assert.deepEqual(fs.readdirSync(directory), []);
 });
 
+test("stray non-claim files never block admission and are left in place", async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), "preset-admission-stray-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const directory = join(root, "locks", "pm-presets-apply-claims");
+  fs.mkdirSync(directory, { recursive: true });
+  for (const stray of [".DS_Store", "notes.claim~", "sync-conflict.tmp"]) fs.writeFileSync(join(directory, stray), "");
+  let clock = 0;
+  const time = t.mock.method(Date, "now", () => clock++ * 20_000);
+  let release: () => void;
+  try { release = await acquireApplyAdmission(root); }
+  finally { time.mock.restore(); }
+  assert.equal(fs.readdirSync(directory).filter((entry) => entry.endsWith(".claim")).length, 1);
+  release();
+  assert.deepEqual(fs.readdirSync(directory).sort(), [".DS_Store", "notes.claim~", "sync-conflict.tmp"]);
+});
+
 test("unverifiable PID namespaces receive distinct recovery realms", (t) => {
   const mock = t.mock.method(fs, "readlinkSync", () => { throw Object.assign(new Error("private namespace"), { code: "EACCES" }); });
   syncBuiltinESMExports();

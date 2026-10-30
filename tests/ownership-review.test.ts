@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { syncBuiltinESMExports } from "node:module";
+import { stripTypeScriptTypes, syncBuiltinESMExports } from "node:module";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { PmClient, createExtensionCommandSdk } from "@unbrained/pm-cli/sdk";
@@ -155,6 +155,17 @@ test("documented parameter authoring example compiles as a complete consumer sni
   const readme = fs.readFileSync("README.md", "utf8");
   assert.match(readme, /apply startup-roadmap --param projectKey=acme --with-seeds --force/);
   for (const text of [readme, document]) assert.match(text, /host audit may create.*lock/s);
+});
+
+test("documented programmatic example runs against the declarations from the earlier sections", () => {
+  const document = fs.readFileSync("docs/params-example.md", "utf8");
+  const [manifest, bindings, programmatic] = [...document.matchAll(/```typescript\n([\s\S]*?)```/g)].map((match) => match[1]);
+  const local = /^import \{ PARAMETERS, SEEDS, SETTINGS, TEMPLATES \} from "\.\/preset-definition\.ts";\n/m;
+  assert.match(programmatic, local, "the example must name where its declarations come from");
+  const source = stripTypeScriptTypes([manifest, bindings, programmatic.replace(local, "")].join("\n"))
+    + '\nif (parts.seeds[0].title !== "Define the acme first roadmap initiative" || parts.settings.id_prefix !== "acme-") process.exit(1);';
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e", source], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
 });
 
 test("managed missing-document refusal emits an executable native recovery command", async (t) => {

@@ -133,12 +133,14 @@ import {
   resolveParameterValues,
   resolveParameterizedPreset,
 } from "pm-presets";
+// PARAMETERS, SETTINGS, TEMPLATES and SEEDS are the declarations from sections 1 and 2.
+import { PARAMETERS, SEEDS, SETTINGS, TEMPLATES } from "./preset-definition.ts";
 
-const resolved = resolveParameterValues(manifest, { projectKey: "acme" });
-const parts = resolveParameterizedPreset(manifest, resolved.values, {
-  settings,   // PresetSettingsPatch
-  templates,  // PresetTemplateMap
-  seeds,      // SeedItem[]
+const resolved = resolveParameterValues(PARAMETERS, { projectKey: "acme" });
+const parts = resolveParameterizedPreset(PARAMETERS, resolved.values, {
+  settings: SETTINGS,
+  templates: TEMPLATES,
+  seeds: SEEDS,
 });
 ```
 

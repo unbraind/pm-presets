@@ -1,6 +1,6 @@
 /** External references protect every tracker byte, including append-only audit history. */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, symlinkSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
@@ -354,7 +354,7 @@ test("SDK lookup follows the canonical CLI behind npm-style symlinks", async (t)
   const backend = require("node:module") as { _resolveFilename(...args: unknown[]): string };
   const native = backend._resolveFilename;
   const mock = t.mock.method(backend, "_resolveFilename", (...args: unknown[]) => {
-    if (args[0] === "@unbrained/pm-cli/sdk" && (args[1] as { filename: string }).filename !== cli) throw new Error("Peer lookup requires the canonical host.");
+    if (args[0] === "@unbrained/pm-cli/sdk" && (args[1] as { filename: string }).filename !== realpathSync(cli)) throw new Error("Peer lookup requires the canonical host.");
     return native.apply(backend, args);
   });
   try {
