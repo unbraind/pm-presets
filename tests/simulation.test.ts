@@ -1,9 +1,10 @@
 /** Real SDK and subprocess regressions for isolated preset workflow simulation. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 import { createExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
 import { PmClient } from "@unbrained/pm-cli/sdk";
@@ -110,6 +111,54 @@ test("refusals carry stable codes, exit statuses and remedies", () => {
   assert.equal(resolveSimulationSdk(["invalid anchor", import.meta.url]), sdkPath);
 });
 
+test("a symlinked host entry resolves the SDK from its real location", (t) => {
+  // Global npm installs invoke pm through a bin symlink, so process.argv[1] lives
+  // beside no node_modules. A standalone extension copy has to resolve the host
+  // SDK through that anchor (PM-CLI-3Q: sdk_unavailable on a compatible host).
+  const root = mkdtempSync(join(tmpdir(), "preset-sdk-link-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const link = join(root, "pm");
+  try {
+    symlinkSync(sdkPath, link);
+  } catch (error) {
+    t.skip(`symlinks unavailable: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  assert.equal(resolveSimulationSdk([link]), sdkPath);
+  assert.equal(resolveSimulationSdk([pathToFileURL(link).href]), sdkPath);
+  assert.equal(resolveSimulationSdk(["file://remote-host/share/pm", link]), sdkPath);
+});
+
+test("workspace anchors resolve where they are given; only the invoked entry follows its symlink first", (t) => {
+  // A different SDK beside the link stands for a workspace-local install. A
+  // workspace anchor must keep finding it, while the running CLI entry must
+  // reach the host it actually executes.
+  const root = mkdtempSync(join(tmpdir(), "preset-sdk-order-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const local = join(root, "node_modules", "@unbrained", "pm-cli");
+  mkdirSync(local, { recursive: true });
+  writeFileSync(join(local, "package.json"), JSON.stringify({ name: "@unbrained/pm-cli", exports: { "./sdk": "./sdk.js" } }));
+  writeFileSync(join(local, "sdk.js"), "");
+  mkdirSync(join(root, "bin"));
+  const link = join(root, "bin", "pm");
+  try {
+    symlinkSync(sdkPath, link);
+  } catch (error) {
+    t.skip(`symlinks unavailable: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  const localSdk = realpathSync(join(local, "sdk.js"));
+  assert.equal(resolveSimulationSdk([link]), localSdk);
+  const entry = process.argv[1];
+  process.argv[1] = link;
+  try {
+    assert.equal(resolveSimulationSdk([link]), sdkPath);
+    assert.equal(resolveSimulationSdk([pathToFileURL(link).href]), sdkPath);
+  } finally {
+    process.argv[1] = entry;
+  }
+});
+
 test("failed worker startup refuses and removes its disposable workspace", (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-failure-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -184,4 +233,21 @@ test("built output works through the real CLI in a non-git tracker with git abse
   assert.equal(toon.status, 0, toon.stderr);
   assert.match(toon.stdout, /scenarios\[4\]/);
   assert.ok(toon.stdout.length < 2500);
+  // PM-CLI-3Q: a global install reaches cli.js through a bin symlink, and a
+  // standalone extension copy has no node_modules, so only the entry anchor
+  // can locate the host SDK.
+  const link = join(root, "bin", "pm");
+  mkdirSync(join(root, "bin"));
+  try {
+    symlinkSync(cli, link);
+  } catch (error) {
+    t.diagnostic(`symlinked entry skipped: ${(error as NodeJS.ErrnoException).code}`);
+    return;
+  }
+  rmSync(join(pmRoot, "extensions", "pm-presets", "node_modules"), { recursive: true, force: true });
+  const linked = spawnSync(process.execPath, [link, "--path", pmRoot, "presets", "simulate", "bug-triage", "--json"], {
+    cwd: root, encoding: "utf8", env: { ...process.env, PATH: "", GIT_CEILING_DIRECTORIES: root, DO_NOT_TRACK: "1" },
+  });
+  assert.equal(linked.status, 0, linked.stderr + linked.stdout);
+  assert.equal((JSON.parse(linked.stdout) as { ok: boolean }).ok, true);
 });

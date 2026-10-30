@@ -1,5 +1,7 @@
 /** Host SDK resolution shared by template reads, plans and simulations. */
+import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 /** Actionable refusal; internal paths and raw child diagnostics never escape. */
 export class SimulationRefusal extends Error {
     /** Stable machine-readable category. */
@@ -17,11 +19,30 @@ export class SimulationRefusal extends Error {
         this.exitCode = exitCode;
     }
 }
-/** Resolve the peer from the package or the CLI host, including standalone extension copies. */
+/**
+ * Lookup locations for one anchor. Workspace anchors keep their given location
+ * first; the invoked CLI entry is followed to its real file first, because a
+ * global bin symlink has no node_modules beside it.
+ */
+function anchorLocations(anchor) {
+    let given;
+    let canonical;
+    try {
+        given = anchor.startsWith("file:") ? fileURLToPath(anchor) : anchor;
+        canonical = realpathSync(given);
+    }
+    catch {
+        return [anchor]; // Virtual/nonexistent anchors still support require's normal lookup.
+    }
+    if (canonical === given)
+        return [anchor];
+    return given === process.argv[1] ? [canonical, anchor] : [anchor, canonical];
+}
+/** Resolve the peer from the package, the workspace or the CLI host, including invocation symlinks. */
 export function resolveSimulationSdk(anchors) {
-    for (const anchor of anchors) {
+    for (const location of anchors.flatMap(anchorLocations)) {
         try {
-            return createRequire(anchor).resolve("@unbrained/pm-cli/sdk");
+            return createRequire(location).resolve("@unbrained/pm-cli/sdk");
         }
         catch {
             // The extension copy may have no node_modules; try the host next.

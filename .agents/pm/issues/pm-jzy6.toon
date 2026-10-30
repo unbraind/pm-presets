@@ -1,0 +1,20 @@
+id: pm-jzy6
+title: Resolve the host SDK through symlinked pm entry points
+description: "A standalone extension copy (no node_modules) resolves @unbrained/pm-cli/sdk through the host entry anchor process.argv[1]. A global npm install invokes pm through a bin symlink, and createRequire(anchor) searches beside the link, so a compatible host refused with sdk_unavailable. Sentry PM-CLI-3Q (2 events, pm-cli 2026.10.25 host) blocks the pm-cli daily release. Reproduced with pm-cli 2026.10.28 and pm-presets 2026.10.29: pm presets plan exits 2 through the symlinked bin and 0 through the real path."
+type: Issue
+status: closed
+priority: 0
+tags[3]: bug,hotfix,sdk-loader
+created_at: "2026-10-30T16:51:07.519Z"
+updated_at: "2026-10-30T17:38:22.266Z"
+closed_at: "2026-10-30T16:52:43.247Z"
+completed_at: "2026-10-30T16:52:43.247Z"
+author: "harness:claude-code"
+estimated_minutes: 60
+acceptance_criteria: "resolveSimulationSdk canonicalizes each anchor with realpathSync (paths and file: URLs) before createRequire; a symlinked host entry resolves the SDK; a regression test fails without the fix; nonexistent anchors keep the normal lookup"
+expected_result: pm presets commands that load the host SDK succeed from a standalone extension copy invoked through the global pm bin symlink
+comments[2]{created_at,author,text}:
+  "2026-10-30T16:52:42.803Z","harness:claude-code","Reproduction: isolated npm prefix with pm-cli 2026.10.28 and pm-presets 2026.10.29 installed as a project extension. With the extension node_modules removed (standalone copy), pm presets plan software-sprint exits 2 through the global bin symlink and 0 when the same cli.js is invoked by its real path. Patching only the dist loader to canonicalize anchors with realpathSync makes the symlinked invocation exit 0. Regression test 'a symlinked host entry resolves the SDK from its real location' passes with the fix and fails with SimulationRefusal sdk_unavailable on the unfixed loader. npm run coverage on Node 22: 25 source files at 100 percent, thresholds met."
+  "2026-10-30T17:38:22.265Z","harness:claude-code","CodeRabbit review on PR 181: canonicalizing every anchor would also follow a symlinked workspace package.json and could skip a workspace-local SDK. Lookup order is now role-aware: workspace and package anchors try their given location first, and only the invoked CLI entry (process.argv[1], as a path or file: URL) follows its symlink first. Malformed file: URLs fall back to the normal lookup. New test covers both orders with a different SDK beside the link; negative controls: the previous all-canonical loader fails the order test and the original loader fails both tests. The real failure layout (global bin symlink, standalone extension copy) exits 0 for presets simulate and plan. Coverage gate 100 percent."
+close_reason: "Fixed: resolveSimulationSdk canonicalizes path and file: URL anchors with realpathSync before createRequire, so a standalone extension copy resolves the host SDK through the global pm bin symlink. Regression test plus negative control; exact coverage gate green."
+body: ""
