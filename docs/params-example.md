@@ -74,8 +74,9 @@ export const SEEDS = [
 ```
 
 One supplied value reaches every occurrence: apply substitutes the same
-resolved value into the settings leaf, both template values and the seed prose,
-and reports the count (`Resolved 1 parameter(s), 4 binding occurrence(s)`).
+resolved value into the settings leaf, both template values and the seed prose.
+The summary counts the settings and template occurrences
+(`Resolved 1 parameter(s), 3 binding occurrence(s)`); seeds resolve separately.
 
 ## 3. Supply values and read back the choices
 
@@ -112,7 +113,7 @@ Credentials remain outside the tracker. Consumers call `resolveSecretReference`
 at use time and must not emit or persist the returned value. Missing environment
 values refuse with `unavailable_secret_reference`; commands never dereference.
 
-## 6. Resolution is computed once and holds under concurrency
+## 5. Resolution is computed once and holds under concurrency
 
 The unified apply resolves your input exactly once (flags plus at most one
 params file), pre-validates the seed bindings at that same boundary, and
@@ -123,7 +124,7 @@ and the template writes, keeping concurrent applies internally consistent;
 dry-runs skip the preset apply lock. The host audit may create its own lock
 file and may refuse on a read-only tracker; preset artifacts stay unchanged.
 
-## 5. Programmatic use
+## 6. Programmatic use
 
 The same engine is exported from the package root for SDK consumers:
 

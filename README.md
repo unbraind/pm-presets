@@ -225,7 +225,7 @@ pm presets apply startup-roadmap
 # Inspect the changed templates before reconciling owned artifacts:
 pm presets diff startup-roadmap --param projectKey=acme
 # One supplied value reaches every occurrence (prefix becomes "acme-",
-# templates record "## Project: acme", the seed title names the acme project):
+# templates record "acme" under "## Project", the seed title names the acme project):
 pm presets apply startup-roadmap --param projectKey=acme --with-seeds --force
 
 # Values can also come from a JSON file:
@@ -328,7 +328,8 @@ while being read. Missing, unreadable, nonregular and oversized files return
 `invalid_params_file` with exit 2, without raw filesystem diagnostics.
 
 The same engine backs every read path (`show`, `diff`, `plan`, `stack`,
-`validate`), so previews never display unresolved `${param:...}` syntax. See
+`validate`): answered bindings resolve in every preview, while a declaration-mode
+projection may keep the authored `${param:...}` occurrence for an unanswered parameter. See
 [docs/params-example.md](docs/params-example.md) for the full authoring walkthrough.
 
 ## Presets in Detail
