@@ -44,13 +44,16 @@ import {
   requireValidPresets,
   validateAllPresets,
 } from "./catalog.ts";
-import { computePresetDiff, readWorkspaceSnapshot } from "./diff.ts";
+import { computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.ts";
 import {
   buildExportedPreset,
   readWorkspaceSettings,
   readWorkspaceTemplates,
 } from "./export.ts";
-import { runPresetSeeds } from "./seeds.ts";
+import { parameterSafeApi } from "./command-errors.ts";
+import { ParameterRefusal, parseParameterFlagEntries, readSuppliedParameterValues } from "./params.ts";
+import { PRESET_PARAMETERS } from "./registry.ts";
+import { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
 import * as fs from "node:fs";
 import { PRESET_HANDLERS } from "./setup.ts";
 import { simulatePreset, type PresetScenarioId } from "./simulation.ts";
@@ -80,18 +83,38 @@ class PresetError extends Error {
 // flag definitions whose `long`/`short` include their dash prefixes. Declaring
 // `long: "dry-run"` (no `--`) makes the flag invisible to `--help` AND rejected
 // at parse time as "Unknown option". Always include the prefixes.
+// Shared parameter flags: `--param` is repeatable (`k=v` entries accumulate) and
+// `--params-file` reads a JSON object. Supplied names must be declared by the
+// preset's typed parameter manifest; unknown or unanswered values refuse
+// before any write with a typed exit-2 refusal.
+const PARAM_FLAGS: FlagDefinition[] = [
+  {
+    long: "--param",
+    value_name: "<name>=<value>",
+    value_type: "string",
+    repeatable: true,
+    description: "Supply a declared preset parameter (repeatable); see `pm presets show <id>` for the manifest.",
+  },
+  {
+    long: "--params-file",
+    value_name: "<file>",
+    value_type: "string",
+    description: "Read supplied parameter values from a JSON object file (same names as --param).",
+  },
+];
+
 const COMMON_FLAGS: FlagDefinition[] = [
   {
     long: "--force",
     short: "-f",
     value_type: "boolean",
-    description: "Overwrite existing settings.json and template files without prompting.",
+    description: "Reconcile changed preset templates and managed starter-item contents.",
   },
   {
     long: "--dry-run",
     short: "-n",
     value_type: "boolean",
-    description: "Preview what would be written without making any changes.",
+    description: "Preview artifacts without writing preset settings, templates or items; the host audit may still create its lock file.",
   },
   {
     long: "--prefix",
@@ -100,6 +123,7 @@ const COMMON_FLAGS: FlagDefinition[] = [
     value_type: "string",
     description: "Override the id_prefix written to settings.json.",
   },
+  ...PARAM_FLAGS,
 ];
 
 // `presets apply` additionally accepts --with-seeds to create starter items
@@ -110,7 +134,7 @@ const APPLY_FLAGS: FlagDefinition[] = [
     long: "--with-seeds",
     short: "-s",
     value_type: "boolean",
-    description: "Also create the preset's starter items (built-in fields only; see #97).",
+    description: "Enroll starter items in managed preset state (built-in fields only; see #97).",
   },
   {
     long: "--replace",
@@ -120,7 +144,8 @@ const APPLY_FLAGS: FlagDefinition[] = [
   },
 ];
 
-// `presets diff` additionally accepts --strict for CI drift detection.
+// `presets diff` additionally accepts --strict for CI drift detection and the
+// parameter flags so the preview mirrors a parameterized apply.
 const DIFF_FLAGS: FlagDefinition[] = [
   {
     long: "--strict",
@@ -128,6 +153,10 @@ const DIFF_FLAGS: FlagDefinition[] = [
     description:
       "Exit non-zero (4) when the workspace is NOT in sync with the preset (drift detection for CI/compliance).",
   },
+  ...PARAM_FLAGS,
+  { long: "--with-seeds", value_type: "boolean", description: "Include managed starter-item contents in the desired-state comparison." },
+  { long: "--prefix", value_name: "<prefix>", value_type: "string", description: "Compare against the same prefix override as apply." },
+  { long: "--replace", value_type: "boolean", description: "Compare replacement settings semantics." },
 ];
 
 // `presets export` writes to a file or stdout and can carry a display name.
@@ -152,6 +181,9 @@ const EXPORT_FLAGS: FlagDefinition[] = [
 // --custom <name>` from a single entry point. The subcommands (`presets list`,
 // `presets diff`, `presets export`) remain available with identical behavior.
 const PRESETS_FLAGS: FlagDefinition[] = [
+  { long: "--with-seeds", value_type: "boolean", description: "With --diff: compare managed starter-item contents." },
+  { long: "--prefix", value_name: "<prefix>", value_type: "string", description: "With --diff: use the same prefix override as apply." },
+  { long: "--replace", value_type: "boolean", description: "With --diff: compare replacement settings semantics." },
   {
     long: "--list",
     value_type: "boolean",
@@ -188,6 +220,7 @@ const PRESETS_FLAGS: FlagDefinition[] = [
     value_type: "string",
     description: "With --custom: human-readable display name for the exported preset (defaults to the name).",
   },
+  ...PARAM_FLAGS,
 ];
 
 /**
@@ -202,6 +235,7 @@ const defineExtension = <TModule extends ExtensionModule>(module: TModule): TMod
 
 export default defineExtension({
   activate(api: ExtensionApi) {
+    api = parameterSafeApi(api);
     registerUpgradeCommands(api);
     registerPlanCommand(api);
     registerStackCommand(api);
@@ -289,7 +323,7 @@ export default defineExtension({
         "pm presets --custom our-config --output our-config.preset.json",
       ],
       flags: PRESETS_FLAGS,
-      run: (ctx: CommandHandlerContext) => {
+      run: async (ctx: CommandHandlerContext) => {
         const options = ctx.options ?? {};
         const list = readBooleanOption(options, "list");
         const diffId = readStringOption(options, "diff");
@@ -317,6 +351,11 @@ export default defineExtension({
           );
         }
 
+        if (!diffId && (parseParameterFlagEntries(options.param).length > 0
+          || [options.paramsFile, options["params-file"]].some((value) => value !== undefined && value !== null))) {
+          throw new ParameterRefusal("invalid_param_flag", "Use parameter inputs only with --diff <preset>, presets apply, or a setup command.");
+        }
+
         if (list) {
           return {
             presets: buildListRows(),
@@ -325,9 +364,10 @@ export default defineExtension({
         }
 
         if (diffId) {
-          const definition = requirePresetDefinition(diffId);
-          const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-          const result = computePresetDiff(definition, snapshot);
+          const supplied = readSuppliedParameterValues(options);
+          const definition = requirePresetDefinition(diffId, supplied);
+          const snapshot = await readWorkspaceSnapshot(resolvePmDir(ctx), ctx.sdk?.client);
+          const result = await computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot, { withSeeds: readBooleanOption(ctx.options, "withSeeds", "with-seeds"), prefix: readStringOption(ctx.options, "prefix"), replace: readBooleanOption(ctx.options, "replace") });
           const strict = readBooleanOption(options, "strict");
           if (strict && !result.inSync) {
             // `--json` is host-owned; read it from ctx.global.
@@ -339,7 +379,7 @@ export default defineExtension({
               console.error(
                 "Workspace is NOT in sync with preset '" + definition.id + "': " +
                   settingsToAdd + " setting(s) to add, " + settingsToChange + " to change, " +
-                  templatesMissing + " template(s) missing.",
+                  templatesMissing + " template(s) missing. Drifted artifacts: " + result.artifacts.join(", "),
               );
             }
             throw new PresetError(
@@ -423,10 +463,11 @@ export default defineExtension({
         { name: "preset", required: true, description: "Preset id (see `pm presets list`)." },
       ],
       flags: DIFF_FLAGS,
-      run: (ctx: CommandHandlerContext) => {
-        const definition = requirePresetDefinition(ctx.args?.[0]);
-        const snapshot = readWorkspaceSnapshot(resolvePmDir(ctx));
-        const result = computePresetDiff(definition, snapshot);
+      run: async (ctx: CommandHandlerContext) => {
+        const supplied = readSuppliedParameterValues(ctx.options);
+        const definition = requirePresetDefinition(ctx.args?.[0], supplied);
+        const snapshot = await readWorkspaceSnapshot(resolvePmDir(ctx), ctx.sdk?.client);
+        const result = await computeParameterizedDiff(definition, PRESET_PARAMETERS[definition.id], supplied, snapshot, { withSeeds: readBooleanOption(ctx.options, "withSeeds", "with-seeds"), prefix: readStringOption(ctx.options, "prefix"), replace: readBooleanOption(ctx.options, "replace") });
         const strict = readBooleanOption(ctx.options, "strict");
         if (strict && !result.inSync) {
           // Drift detected. Print the diff (respecting --json) so CI logs show
@@ -440,7 +481,7 @@ export default defineExtension({
             console.error(
               `Workspace is NOT in sync with preset '${definition.id}': ` +
                 `${settingsToAdd} setting(s) to add, ${settingsToChange} to change, ` +
-                `${templatesMissing} template(s) missing.`,
+                `${templatesMissing} template(s) missing. Drifted artifacts: ${result.artifacts.join(", ")}`,
             );
           }
           throw new PresetError(
@@ -553,20 +594,14 @@ export default defineExtension({
       ],
       flags: APPLY_FLAGS,
       run: async (ctx: CommandHandlerContext) => {
-        const id = ctx.args?.[0];
-        // Validate the id up front (NOT_FOUND/exit 3 for unknown names).
-        const definition = requirePresetDefinition(id);
-        const handler = PRESET_HANDLERS[definition.id];
-        await handler(ctx);
+        // ONE boundary before any write: the preset id, every parameter value
+        // AND the seed bindings resolve/refuse here — a bad seed can never
+        // leave a half-applied preset, and the params file is read exactly once.
+        const application = resolvePresetApplication(ctx);
+        const handler = PRESET_HANDLERS[application.definition.id];
+        await handler(contextWithResolvedParameters(ctx, application));
 
-        const withSeeds = readBooleanOption(ctx.options, "withSeeds", "with-seeds");
-        if (!withSeeds) {
-          return;
-        }
-        await runPresetSeeds(resolvePmDir(ctx), definition.id, {
-          client: ctx.sdk?.client,
-          dryRun: readBooleanOption(ctx.options, "dryRun", "dry-run"),
-        });
+
       },
     });
 
@@ -606,6 +641,7 @@ export default defineExtension({
 
 // Re-export public API
 export { PRESET_REGISTRY } from "./registry.ts";
+export { collectPresetParameterIssues, projectPresetDefinition } from "./catalog.ts";
 export type { PresetDescriptor } from "./registry.ts";
 
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
@@ -619,3 +655,44 @@ export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPla
 
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
 export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";
+
+export {
+  ParameterRefusal,
+  isSecretReference,
+  resolveSecretReference,
+  assertResolvedParameterValues,
+  buildParameterViews,
+  collectParameterValues,
+  collectSecretSettingPaths,
+  parseParameterFlagEntries,
+  parseParamsFile,
+  readSuppliedParameterValues,
+  redactSecretValues,
+  redactSecretValuesDeep,
+  resolveParameterValues,
+  resolveParameterizedPreset,
+  resolveSeedsWithParameters,
+  resolveSettingsWithParameters,
+  resolveTemplatesWithParameters,
+  validateParameterManifest,
+} from "./params.ts";
+export type {
+  ParameterRefusalCode,
+  ParameterBindingOccurrence,
+  PresetParameter,
+  PresetParameterManifest,
+  PresetParameterType,
+  PresetParameterView,
+  ResolvedParameterValues,
+} from "./params.ts";
+export { PRESET_PARAMETERS } from "./registry.ts";
+export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
+export type { ResolvedPresetApplication } from "./apply-command.ts";
+export { resolvedSeedsForPreset } from "./seeds.ts";
+
+export { computeDesiredPresetState, compareDesiredPresetState } from "./desired-state.ts";
+export type { DesiredPresetState, PresetArtifactRecord } from "./desired-state.ts";
+export { computePresetDiff, computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.ts";
+export type { PresetDiff, WorkspaceSnapshot } from "./diff.ts";
+export { requirePresetDefinition } from "./catalog.ts";
+export type { PresetDefinition } from "./catalog.ts";

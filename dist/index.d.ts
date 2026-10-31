@@ -28,6 +28,7 @@ declare const _default: {
 };
 export default _default;
 export { PRESET_REGISTRY } from "./registry.ts";
+export { collectPresetParameterIssues, projectPresetDefinition } from "./catalog.ts";
 export type { PresetDescriptor } from "./registry.ts";
 export { simulatePreset, SimulationRefusal, PRESET_SCENARIOS } from "./simulation.ts";
 export type { PresetSimulationOptions, PresetSimulationReport, PresetScenarioId, PresetScenarioResult, SimulationRefusalCode } from "./simulation.ts";
@@ -37,4 +38,16 @@ export { compilePresetPlan, bundledPresetComposition, summarizePresetPlan, PlanR
 export type { PresetRequirement, PresetPlanFeature, PresetComposition, PresetPlanTarget, PresetPlanGap, PresetPlan, PlanRefusalCode } from "./plan.ts";
 export { planPresetStack, summarizePresetStack, StackRefusal } from "./stack.ts";
 export type { PresetStackSelection, PresetStackInput, PresetStackOwnership, PresetStackPlan, StackRefusalCode } from "./stack.ts";
+export { ParameterRefusal, isSecretReference, resolveSecretReference, assertResolvedParameterValues, buildParameterViews, collectParameterValues, collectSecretSettingPaths, parseParameterFlagEntries, parseParamsFile, readSuppliedParameterValues, redactSecretValues, redactSecretValuesDeep, resolveParameterValues, resolveParameterizedPreset, resolveSeedsWithParameters, resolveSettingsWithParameters, resolveTemplatesWithParameters, validateParameterManifest, } from "./params.ts";
+export type { ParameterRefusalCode, ParameterBindingOccurrence, PresetParameter, PresetParameterManifest, PresetParameterType, PresetParameterView, ResolvedParameterValues, } from "./params.ts";
+export { PRESET_PARAMETERS } from "./registry.ts";
+export { resolvePresetApplication, contextWithResolvedParameters } from "./apply-command.ts";
+export type { ResolvedPresetApplication } from "./apply-command.ts";
+export { resolvedSeedsForPreset } from "./seeds.ts";
+export { computeDesiredPresetState, compareDesiredPresetState } from "./desired-state.ts";
+export type { DesiredPresetState, PresetArtifactRecord } from "./desired-state.ts";
+export { computePresetDiff, computeParameterizedDiff, readWorkspaceSnapshot } from "./diff.ts";
+export type { PresetDiff, WorkspaceSnapshot } from "./diff.ts";
+export { requirePresetDefinition } from "./catalog.ts";
+export type { PresetDefinition } from "./catalog.ts";
 //# sourceMappingURL=index.d.ts.map

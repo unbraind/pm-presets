@@ -1,7 +1,8 @@
 /** Operational prerequisite negotiation, independent of storage and settings validation. */
 import type { WorkspaceContracts } from "@unbrained/pm-cli/sdk";
-import { seedsForPreset } from "./seeds.ts";
+import { resolvedSeedsForPreset } from "./seeds.ts";
 import { requirePresetDefinition } from "./catalog.ts";
+import { normalizeSeedArtifact } from "./desired-state.ts";
 
 /** A named operational prerequisite; command names are canonical activated extension paths. */
 export interface PresetRequirement {
@@ -154,7 +155,7 @@ export function bundledPresetComposition(id: string, withSeeds = false): PresetC
       ...[...new Set(preset.templates.map((template) => template.type))].map((name) => ({ kind: "type" as const, name }))] },
   ];
   if (withSeeds) features.push({ id: "seeds", optional: false, requires: [{ kind: "capability", name: "items.create" },
-    ...[...new Set(seedsForPreset(preset.id).map((seed) => seed.type))].map((name) => ({ kind: "type" as const, name }))] });
+    ...[...new Set(resolvedSeedsForPreset(preset.id, {}, true).map((seed) => JSON.stringify(seed).includes("${param:") ? seed.type : normalizeSeedArtifact(seed, preset.itemTypes).type))].map((name) => ({ kind: "type" as const, name }))] });
   return { id: preset.id, features };
 }
 /** Compact CLI view with complete counts and explicit truncation, never hidden gaps. */

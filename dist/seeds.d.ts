@@ -29,6 +29,19 @@ export declare const PRESET_SEEDS: Record<string, SeedItem[]>;
  * simply a no-op rather than an error.
  */
 export declare function seedsForPreset(presetId: string): SeedItem[];
+/**
+ * Resolve a preset's seed items with supplied values and declared defaults.
+ *
+ * Seeds are authored with `${param:<name>}` occurrences exactly like settings
+ * and templates; the SAME resolution engine substitutes every occurrence and
+ * refuses secret bindings in the public seed prose before anything is created.
+ * Callers may pass values already resolved at their boundary or omit them for
+ * default-backed previews. No params file or flag list is re-read. A declared
+ * parameter without an effective value refuses (`unanswered_parameter`) rather
+ * than letting raw binding syntax reach a seed. Presets without parameters
+ * still validate seed bindings against their empty declaration.
+ */
+export declare function resolvedSeedsForPreset(presetId: string, supplied?: Readonly<Record<string, string>>, allowUnresolved?: boolean): SeedItem[];
 /** Build a manual command preview only; seed writes never execute these arguments. */
 export declare function buildSeedCreateArgs(pmRoot: string, seed: SeedItem): string[];
 /**
@@ -42,7 +55,7 @@ export interface SeedPlanEntry {
     command: string;
 }
 /** Pure dry-run plan: what `--with-seeds` would create, without running anything. */
-export declare function planSeeds(pmRoot: string, presetId: string): SeedPlanEntry[];
+export declare function planSeeds(pmRoot: string, presetId: string, values?: Readonly<Record<string, string>>): SeedPlanEntry[];
 export interface SeedResult {
     created: number;
     failed: number;
@@ -57,7 +70,7 @@ export interface SeedResult {
  * Non-throwing: native create failures retain the existing partial-result shape.
  * There is no batch/replay precondition: an invalid seed must not undo others.
  */
-export declare function seedPresetItems(client: PmClient, presetId: string): Promise<SeedResult>;
+export declare function seedPresetItems(client: PmClient, presetId: string, values?: Readonly<Record<string, string>>): Promise<SeedResult>;
 /**
  * Options for {@link runPresetSeeds}: whether to print a plan instead of creating
  * items, and the host client used for writes.
@@ -67,6 +80,8 @@ export interface RunPresetSeedsOptions {
     readonly dryRun: boolean;
     /** Invocation-bound client; required only when creating seeds. */
     readonly client?: PmClient;
+    /** Effective parameter values resolved once by the caller's boundary; never re-read. */
+    readonly parameterValues?: Readonly<Record<string, string>>;
 }
 /**
  * Print a dry-run plan or create starter items for an already-applied preset.

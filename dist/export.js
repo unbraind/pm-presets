@@ -20,6 +20,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { resolveParameterizedPreset } from "./params.js";
 import { loadTemplateSdk } from "./presets/shared.js";
 const EXPORT_NOTE = "Custom item-field values are not captured: custom scalar fields have no " +
     "`pm create --<field>` setter (pm-cli #97). This snapshot reconstructs the " +
@@ -29,8 +30,15 @@ function isJsonObject(value) {
 }
 /** Pure: assemble an ExportedPreset from already-read workspace inputs. */
 export function buildExportedPreset(input) {
-    const settings = input.settings ?? {};
-    const idPrefixRaw = settings["id_prefix"];
+    const sourceSettings = input.settings ?? {};
+    // Export is a tracked-file/output sink too. Refuse invalid reference storage
+    // and legacy unresolved bindings rather than publishing a new copy of them.
+    resolveParameterizedPreset([], {}, {
+        settings: sourceSettings,
+        templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])),
+    });
+    const settings = Object.fromEntries(Object.entries(sourceSettings).filter(([key]) => key !== "preset_artifacts" && key !== "preset_ownership"));
+    const idPrefixRaw = Object.hasOwn(settings, "id_prefix") ? settings["id_prefix"] : undefined;
     const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
     const now = input.now ?? new Date();
     const templates = [...input.templates].sort((left, right) => left.name.localeCompare(right.name));

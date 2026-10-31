@@ -11,7 +11,9 @@
  * keeps it unit-testable with `node --test` and side-effect free.
  */
 import type { PresetSettingsPatch, PresetTemplateMap, StoredCreateTemplateDocument } from "./presets/shared.ts";
+import { type SeedItem } from "./seeds.ts";
 import { type PresetDescriptor, type PresetId } from "./registry.ts";
+import { type PresetParameterManifest, type PresetParameterView } from "./params.ts";
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
     name: string;
@@ -41,12 +43,21 @@ export interface PresetDefinition {
     settings: PresetSettingsPatch;
     /** Templates this preset installs. */
     templates: PresetTemplateView[];
+    /** Complete resolved template payloads used by application and drift detection. */
+    templateDocuments?: PresetTemplateMap;
+    /** Fully resolved starter-item payloads, selected when enrolled or requested. */
+    seedItems?: SeedItem[];
     /** Custom item types registered at activation (kanban only today). */
     itemTypes: PresetItemTypeView[];
+    /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */
+    parameters: PresetParameterView[];
+    /** Authored secret-bearing leaves, retained after substitution for safe previews. */
+    secretSettingPaths?: readonly string[];
 }
 interface RawPreset {
     settings: PresetSettingsPatch;
     templates: PresetTemplateMap;
+    parameters: PresetParameterManifest;
     itemTypes?: readonly {
         name: string;
         aliases?: string[];
@@ -56,6 +67,28 @@ interface RawPreset {
         }>;
     }[];
 }
+/** The resolved-input shape {@link resolveRawPreset} requires: parameters normalized. */
+interface RawPresetInput {
+    settings: PresetSettingsPatch;
+    templates: PresetTemplateMap;
+    parameters: PresetParameterManifest;
+    itemTypes?: readonly {
+        name: string;
+        aliases?: string[];
+        options?: Array<{
+            key: string;
+            values?: string[];
+        }>;
+    }[];
+}
+/**
+ * Project one raw preset export set into a full catalog definition.
+ *
+ * Pure and exported so the declaration-mode contract is directly testable
+ * with synthetic raw exports (required parameters without defaults, authored
+ * binding occurrences) rather than only through the bundled catalog.
+ */
+export declare function projectPresetDefinition(descriptor: PresetDescriptor, raw: RawPresetInput, supplied?: Readonly<Record<string, string>>): PresetDefinition;
 /** Copy bundled template payloads for adaptation into host profile definitions. */
 export declare function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[];
 /**
@@ -83,10 +116,12 @@ export declare function listPresetDefinitions(): PresetDefinition[];
  *
  * Returns `undefined` for unknown names so callers decide the error contract;
  * `requirePresetDefinition` is the throwing variant for command handlers.
+ * Parameter bindings resolve with defaults unless caller-supplied values are
+ * passed (the diff preview mirrors a parameterized apply that way).
  */
-export declare function findPresetDefinition(id: string | undefined): PresetDefinition | undefined;
+export declare function findPresetDefinition(id: string | undefined, supplied?: Readonly<Record<string, string>>): PresetDefinition | undefined;
 /** Throwing lookup: NOT_FOUND (exit 3) for unknown names. */
-export declare function requirePresetDefinition(id: string | undefined): PresetDefinition;
+export declare function requirePresetDefinition(id: string | undefined, supplied?: Readonly<Record<string, string>>): PresetDefinition;
 /** A compact row for `presets list`, enriched with what each preset configures. */
 export interface PresetListRow {
     id: string;
@@ -151,8 +186,23 @@ export declare function collectPresetIssues(definition: PresetValidationSubject,
  */
 export declare function requireValidPresets(result: PresetValidationResult): PresetValidationResult;
 /**
+ * Validate one bundled preset's parameter manifest and resolved native fields.
+ *
+ * Producer/validator agreement: resolves every binding occurrence with the
+ * SAME engine the apply path uses, then runs the existing preset issue checks
+ * on the resolved settings/templates. A manifest, binding or resolution failure
+ * is captured as one issue naming the preset (a bad record fails alone, never
+ * the whole validation run).
+ */
+export declare function collectPresetParameterIssues(definition: PresetDefinition, raw: {
+    settings: PresetSettingsPatch;
+    templates: PresetTemplateMap;
+    parameters?: PresetParameterManifest;
+}, advertisedTemplates?: readonly string[]): PresetValidationIssue[];
+/**
  * Validate that every bundled preset parses/loads coherently:
  *  - registry descriptor and raw exports agree,
+ *  - parameter manifests are well-formed and every binding resolves,
  *  - governance is a known enum value,
  *  - id_prefix is present,
  *  - templates have valid names and string/string[] option values,

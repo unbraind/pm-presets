@@ -17,9 +17,11 @@ import type {
   PresetTemplateMap,
   StoredCreateTemplateDocument,
 } from "./presets/shared.ts";
+import { resolvedSeedsForPreset, type SeedItem } from "./seeds.ts";
 import { CommandError, EXIT_CODE } from "./presets/shared.ts";
 import {
   PRESET_REGISTRY,
+  PRESET_PARAMETERS,
   type PresetDescriptor,
   type PresetId,
   bugTriageSettings,
@@ -39,6 +41,14 @@ import {
   agentWorkflowTemplates,
   agentWorkflowItemTypes,
 } from "./registry.ts";
+import {
+  buildParameterViews,
+  collectParameterValues,
+  collectSecretSettingPaths,
+  resolveParameterizedPreset,
+  type PresetParameterManifest,
+  type PresetParameterView,
+} from "./params.ts";
 
 /** A minimally-typed mirror of the SDK's SchemaItemTypeDefinition. */
 export interface PresetItemTypeView {
@@ -68,13 +78,30 @@ export interface PresetDefinition {
   settings: PresetSettingsPatch;
   /** Templates this preset installs. */
   templates: PresetTemplateView[];
+  /** Complete resolved template payloads used by application and drift detection. */
+  templateDocuments?: PresetTemplateMap;
+  /** Fully resolved starter-item payloads, selected when enrolled or requested. */
+  seedItems?: SeedItem[];
   /** Custom item types registered at activation (kanban only today). */
   itemTypes: PresetItemTypeView[];
+  /** Declared parameters, with unanswered choices flagged; resolved values come from `settings`/`templates`. */
+  parameters: PresetParameterView[];
+  /** Authored secret-bearing leaves, retained after substitution for safe previews. */
+  secretSettingPaths?: readonly string[];
 }
 
 interface RawPreset {
   settings: PresetSettingsPatch;
   templates: PresetTemplateMap;
+  parameters: PresetParameterManifest;
+  itemTypes?: readonly { name: string; aliases?: string[]; options?: Array<{ key: string; values?: string[] }> }[];
+}
+
+/** The resolved-input shape {@link resolveRawPreset} requires: parameters normalized. */
+interface RawPresetInput {
+  settings: PresetSettingsPatch;
+  templates: PresetTemplateMap;
+  parameters: PresetParameterManifest;
   itemTypes?: readonly { name: string; aliases?: string[]; options?: Array<{ key: string; values?: string[] }> }[];
 }
 
@@ -89,18 +116,88 @@ interface RawPreset {
  * `listPresetDefinitions()`). There is no other caller.
  */
 const RAW_PRESETS: Record<PresetId, RawPreset> = {
-  "bug-triage": { settings: bugTriageSettings, templates: bugTriageTemplates },
-  "indie-dev": { settings: indieDevSettings, templates: indieDevTemplates },
-  "open-source": { settings: openSourceSettings, templates: openSourceTemplates },
-  "software-sprint": { settings: softwareSprintSettings, templates: softwareSprintTemplates },
-  "startup-roadmap": { settings: startupRoadmapSettings, templates: startupRoadmapTemplates },
-  "kanban": { settings: kanbanSettings, templates: kanbanTemplates, itemTypes: kanbanItemTypes },
-  "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, itemTypes: agentWorkflowItemTypes },
+  "bug-triage": { settings: bugTriageSettings, templates: bugTriageTemplates, parameters: PRESET_PARAMETERS["bug-triage"] },
+  "indie-dev": { settings: indieDevSettings, templates: indieDevTemplates, parameters: PRESET_PARAMETERS["indie-dev"] },
+  "open-source": { settings: openSourceSettings, templates: openSourceTemplates, parameters: PRESET_PARAMETERS["open-source"] },
+  "software-sprint": { settings: softwareSprintSettings, templates: softwareSprintTemplates, parameters: PRESET_PARAMETERS["software-sprint"] },
+  "startup-roadmap": { settings: startupRoadmapSettings, templates: startupRoadmapTemplates, parameters: PRESET_PARAMETERS["startup-roadmap"] },
+  "kanban": { settings: kanbanSettings, templates: kanbanTemplates, parameters: PRESET_PARAMETERS["kanban"], itemTypes: kanbanItemTypes },
+  "agent-workflow": { settings: agentWorkflowSettings, templates: agentWorkflowTemplates, parameters: PRESET_PARAMETERS["agent-workflow"], itemTypes: agentWorkflowItemTypes },
 };
+
+/**
+ * Resolve one bundled preset's raw exports against its typed parameter manifest.
+ *
+ * Declaration mode, on purpose: catalog and read surfaces (`show`, `list`,
+ * `validate`, `plan`, `stack`) display a preset's declarations — parameters are
+ * collected leniently, every ANSWERED occurrence is substituted through the
+ * same engine the apply path uses, and declared-but-unanswered occurrences
+ * stay authored in the returned content while the parameter views flag them.
+ * Only the apply path (and the parameterized diff preview that mirrors it)
+ * demands full answers and refuses on unanswered parameters.
+ */
+function resolveRawPreset(
+  raw: RawPresetInput,
+  supplied?: Readonly<Record<string, string>>,
+): { settings: PresetSettingsPatch; templates: PresetTemplateMap; parameterViews: PresetParameterView[] } {
+  const manifest = raw.parameters;
+  const resolved = collectParameterValues(manifest, supplied ?? {});
+  const substitution = resolveParameterizedPreset(
+    manifest,
+    resolved.values,
+    {
+      settings: raw.settings,
+      templates: raw.templates,
+    },
+    true,
+  );
+  return {
+    settings: substitution.settings as PresetSettingsPatch,
+    templates: substitution.templates as PresetTemplateMap,
+    parameterViews: buildParameterViews(manifest, supplied),
+  };
+}
+
+/**
+ * Project one raw preset export set into a full catalog definition.
+ *
+ * Pure and exported so the declaration-mode contract is directly testable
+ * with synthetic raw exports (required parameters without defaults, authored
+ * binding occurrences) rather than only through the bundled catalog.
+ */
+export function projectPresetDefinition(
+  descriptor: PresetDescriptor,
+  raw: RawPresetInput,
+  supplied?: Readonly<Record<string, string>>,
+): PresetDefinition {
+  const resolved = resolveRawPreset(raw, supplied);
+  const templates = Object.values(resolved.templates)
+    .map(projectTemplateView)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  return {
+    id: descriptor.id,
+    displayName: descriptor.displayName,
+    description: descriptor.description,
+    command: descriptor.command,
+    idPrefix: descriptor.idPrefix,
+    governance: descriptor.governance,
+    settings: resolved.settings,
+    templates,
+    templateDocuments: resolved.templates,
+    itemTypes: projectItemTypeViews(raw.itemTypes),
+    parameters: resolved.parameterViews,
+    secretSettingPaths: collectSecretSettingPaths(raw.settings, raw.parameters),
+  };
+}
 
 /** Copy bundled template payloads for adaptation into host profile definitions. */
 export function presetTemplateEntries(id: PresetId): StoredCreateTemplateDocument[] {
-  return structuredClone(Object.values(RAW_PRESETS[id].templates));
+  const raw = Object.hasOwn(RAW_PRESETS, id) ? RAW_PRESETS[id] : undefined;
+  if (!raw) {
+    throw new CommandError(`No definition exports for preset '${id}'.`);
+  }
+  const substitution = resolveRawPreset(raw);
+  return Object.values(substitution.templates).map((document) => structuredClone(document));
 }
 
 /**
@@ -161,30 +258,22 @@ export function projectItemTypeViews(
  * @returns The full preset definition.
  * @throws {CommandError} When no raw export exists for the descriptor's id.
  */
-function buildDefinition(descriptor: PresetDescriptor): PresetDefinition {
-  const raw = RAW_PRESETS[descriptor.id] as RawPreset | undefined;
+function buildDefinition(
+  descriptor: PresetDescriptor,
+  supplied?: Readonly<Record<string, string>>,
+): PresetDefinition {
+  const raw = Object.hasOwn(RAW_PRESETS, descriptor.id) ? RAW_PRESETS[descriptor.id] : undefined;
   if (!raw) {
     throw new CommandError(`No definition exports for preset '${descriptor.id}'.`);
   }
-  const templates = Object.values(raw.templates)
-    .map(projectTemplateView)
-    .sort((left, right) => left.name.localeCompare(right.name));
-  return {
-    id: descriptor.id,
-    displayName: descriptor.displayName,
-    description: descriptor.description,
-    command: descriptor.command,
-    idPrefix: descriptor.idPrefix,
-    governance: descriptor.governance,
-    settings: raw.settings,
-    templates,
-    itemTypes: projectItemTypeViews(raw.itemTypes),
-  };
+  // Destination policy is authoring validation, even when no seeds are selected.
+  const seedItems = resolvedSeedsForPreset(descriptor.id, supplied ?? {}, true);
+  return { ...projectPresetDefinition(descriptor, raw, supplied), seedItems };
 }
 
 /** All preset definitions in registry order. */
 export function listPresetDefinitions(): PresetDefinition[] {
-  return PRESET_REGISTRY.map(buildDefinition);
+  return PRESET_REGISTRY.map((descriptor) => buildDefinition(descriptor));
 }
 
 /**
@@ -192,8 +281,13 @@ export function listPresetDefinitions(): PresetDefinition[] {
  *
  * Returns `undefined` for unknown names so callers decide the error contract;
  * `requirePresetDefinition` is the throwing variant for command handlers.
+ * Parameter bindings resolve with defaults unless caller-supplied values are
+ * passed (the diff preview mirrors a parameterized apply that way).
  */
-export function findPresetDefinition(id: string | undefined): PresetDefinition | undefined {
+export function findPresetDefinition(
+  id: string | undefined,
+  supplied?: Readonly<Record<string, string>>,
+): PresetDefinition | undefined {
   if (typeof id !== "string") {
     return undefined;
   }
@@ -202,12 +296,15 @@ export function findPresetDefinition(id: string | undefined): PresetDefinition |
     return undefined;
   }
   const descriptor = PRESET_REGISTRY.find((preset) => preset.id.toLowerCase() === needle);
-  return descriptor ? buildDefinition(descriptor) : undefined;
+  return descriptor ? buildDefinition(descriptor, supplied) : undefined;
 }
 
 /** Throwing lookup: NOT_FOUND (exit 3) for unknown names. */
-export function requirePresetDefinition(id: string | undefined): PresetDefinition {
-  const found = findPresetDefinition(id);
+export function requirePresetDefinition(
+  id: string | undefined,
+  supplied?: Readonly<Record<string, string>>,
+): PresetDefinition {
+  const found = findPresetDefinition(id, supplied);
   if (!found) {
     const ids = PRESET_REGISTRY.map((preset) => preset.id).join(", ");
     throw new CommandError(
@@ -366,32 +463,57 @@ export function requireValidPresets(result: PresetValidationResult): PresetValid
 }
 
 /**
+ * Validate one bundled preset's parameter manifest and resolved native fields.
+ *
+ * Producer/validator agreement: resolves every binding occurrence with the
+ * SAME engine the apply path uses, then runs the existing preset issue checks
+ * on the resolved settings/templates. A manifest, binding or resolution failure
+ * is captured as one issue naming the preset (a bad record fails alone, never
+ * the whole validation run).
+ */
+export function collectPresetParameterIssues(
+  definition: PresetDefinition,
+  raw: { settings: PresetSettingsPatch; templates: PresetTemplateMap; parameters?: PresetParameterManifest },
+  advertisedTemplates?: readonly string[],
+): PresetValidationIssue[] {
+  try {
+    const resolved = resolveRawPreset({ settings: raw.settings, templates: raw.templates, parameters: raw.parameters ?? [] });
+    const issues = collectPresetIssues(definition, resolved.templates, advertisedTemplates);
+    // A bundled preset must be applicable with its own defaults: any binding
+    // that stays unresolved after default resolution is a validation failure,
+    // not a state to display.
+    for (const view of resolved.parameterViews) {
+      if (view.unanswered) {
+        issues.push({
+          presetId: definition.id,
+          message: `required parameter '${view.name}' has no default and cannot be resolved for validation`,
+        });
+      }
+    }
+    return issues;
+  } catch (error) {
+    return [{ presetId: definition.id, message: `parameter resolution failed: ${String(error)}` }];
+  }
+}
+
+/**
  * Validate that every bundled preset parses/loads coherently:
  *  - registry descriptor and raw exports agree,
+ *  - parameter manifests are well-formed and every binding resolves,
  *  - governance is a known enum value,
  *  - id_prefix is present,
  *  - templates have valid names and string/string[] option values,
  *  - the descriptor's advertised template list matches what is exported.
  */
 export function validateAllPresets(): PresetValidationResult {
-  const definitions = listPresetDefinitions();
   const issues: PresetValidationIssue[] = [];
-
-  for (const definition of definitions) {
-    const descriptor = PRESET_REGISTRY.find((preset) => preset.id === definition.id);
-    // This lookup is unchecked on purpose, and it is safe for a reason that is
-    // not local: every `definition` here came from `listPresetDefinitions()`,
-    // which maps `buildDefinition` over the registry, and `buildDefinition`
-    // throws on a descriptor with no raw exports. A drifted registry entry can
-    // therefore never reach this line — `listPresetDefinitions()` above raises
-    // the actionable error first. Adding a second guard here would be
-    // unreachable code, so the invariant is recorded instead. If
-    // `buildDefinition`'s guard is ever removed, this line becomes a
-    // `Cannot read properties of undefined`.
-    issues.push(
-      ...collectPresetIssues(definition, RAW_PRESETS[definition.id].templates, descriptor?.templates),
-    );
+  for (const descriptor of PRESET_REGISTRY) {
+    try {
+      const definition = buildDefinition(descriptor);
+      issues.push(...collectPresetParameterIssues(definition, RAW_PRESETS[definition.id], descriptor.templates));
+    } catch (error) {
+      issues.push({ presetId: descriptor.id, message: `parameter resolution failed: ${String(error)}` });
+    }
   }
-
-  return { ok: issues.length === 0, checked: definitions.length, issues };
+  return { ok: issues.length === 0, checked: PRESET_REGISTRY.length, issues };
 }

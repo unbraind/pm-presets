@@ -1,5 +1,25 @@
 import { applyPreset, storedTemplate, } from "../shared.js";
 /**
+ * The typed parameter binding manifest for the startup-roadmap preset.
+ *
+ * `projectKey` is declared once here and referenced with `${param:projectKey}`
+ * occurrences in the settings patch (`id_prefix`), template bodies and the
+ * preset's seed item, so one supplied value reaches every declared occurrence.
+ * Its default keeps the historical `road-` prefix and prose when no parameter
+ * is supplied, so existing invocations are unchanged.
+ */
+export const PARAMETERS = [
+    {
+        name: "projectKey",
+        type: "string",
+        required: true,
+        default: "road",
+        pattern: "[a-z][a-z0-9-]{0,15}",
+        maxLength: 16,
+        description: "Lowercase project key used for item id prefixes, roadmap template prose and the starter initiative seed.",
+    },
+];
+/**
  * The settings patch for the startup-roadmap preset.
  *
  * Custom governance with strict metadata and stale-lock force required, tuned
@@ -7,7 +27,7 @@ import { applyPreset, storedTemplate, } from "../shared.js";
  * prefixed `road-`.
  */
 export const SETTINGS = {
-    id_prefix: "road-",
+    id_prefix: "${param:projectKey}-",
     governance: {
         preset: "custom",
         ownership_enforcement: "warn",
@@ -43,7 +63,7 @@ export const TEMPLATES = {
         risk: "high",
         confidence: "medium",
         acceptanceCriteria: "Initiative has owner, success metrics, target window, and explicit risks.",
-        body: "## Objective\nTBD\n\n## Owner\nTBD\n\n## Stakeholders\nTBD\n\n## Target Quarter\nTBD\n\n## Investment Level\nTBD\n\n## Business Value\nTBD\n\n## Success Metrics\nTBD\n\n## Risks\nTBD\n",
+        body: "## Objective\nTBD\n\n## Project\n${param:projectKey}\n\n## Owner\nTBD\n\n## Stakeholders\nTBD\n\n## Target Quarter\nTBD\n\n## Investment Level\nTBD\n\n## Business Value\nTBD\n\n## Success Metrics\nTBD\n\n## Risks\nTBD\n",
     }),
     "feature.json": storedTemplate("feature", {
         type: "Feature",
@@ -55,7 +75,7 @@ export const TEMPLATES = {
         risk: "medium",
         confidence: "medium",
         acceptanceCriteria: "Feature is linked to a roadmap outcome and has measurable acceptance criteria.",
-        body: "## Milestone\nTBD\n\n## User Story\nTBD\n\n## Impacted Personas\nTBD\n\n## Design Link\nTBD\n\n## Scope\nTBD\n\n## Acceptance\nTBD\n",
+        body: "## Milestone\nTBD\n\n## Project\n${param:projectKey}\n\n## User Story\nTBD\n\n## Impacted Personas\nTBD\n\n## Design Link\nTBD\n\n## Scope\nTBD\n\n## Acceptance\nTBD\n",
     }),
     "milestone.json": storedTemplate("milestone", {
         type: "Milestone",
@@ -73,9 +93,11 @@ export const TEMPLATES = {
  */
 export async function runStartupRoadmapSetup(context) {
     await applyPreset(context, {
+        presetId: "startup-roadmap",
         label: "Startup roadmap",
         settings: SETTINGS,
         templates: TEMPLATES,
+        parameters: PARAMETERS,
         nextSteps: [
             'pm create --template initiative --title "Plan strategic initiative"',
             'pm create --template feature --title "Define roadmap feature"',

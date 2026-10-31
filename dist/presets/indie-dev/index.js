@@ -47,6 +47,7 @@ export const TEMPLATES = {
  */
 export async function runIndieDevSetup(context) {
     await applyPreset(context, {
+        presetId: "indie-dev",
         label: "Indie dev",
         settings: SETTINGS,
         templates: TEMPLATES,

@@ -307,7 +307,7 @@ test("templates commands are wired through the extension", async (t) => {
   assert.equal((shown.result as { source: string }).source, "builtin");
 });
 
-test("presets handler treats missing options as an empty map", () => {
+test("presets handler treats missing options as an empty map", async () => {
   let run: ((ctx: CommandHandlerContext) => unknown) | undefined;
   mod.activate({
     registerCommand(definition: { name: string; run?: (ctx: CommandHandlerContext) => unknown }) {
@@ -318,8 +318,8 @@ test("presets handler treats missing options as an empty map", () => {
     assert.fail("presets command did not register a run handler");
   }
   const presetsRun = run;
-  assert.throws(
-    () =>
+  await assert.rejects(
+    async () =>
       presetsRun({
         command: "presets",
         args: [],

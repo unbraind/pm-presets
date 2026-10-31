@@ -35,7 +35,7 @@ export interface ExportedPreset {
     displayName: string;
     /** id_prefix lifted from settings for convenience (mirrors bundled descriptors). */
     idPrefix: string;
-    /** The full settings.json the workspace currently has. */
+    /** Portable settings, excluding workspace-local managed seed ownership. */
     settings: Record<string, unknown>;
     /** Every user template installed in the workspace, name + options. */
     templates: ExportedTemplate[];

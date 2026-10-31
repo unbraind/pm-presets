@@ -97,6 +97,7 @@ export const TEMPLATES = {
  */
 export async function runKanbanSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "kanban",
     label: "Kanban board",
     settings: SETTINGS,
     templates: TEMPLATES,

@@ -11,9 +11,16 @@
  *     `--dry-run` arrives in `options` as `dryRun` (not `dry-run`). We read the
  *     camelCase key first and fall back to the kebab-case key for safety.
  */
+import { isArtifactCollision, seedOwnershipProven, initialPresetSettings, admitSettingsOwnership, verifiedArtifactOwnership, requireArtifactOwnership, refuseReservedSeedIdentity } from "../artifact-ownership.js";
+import { acquireApplyAdmission } from "../apply-admission.js";
 import { createRequire } from "node:module";
 import { resolveSimulationSdk } from "../sdk-loader.js";
+import { computeDesiredPresetState, compareDesiredPresetState, ownArtifact, presetArtifactRecord, artifactValuesEqual, seedArtifactMatches } from "../desired-state.js";
+import { readPresetApplicationHistory } from "../application-history.js";
+import { readSeedArtifacts, readSeedTypes } from "../artifact-reader.js";
+import { setJsonProperty } from "../json-object.js";
 import { randomUUID } from "node:crypto";
+import { ParameterRefusal, assertResolvedParameterValues, buildParameterViews, readSuppliedParameterValues, resolveParameterValues, resolveParameterizedPreset, resolveSettingsWithParameters, } from "../params.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 // pm's extension command runtime only treats a thrown error as a cleanly
@@ -155,102 +162,391 @@ export function mergePresetSettings(existing, patch, replace) {
     }
     return merged;
 }
+const APPLY_LOCK_FILE = "pm-presets-apply.lock";
+const APPLY_LOCK_POLL_MS = 50;
+const APPLY_LOCK_TIMEOUT_MS = 15_000;
+const APPLY_LOCK_STALE_MS = 120_000;
+/** Promise-based sleep so the lock polls without blocking the runtime. */
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/**
+ * Serialize parameterized applies on one workspace.
+ *
+ * A real apply mutates two things (audited settings and template files) that
+ * must describe the SAME parameter values; without serialization two
+ * concurrent applies could leave `id_prefix` from one invocation next to
+ * template prose from another. The lock is a `locks/` file with a unique
+ * owner token, created atomically (O_EXCL), polled briefly, stolen when stale
+ * (crashed owner) and released only by its owner — cross-process, not just
+ * in-process. Dry-runs skip it: they write nothing of ours.
+ */
+async function withPresetApplyLock(pmDir, run) {
+    const releaseAdmission = await acquireApplyAdmission(pmDir);
+    try {
+        return await withObservedApplyLock(pmDir, run);
+    }
+    finally {
+        releaseAdmission();
+    }
+}
+/** Keep the existing token-file protocol inside the admission claim for compatibility. */
+async function withObservedApplyLock(pmDir, run) {
+    const locksDir = path.join(pmDir, "locks");
+    const lockPath = path.join(locksDir, APPLY_LOCK_FILE);
+    const token = `${process.pid}-${randomUUID()}`;
+    fs.mkdirSync(locksDir, { recursive: true });
+    const deadline = Date.now() + APPLY_LOCK_TIMEOUT_MS;
+    for (;;) {
+        try {
+            const handle = fs.openSync(lockPath, "wx");
+            try {
+                fs.writeFileSync(handle, token, "utf8");
+            }
+            finally {
+                fs.closeSync(handle);
+            }
+            break;
+        }
+        catch (error) {
+            if (error.code !== "EEXIST") {
+                throw error;
+            }
+            try {
+                const stats = fs.statSync(lockPath);
+                if (Date.now() - stats.mtimeMs > APPLY_LOCK_STALE_MS) {
+                    // Publication, recovery and release all hold the admission claim:
+                    // another contender cannot publish a replacement between observation
+                    // and removal. A token comparison alone would not provide that fence.
+                    fs.rmSync(lockPath, { force: true });
+                    continue;
+                }
+            }
+            catch {
+                // The lock vanished between the failed create and the stat; retry.
+            }
+            if (Date.now() > deadline) {
+                throw new CommandError("Another pm-presets apply is running in this workspace and did not finish in time; retry once it completes.");
+            }
+            await delay(APPLY_LOCK_POLL_MS);
+        }
+    }
+    try {
+        return await run();
+    }
+    finally {
+        // Best-effort release: only a lock file that still carries OUR token is
+        // ours to delete. A vanished file means someone reaped it; a different
+        // token means a stale steal already handed ownership elsewhere — in both
+        // cases this owner must not delete another owner's lock.
+        if (fs.existsSync(lockPath) && fs.readFileSync(lockPath, "utf8") === token) {
+            fs.rmSync(lockPath, { force: true });
+        }
+    }
+}
 /**
  * Apply one preset's settings and templates to the workspace on disk.
  *
  * Merges (or, under `--replace`, swaps owned trees) against the settings read
  * under the host's audit lock, then writes the templates the preset ships
  * — unless `--dry-run`, which prints the planned result instead. Honours
- * `--force` to overwrite an existing user template, and `--prefix` to override
+ * `--force` to reconcile an existing preset-owned template, and `--prefix` to override
  * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
  * is present, with the expected settings path in the message.
  */
 export async function applyPreset(context, input) {
     const { options } = context;
-    const pmDir = resolvePmDir(context);
-    const settingsPath = path.join(pmDir, "settings.json");
-    const templatesDir = path.join(pmDir, "templates");
     const dryRun = readBooleanOption(options, "dryRun", "dry-run");
     const force = readBooleanOption(options, "force");
     const replace = readBooleanOption(options, "replace");
     const prefixOverride = readStringOption(options, "prefix");
+    // Typed parameter binding manifest: validate every supplied value, answer
+    // each declared parameter, and substitute every occurrence BEFORE reading or
+    // writing any tracker state (unknown/missing/invalid input refuses first).
+    // When the unified apply command already resolved the values at its own
+    // boundary, they arrive injected here and are re-validated (never re-read
+    // from a params file), so settings, templates and the later seed step all
+    // use ONE resolution of the caller's input.
+    const manifest = input.parameters ?? [];
+    let effectiveSettings = input.settings;
+    let effectiveTemplates = input.templates;
+    let occurrenceCount = 0;
+    let parameterValues = {};
+    try {
+        const injected = options.resolvedParameterValues;
+        const resolved = injected === undefined
+            ? resolveParameterValues(manifest, readSuppliedParameterValues(options))
+            : (assertResolvedParameterValues(manifest, injected), injected);
+        parameterValues = resolved.values;
+        const substitution = resolveParameterizedPreset(manifest, resolved.values, {
+            settings: input.settings,
+            templates: input.templates,
+        });
+        effectiveSettings = substitution.settings;
+        effectiveTemplates = substitution.templates;
+        occurrenceCount = substitution.occurrences;
+        const views = buildParameterViews(manifest, resolved.values).filter((view) => Object.hasOwn(resolved.values, view.name));
+        const summary = views
+            .map((view) => `${view.name}=${resolved.values[view.name]} (${resolved.sources[view.name]})`)
+            .join(", ");
+        if (views.length > 0)
+            console.log(`Resolved ${views.length} parameter(s), ${occurrenceCount} binding occurrence(s): ${summary}`);
+    }
+    catch (error) {
+        if (error instanceof ParameterRefusal)
+            throw error;
+        throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    const pmDir = resolvePmDir(context);
+    const settingsPath = path.join(pmDir, "settings.json");
+    const templatesDir = path.join(pmDir, "templates");
     if (!fs.existsSync(pmDir) || !fs.existsSync(settingsPath)) {
         throw new CommandError(`pm workspace not found. Expected settings file: ${settingsPath}\n` +
             `Run "pm init" first to initialize a pm workspace in this project.`, EXIT_CODE.NOT_FOUND);
     }
-    readJsonObject(settingsPath, "settings.json");
-    const effectivePatch = {
-        ...input.settings,
-        id_prefix: prefixOverride ?? input.settings.id_prefix,
+    const storedSettings = readJsonObject(settingsPath, "settings.json");
+    resolveSettingsWithParameters([], {}, storedSettings);
+    const settingsPatch = {
+        ...effectiveSettings,
+        id_prefix: prefixOverride ?? effectiveSettings.id_prefix,
     };
-    const templates = Object.entries(input.templates).map(([filename, template]) => {
+    const record = input.presetId ? presetArtifactRecord(storedSettings, input.presetId) : undefined;
+    if (input.presetId) {
+        const history = await readPresetApplicationHistory(pmDir);
+        if (history.errors.length)
+            throw new ParameterRefusal("artifact_unreadable", "Audited preset settings failed: cannot verify history/_workspace.jsonl; inspect the host history verification before applying.");
+        const historical = ownArtifact(history.records, input.presetId);
+        if (record && historical === undefined)
+            throw new ParameterRefusal("artifact_unreadable", "Managed seed ownership has no verified history/_workspace.jsonl application. Restore the host audit before applying.");
+        if (historical !== undefined && !artifactValuesEqual(record, historical ?? undefined))
+            throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${input.presetId}. Restore that record through the host SDK before reconciling items.`);
+    }
+    let admittedRecord = record;
+    const seeds = input.presetId && (readBooleanOption(options, "withSeeds", "with-seeds") || record)
+        ? (await import("../seeds.js")).resolvedSeedsForPreset(input.presetId, parameterValues) : undefined;
+    const client = context.sdk?.client;
+    requireSeedCapabilities(seeds?.length ?? 0, client);
+    const seedTypes = seeds?.length ? await readSeedTypes(pmDir, client) : undefined;
+    let desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds, record, replace, seedTypes });
+    let effectivePatch = desired.settings;
+    // Overrides are final settings input too: they must not reintroduce bindings.
+    resolveSettingsWithParameters([], {}, effectivePatch);
+    assertWritableReferenceKeys(storedSettings, mergePresetSettings(storedSettings, effectivePatch, replace));
+    const templates = desired.templates.map(({ filename, document: template }) => {
         const normalizedName = normalizeTemplateName(template.name);
         if (filename !== `${normalizedName}${TEMPLATE_FILE_EXTENSION}`) {
             throw new CommandError(`Template map key "${filename}" must match document name "${normalizedName}".`);
         }
-        return { template, templatePath: path.join(templatesDir, filename) };
+        return { template, templatePath: path.join(templatesDir, filename), createOnly: true };
     });
-    if (typeof context.sdk?.mutateWorkspaceSettings !== "function") {
-        throw new CommandError("Upgrade the host pm CLI to 2026.9.30 or newer: preset application requires its audited settings capability.");
+    const sdkMutation = context.sdk?.mutateWorkspaceSettings;
+    if (typeof sdkMutation !== "function") {
+        throw new CommandError("Upgrade the host pm CLI to 2026.10.25 or newer: preset application requires its audited settings capability.");
     }
     const replacementResets = [];
-    try {
-        await context.sdk.mutateWorkspaceSettings({
-            operationId: `pm-presets-${randomUUID()}`,
-            dryRun,
-            mutate: (current) => {
-                const mergedSettings = mergePresetSettings(current, effectivePatch, replace);
-                if (dryRun && replace) {
-                    for (const tree of REPLACE_SETTINGS_TREES) {
-                        const patch = effectivePatch[tree];
-                        if (patch === undefined) {
-                            replacementResets.push(tree);
-                            continue;
-                        }
-                        for (const key of Object.keys(current[tree])) {
-                            if (!Object.prototype.hasOwnProperty.call(patch, key)) {
-                                replacementResets.push(`${tree}.${key}`);
+    let admittedOwnership = {};
+    let writtenOwnership = {};
+    const seedTokens = new Map();
+    const initialSettings = await initialPresetSettings();
+    /** Everything a real apply mutates, so the lock covers all of it at once. */
+    const applyWrites = async () => {
+        // Enrollment/ids are workspace state, so refresh them after admission. Two
+        // first-time contenders must converge on the first owner's stable ids.
+        if (input.presetId) {
+            const currentRecord = presetArtifactRecord(readJsonObject(settingsPath, "settings.json"), input.presetId);
+            const history = await readPresetApplicationHistory(pmDir);
+            if (history.errors.length)
+                throw new ParameterRefusal("artifact_unreadable", "Cannot verify history/_workspace.jsonl before writing managed artifacts.");
+            const historical = ownArtifact(history.records, input.presetId);
+            if (currentRecord && historical === undefined)
+                throw new ParameterRefusal("artifact_unreadable", "Managed seed ownership has no verified history/_workspace.jsonl application. Restore the host audit before writing.");
+            if (historical !== undefined && !artifactValuesEqual(currentRecord, historical ?? undefined))
+                throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${input.presetId}. Restore ownership before retrying.`);
+            admittedRecord = currentRecord;
+            if (!artifactValuesEqual(record, currentRecord)) {
+                if (record)
+                    throw new ParameterRefusal("invalid_artifact_record", `Ownership changed while waiting: settings.json#preset_artifacts.${input.presetId}. Re-diff before retrying.`);
+                const currentSeeds = (await import("../seeds.js")).resolvedSeedsForPreset(input.presetId, parameterValues);
+                desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds: currentSeeds, record: currentRecord, replace, seedTypes: await readSeedTypes(pmDir, client) });
+                effectivePatch = desired.settings;
+                requireSeedCapabilities(desired.seeds.length, client);
+            }
+        }
+        // Inspect every overwrite conflict while the apply admission is held, before
+        // settings/history can change. Matching existing artifacts need no force.
+        const currentStored = readJsonObject(settingsPath, "settings.json");
+        admittedOwnership = await verifiedArtifactOwnership(pmDir, currentStored);
+        for (const entry of templates) {
+            entry.createOnly = !fs.existsSync(entry.templatePath);
+            if (!entry.createOnly)
+                requireArtifactOwnership(admittedOwnership, `templates/${entry.template.name}.json`);
+        }
+        const currentSeeds = await readSeedArtifacts(pmDir, desired.seeds.map(({ id }) => id), context.sdk?.client);
+        for (const seed of desired.seeds) {
+            const token = ownArtifact(admittedOwnership, `items/${seed.id}`);
+            const owned = admittedRecord?.seedIds.includes(seed.id) === true && await seedOwnershipProven(pmDir, seed.id, token);
+            if (ownArtifact(currentSeeds, seed.id) && !owned)
+                requireArtifactOwnership({}, `items/${seed.id}`);
+            if (!ownArtifact(currentSeeds, seed.id)) {
+                await refuseReservedSeedIdentity(pmDir, seed.id, owned);
+                seedTokens.set(seed.id, `pm-presets-seed-${randomUUID()}`);
+            }
+        }
+        // Both dry-run and commit use this same preflight before any audit intent is written.
+        admitSettingsOwnership(currentStored, mergePresetSettings(currentStored, effectivePatch, replace), admittedOwnership, initialSettings, Object.keys(effectivePatch));
+        const stale = templates.filter(({ template, templatePath }) => {
+            if (!fs.existsSync(templatePath))
+                return false;
+            try {
+                return !artifactValuesEqual(JSON.parse(fs.readFileSync(templatePath, "utf8")), template);
+            }
+            catch {
+                return true;
+            }
+        }).map(({ template }) => `templates/${template.name}.json`);
+        for (const seed of desired.seeds)
+            if (ownArtifact(currentSeeds, seed.id) && !seedArtifactMatches(seed.item, ownArtifact(currentSeeds, seed.id)))
+                stale.push(`items/${seed.id}`);
+        if (stale.length > 0 && !force)
+            throw new ParameterRefusal("stale_artifacts", `Application would leave stale artifacts: ${stale.join(", ")}. Inspect them and retry with --force to reconcile the complete desired state.`);
+        try {
+            await sdkMutation({
+                operationId: `pm-presets-${input.presetId ?? "custom"}-${randomUUID()}`,
+                dryRun,
+                ...(replace ? { replaceSubtrees: REPLACE_SETTINGS_TREES } : {}),
+                mutate: (current) => {
+                    // The host owns this settings audit lock. Inspect its same raw file:
+                    // the typed host projection omits extension reference fields. Never
+                    // rotate a pre-existing literal into append-only before/after history.
+                    const stored = readJsonObject(settingsPath, "settings.json");
+                    resolveSettingsWithParameters([], {}, stored);
+                    if (input.presetId && !artifactValuesEqual(admittedRecord, presetArtifactRecord(stored, input.presetId)))
+                        throw new ParameterRefusal("invalid_artifact_record", `Ownership changed before the audited write: settings.json#preset_artifacts.${input.presetId}. Re-diff before retrying.`);
+                    const mergedSettings = mergePresetSettings({ ...stored, ...current }, effectivePatch, replace);
+                    assertWritableReferenceKeys(stored, mergedSettings);
+                    if (!artifactValuesEqual(ownArtifact(stored, "preset_ownership") ?? {}, admittedOwnership))
+                        throw new ParameterRefusal("invalid_artifact_record", "Preset provenance changed before the audited write; re-diff before retrying.");
+                    const ownership = admitSettingsOwnership({ ...stored, ...current }, mergedSettings, admittedOwnership, initialSettings, Object.keys(effectivePatch));
+                    for (const [id, token] of seedTokens)
+                        ownership[`items/${id}`] = token;
+                    writtenOwnership = ownership;
+                    mergedSettings.preset_ownership = ownership;
+                    if (dryRun && replace) {
+                        for (const tree of REPLACE_SETTINGS_TREES) {
+                            const patch = settingsPatch[tree];
+                            if (patch === undefined) {
+                                replacementResets.push(tree);
+                                continue;
+                            }
+                            for (const key of Object.keys(current[tree])) {
+                                if (!Object.prototype.hasOwnProperty.call(patch, key)) {
+                                    replacementResets.push(`${tree}.${key}`);
+                                }
                             }
                         }
                     }
-                }
-                return mergedSettings;
-            },
-        });
-    }
-    catch (error) {
-        throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    const verb = replace ? "replace" : "merge";
-    if (dryRun) {
-        console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
-        console.log("Preset patch (the host derives governance policies and canonical storage):");
-        console.log(JSON.stringify(effectivePatch, null, 2));
-        if (replace) {
-            console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+                    return mergedSettings;
+                },
+            });
         }
-    }
-    else {
-        console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
-    }
-    if (dryRun) {
-        console.log(`[dry-run] Would create directory: ${templatesDir}`);
-    }
-    else {
-        fs.mkdirSync(templatesDir, { recursive: true });
-    }
-    for (const { template, templatePath } of templates) {
-        if (fs.existsSync(templatePath) && !force) {
-            console.warn(`Skipped existing template ${templatePath}. Use --force to overwrite.`);
-            continue;
+        catch (error) {
+            if (error instanceof ParameterRefusal)
+                throw error;
+            throw new CommandError(`Audited preset settings failed: ${error instanceof Error ? error.message : String(error)}`);
         }
+        const verb = replace ? "replace" : "merge";
         if (dryRun) {
-            console.log(`[dry-run] Would write template: ${templatePath}`);
-            console.log(JSON.stringify(template, null, 2));
-            continue;
+            console.log(`[dry-run] Would ${verb} ${input.label} settings into ${settingsPath}:`);
+            console.log("Preset patch (the host derives governance policies and canonical storage):");
+            // Resolution stores external references only. Never dereference a
+            // credential for previews or audited tracker mutation.
+            console.log(JSON.stringify(effectivePatch, null, 2));
+            if (replace) {
+                console.log(`Replacement resets existing paths to host defaults/preset policy: ${JSON.stringify(replacementResets.sort())}`);
+            }
         }
-        fs.writeFileSync(templatePath, `${JSON.stringify(template, null, 2)}\n`, "utf8");
-        console.log(`Wrote template ${templatePath}`);
+        else {
+            console.log(`Updated settings.json at ${settingsPath} (${verb} mode)`);
+        }
+        writePresetTemplates(templatesDir, templates, { dryRun, force });
+        if (!dryRun && templates.some(({ createOnly }) => createOnly)) {
+            // A reservation is not a birth receipt: claim templates only after this run's
+            // exclusive creations succeeded, so a failed apply cannot adopt later collisions.
+            try {
+                await sdkMutation({ operationId: `pm-presets-${input.presetId ?? "custom"}-${randomUUID()}`, mutate: (current) => {
+                        const stored = readJsonObject(settingsPath, "settings.json");
+                        if (!artifactValuesEqual(ownArtifact(stored, "preset_ownership"), writtenOwnership))
+                            throw new ParameterRefusal("invalid_artifact_record", "Preset provenance changed before template ownership was recorded; inspect the tracker before retrying.");
+                        const ownership = { ...writtenOwnership };
+                        for (const { template } of templates)
+                            ownership[`templates/${template.name}.json`] = true;
+                        return { ...stored, ...current, preset_ownership: ownership };
+                    } });
+            }
+            catch (error) {
+                if (error instanceof ParameterRefusal)
+                    throw error;
+                throw new ParameterRefusal("artifact_write_failed", "Could not record template ownership after exclusive creation. Preserve the new templates and inspect the host audit before retrying; --force cannot claim unverified files.");
+            }
+        }
+        if (desired.seeds.length > 0) {
+            if (dryRun)
+                console.log(`[dry-run] Would seed ${desired.seeds.length} starter item(s):`);
+            for (const seed of desired.seeds) {
+                if (seedArtifactMatches(seed.item, ownArtifact(currentSeeds, seed.id)))
+                    continue;
+                if (dryRun) {
+                    console.log(`[dry-run] Would reconcile seed: ${seed.id}: ${seed.item.type}: ${seed.item.title}`);
+                    continue;
+                }
+                try {
+                    if (ownArtifact(currentSeeds, seed.id))
+                        await client.update(seed.id, { ...seed.item, unset: ["parent"] });
+                    else
+                        await client.create({ ...seed.item, id: seed.id, message: seedTokens.get(seed.id), unset: ["parent"] });
+                }
+                catch (error) {
+                    if (isArtifactCollision(error))
+                        throw new ParameterRefusal("artifact_conflict", `Unowned collision: items/${seed.id} appeared during application. Preserve it and inspect its native history; --force cannot adopt it.`);
+                    throw new ParameterRefusal("artifact_write_failed", `Could not reconcile items/${seed.id}. Check registered type '${seed.item.type}', governance and write access. Earlier audited writes may have completed; inspect the tracker and retry with --force.`);
+                }
+            }
+            if (!dryRun) {
+                const written = await readSeedArtifacts(pmDir, desired.seeds.map(({ id }) => id), client);
+                const staleSeeds = desired.seeds.filter((seed) => !seedArtifactMatches(seed.item, ownArtifact(written, seed.id)));
+                if (staleSeeds.length)
+                    throw new ParameterRefusal("stale_artifacts", `Managed seeds did not reach the desired state: ${staleSeeds.map(({ id }) => `items/${id}`).join(", ")}. Inspect native validation results and retry.`);
+            }
+        }
+        if (!dryRun) {
+            const documents = Object.fromEntries(templates.map(({ templatePath }) => {
+                try {
+                    return [path.basename(templatePath), JSON.parse(fs.readFileSync(templatePath, "utf8"))];
+                }
+                catch {
+                    return [path.basename(templatePath), undefined];
+                }
+            }));
+            const writtenHistory = input.presetId ? await readPresetApplicationHistory(pmDir) : { records: {}, errors: [] };
+            const remaining = compareDesiredPresetState(desired, {
+                settings: readJsonObject(settingsPath, "settings.json"), templates: documents,
+                seeds: await readSeedArtifacts(pmDir, desired.seeds.map(({ id }) => id), client),
+                applicationRecords: writtenHistory.records, artifactErrors: writtenHistory.errors,
+            });
+            if (remaining.length)
+                throw new ParameterRefusal("stale_artifacts", `Application did not reach the complete desired state: ${remaining.join(", ")}. Inspect concurrent edits or host normalization before retrying.`);
+        }
+    };
+    if (dryRun) {
+        // Dry-runs skip package admission; the host audit may still need a lock file.
+        await applyWrites();
+    }
+    else {
+        // Real applies hold the workspace-scoped preset lock across the settings
+        // mutation AND the template writes, so two concurrent parameterized
+        // applies can never leave settings from one invocation next to template
+        // prose from another.
+        await withPresetApplyLock(pmDir, applyWrites);
     }
     console.log("");
     console.log(`${input.label} preset applied. Next steps:`);
@@ -261,10 +557,96 @@ export async function applyPreset(context, input) {
         console.warn(input.warning);
     }
 }
+/** Refuse missing seed mutation capabilities before any settings/template/item write. */
+function requireSeedCapabilities(count, client) {
+    if (count > 0 && (!client || typeof client.create !== "function" || typeof client.update !== "function" || typeof client.schemaList !== "function"))
+        throw new ParameterRefusal("artifact_capability_missing", "Managed seeds require the invocation-bound host SDK create/update/schemaList capabilities.");
+}
+/** Refuse nested prototype-key edits that the host audit protocol cannot apply safely. */
+function assertWritableReferenceKeys(before, after) {
+    const previous = before.secret_references;
+    if (!isJsonObject(previous))
+        return; // A new map is written as one safe parent value.
+    const next = after.secret_references;
+    const priorReference = Object.hasOwn(previous, "__proto__") ? previous["__proto__"] : undefined;
+    const nextReference = isJsonObject(next) && Object.hasOwn(next, "__proto__") ? next["__proto__"] : undefined;
+    if (priorReference !== nextReference) {
+        throw new ParameterRefusal("invalid_secret_reference", "This host cannot add or change a nested '__proto__' reference key. Keep the existing reference and rotate its environment value; use a compatible host for a key migration.");
+    }
+}
+/**
+ * Write (or, under `dryRun`, print) one apply's resolved template documents.
+ *
+ * Extracted so the whole template half of an apply runs inside the same
+ * workspace apply lock as the settings mutation. Template documents can never
+ * hold secret bindings (the resolution engine refuses them), so their dry-run
+ * dumps need no redaction.
+ */
+function writePresetTemplates(templatesDir, templates, options) {
+    if (options.dryRun) {
+        console.log(`[dry-run] Would create directory: ${templatesDir}`);
+    }
+    else {
+        try {
+            fs.mkdirSync(templatesDir, { recursive: true });
+        }
+        catch {
+            throw new ParameterRefusal("artifact_write_failed", "Could not create templates/. Earlier audited settings may have committed; repair tracker write access and retry with --force.");
+        }
+    }
+    for (const { template, templatePath, createOnly } of templates) {
+        if (!createOnly && fs.existsSync(templatePath) && !options.force) {
+            console.warn(`Skipped existing template ${templatePath}; its contents already match the desired state.`);
+            continue;
+        }
+        if (options.dryRun) {
+            console.log(`[dry-run] Would write template: ${templatePath}`);
+            console.log(JSON.stringify(template, null, 2));
+            continue;
+        }
+        try {
+            fs.writeFileSync(templatePath, `${JSON.stringify(template, null, 2)}\n`, { encoding: "utf8", flag: createOnly ? "wx" : "w" });
+        }
+        catch (error) {
+            if (error.code === "EEXIST")
+                throw new ParameterRefusal("artifact_conflict", `Unowned collision: templates/${path.basename(templatePath)} appeared during application. Preserve it before retrying; --force cannot adopt it.`);
+            throw new ParameterRefusal("artifact_write_failed", `Could not write templates/${path.basename(templatePath)}. Earlier audited writes may have completed; repair tracker write access and retry with --force.`);
+        }
+        console.log(`Wrote template ${templatePath}`);
+    }
+}
 /** Resolve template reads through the existing package-or-host SDK loader. */
 export function loadTemplateSdk() {
     const sdkPath = resolveSimulationSdk([import.meta.url, path.join(process.cwd(), "package.json"), process.argv[1]]);
-    return createRequire(import.meta.url)(sdkPath);
+    const sdk = createRequire(import.meta.url)(sdkPath);
+    /** Delegate native validation first, preserving its expected-error identity. */
+    const show = async (name, global) => {
+        const result = await sdk.runTemplatesShow(name, global);
+        if (result.source === "builtin" && !(await sdk.runTemplatesList(global)).builtin_templates.includes(result.name)) {
+            throw new CommandError("Template not found. Choose a name reported by 'pm templates list'.", EXIT_CODE.NOT_FOUND);
+        }
+        if (result.source === "user")
+            assertLoadedTemplateKeys(result.path, result.options);
+        return result;
+    };
+    return {
+        runTemplatesList: sdk.runTemplatesList,
+        runTemplatesShow: show,
+        loadCreateTemplateOptions: async (pmDir, name) => (await show(name, { path: pmDir, noExtensions: true })).options,
+    };
+}
+/** Refuse a host projection that loses raw JSON keys instead of exporting partial data. */
+function assertLoadedTemplateKeys(filePath, options) {
+    let keys;
+    try {
+        keys = Object.keys(JSON.parse(fs.readFileSync(filePath, "utf8")).options);
+    }
+    catch {
+        throw new ParameterRefusal("invalid_manifest", "The template changed during validation; inspect its JSON and retry without exporting partial data.");
+    }
+    if (keys.some((key) => !Object.hasOwn(options, key))) {
+        throw new ParameterRefusal("invalid_manifest", "The host cannot preserve this template's option names; use nonempty trimmed names and rename '__proto__' before reading or exporting.");
+    }
 }
 /** List SDK templates with invocation globals and the active tracker taking precedence. */
 export function runTemplatesList(context) {
@@ -304,11 +686,11 @@ function readJsonObject(filePath, label) {
 function deepMergeJson(base, patch) {
     const result = { ...base };
     for (const [key, value] of Object.entries(patch)) {
-        if (isJsonObject(value) && isJsonObject(result[key])) {
-            result[key] = deepMergeJson(result[key], value);
+        if (isJsonObject(value) && Object.hasOwn(result, key) && isJsonObject(result[key])) {
+            setJsonProperty(result, key, deepMergeJson(result[key], value));
             continue;
         }
-        result[key] = value;
+        setJsonProperty(result, key, value);
     }
     return result;
 }

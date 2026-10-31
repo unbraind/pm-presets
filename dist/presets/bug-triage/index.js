@@ -83,6 +83,7 @@ export const TEMPLATES = {
  */
 export async function runBugTriageSetup(context) {
     await applyPreset(context, {
+        presetId: "bug-triage",
         label: "Bug triage",
         settings: SETTINGS,
         templates: TEMPLATES,

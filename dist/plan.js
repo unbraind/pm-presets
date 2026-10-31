@@ -1,5 +1,6 @@
-import { seedsForPreset } from "./seeds.js";
+import { resolvedSeedsForPreset } from "./seeds.js";
 import { requirePresetDefinition } from "./catalog.js";
+import { normalizeSeedArtifact } from "./desired-state.js";
 /** Invalid inputs and unavailable contract readers fail closed before planning. */
 export class PlanRefusal extends Error {
     /** Machine-readable reason for recovery decisions. */
@@ -95,7 +96,7 @@ export function bundledPresetComposition(id, withSeeds = false) {
     ];
     if (withSeeds)
         features.push({ id: "seeds", optional: false, requires: [{ kind: "capability", name: "items.create" },
-                ...[...new Set(seedsForPreset(preset.id).map((seed) => seed.type))].map((name) => ({ kind: "type", name }))] });
+                ...[...new Set(resolvedSeedsForPreset(preset.id, {}, true).map((seed) => JSON.stringify(seed).includes("${param:") ? seed.type : normalizeSeedArtifact(seed, preset.itemTypes).type))].map((name) => ({ kind: "type", name }))] });
     return { id: preset.id, features };
 }
 /** Compact CLI view with complete counts and explicit truncation, never hidden gaps. */

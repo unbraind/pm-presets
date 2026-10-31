@@ -99,6 +99,7 @@ export const TEMPLATES = {
  */
 export async function runBugTriageSetup(context: CommandHandlerContext): Promise<void> {
   await applyPreset(context, {
+    presetId: "bug-triage",
     label: "Bug triage",
     settings: SETTINGS,
     templates: TEMPLATES,

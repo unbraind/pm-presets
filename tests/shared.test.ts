@@ -38,6 +38,7 @@ import {
   runTemplatesList,
   runTemplatesShow,
   storedTemplate,
+  type PresetSettingsPatch,
 } from "../src/presets/shared.ts";
 
 /** Create an initialized temp pm root and delete it after the test. */
@@ -152,10 +153,11 @@ test("applyPreset dry-run previews merge output without writing templates", asyn
 
 test("applyPreset replace mode and force overwrite, and skips without force", async (t) => {
   const pmDir = await workspace(t);
-  writeFileSync(
-    join(pmDir, "settings.json"),
-    JSON.stringify({ ...JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")), governance: { preset: "custom", require_close_reason: false, workflow_enforcement: "strict" }, testing: { record_results_to_items: true } }, null, 2),
-  );
+  await applyPreset(context(pmDir), {
+    label: "Owned baseline",
+    settings: { id_prefix: "indie-", governance: { preset: "custom", require_close_reason: false, workflow_enforcement: "strict" }, testing: { record_results_to_items: true } } as PresetSettingsPatch,
+    templates: {}, nextSteps: [],
+  });
   const warns: string[] = [];
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "warn", (...args: unknown[]) => {
@@ -179,12 +181,15 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
   assert.equal(effective.governance.workflow_enforcement, undefined);
   assert.equal((afterReplace.testing as { record_results_to_items: boolean }).record_results_to_items, false);
 
-  await applyPreset(context(pmDir), {
+  await applyPreset(context(pmDir), { label: "Matching", settings: { id_prefix: "indie-" }, templates: { "idea.json": storedTemplate("idea", { type: "Decision" }) }, nextSteps: [] });
+  const beforeRefusal = readFileSync(join(pmDir, "settings.json"), "utf8");
+  await assert.rejects(() => applyPreset(context(pmDir), {
     label: "Indie dev",
     settings: { id_prefix: "indie-" },
     templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) },
     nextSteps: [],
-  });
+  }), { code: "stale_artifacts", exitCode: 2 });
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), beforeRefusal);
   assert.ok(warns.some((line) => line.includes("Skipped existing template")));
   const skipped = JSON.parse(readFileSync(join(pmDir, "templates", "idea.json"), "utf8")) as {
     options: { priority?: string };
@@ -207,18 +212,17 @@ test("applyPreset replace mode and force overwrite, and skips without force", as
 
 test("applyPreset preview respects existing templates and force without writes", async (t) => {
   const pmDir = await workspace(t);
-  const templatesDir = join(pmDir, "templates");
-  mkdirSync(templatesDir, { recursive: true });
-  const templatePath = join(templatesDir, "idea.json");
-  const original = JSON.stringify(storedTemplate("idea", { type: "Task", priority: "1" }));
-  writeFileSync(templatePath, original);
+  await applyPreset(context(pmDir), { label: "Owned baseline", settings: { id_prefix: "preview-" }, templates: { "idea.json": storedTemplate("idea", { type: "Task", priority: "1" }) }, nextSteps: [] });
+  const templatePath = join(pmDir, "templates", "idea.json");
+  const original = readFileSync(templatePath, "utf8");
   const before = readFileSync(join(pmDir, "settings.json"), "utf8");
   const lines: string[] = [];
   const warnings: string[] = [];
   t.mock.method(console, "log", (...args: unknown[]) => { lines.push(args.map(String).join(" ")); });
   t.mock.method(console, "warn", (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); });
   const input = { label: "Preview", settings: { id_prefix: "preview-" }, templates: { "idea.json": storedTemplate("idea", { type: "Decision", priority: "9" }) }, nextSteps: [] };
-  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), input);
+  await applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), { ...input, templates: { "idea.json": storedTemplate("idea", { type: "Task", priority: "1" }) } });
+  await assert.rejects(() => applyPreset(context(pmDir, { options: { dryRun: true, replace: true } }), input), { code: "stale_artifacts", exitCode: 2 });
   assert.ok(warnings.some((line) => line.includes("Skipped existing template")));
   assert.ok(!lines.some((line) => line.includes("Would write template")));
   lines.length = 0;
@@ -397,4 +401,25 @@ test("runTemplatesShow recovers incomplete documents and rejects invalid ones", 
 
   writeFileSync(join(pmDir, "templates", "badval.json"), "{\"name\":\"badval\",\"options\":{\"type\":1}}\n");
   await assert.rejects(() => runTemplatesShow(context(pmDir, { args: ["badval"] })), /invalid value for option "type"/);
+});
+
+test("applyPreset refuses literal secrets and summarizes only external references", async (t) => {
+  const logs: string[] = [];
+  t.mock.method(console, "log", (...args: unknown[]) => logs.push(args.map(String).join(" ")));
+  t.mock.method(console, "warn", () => {});
+  const pmDir = await workspace(t);
+  const input = {
+    label: "Parameterized", settings: { id_prefix: "k-" }, templates: {},
+    parameters: [{ name: "token", type: "secret" as const, required: true, description: "Webhook environment reference." }], nextSteps: [],
+  };
+  const before = readFileSync(join(pmDir, "settings.json"), "utf8");
+  await assert.rejects(() => applyPreset(context(pmDir, { options: { param: ["token=hunter2"] } }), input), { code: "invalid_secret_reference", exitCode: 2 });
+  assert.equal(readFileSync(join(pmDir, "settings.json"), "utf8"), before);
+  await applyPreset(context(pmDir, { options: { param: ["token=@WEBHOOK_TOKEN"] } }), input);
+  const summary = logs.find((line) => line.includes("Resolved 1 parameter(s)"));
+  assert.ok(summary, `expected a resolution summary line; got: ${logs.join(" | ")}`);
+  assert.match(summary, /token=@WEBHOOK_TOKEN \(supplied\)/);
+  assert.ok(!logs.some((line) => line.includes("hunter2")), "the secret value must never be printed");
+  const settings = JSON.parse(readFileSync(join(pmDir, "settings.json"), "utf8")) as { id_prefix: string };
+  assert.strictEqual(settings.id_prefix, "k-");
 });

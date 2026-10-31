@@ -13,6 +13,7 @@
  */
 import type * as PmSdk from "@unbrained/pm-cli/sdk";
 import type { CommandHandlerContext, PmSettings } from "@unbrained/pm-cli/sdk";
+import { type PresetParameterManifest } from "../params.ts";
 /**
  * Numeric exit codes mirroring the pm-cli SDK contract.
  *
@@ -67,6 +68,8 @@ export type PresetTemplateMap = Record<string, StoredCreateTemplateDocument>;
  * preservation of unrecognized stored fields.
  */
 export type PresetSettingsPatch = Pick<PmSettings, "id_prefix"> & {
+    /** External credential references only; values resolve at consumption, never during apply. */
+    secret_references?: Record<string, string>;
     /** Named governance presets own their derived knobs; custom presets specify overrides. */
     governance?: Partial<PmSettings["governance"]>;
     /** Validation policies accepted by the installed SDK; governance owns mirrored fields. */
@@ -117,16 +120,20 @@ export declare function mergePresetSettings(existing: JsonObject, patch: JsonObj
  * Merges (or, under `--replace`, swaps owned trees) against the settings read
  * under the host's audit lock, then writes the templates the preset ships
  * — unless `--dry-run`, which prints the planned result instead. Honours
- * `--force` to overwrite an existing user template, and `--prefix` to override
+ * `--force` to reconcile an existing preset-owned template, and `--prefix` to override
  * the preset's `id_prefix`. Throws `NOT_FOUND` when no initialized pm workspace
  * is present, with the expected settings path in the message.
  */
 export declare function applyPreset(context: CommandHandlerContext, input: {
     label: string;
+    /** Bundled id used to maintain the complete managed seed inventory. */
+    presetId?: string;
     settings: PresetSettingsPatch;
     templates: PresetTemplateMap;
     nextSteps: string[];
     warning?: string;
+    /** Typed parameter manifest; supplied values resolve through it before any write. */
+    parameters?: PresetParameterManifest;
 }): Promise<void>;
 /** Resolve template reads through the existing package-or-host SDK loader. */
 export declare function loadTemplateSdk(): Pick<typeof PmSdk, "runTemplatesList" | "runTemplatesShow" | "loadCreateTemplateOptions">;

@@ -1,5 +1,6 @@
 /** Reproducible agent lifecycle probes against disposable, integration-free trackers. */
 import { spawnSync } from "node:child_process";
+import { initialPresetSettings } from "./artifact-ownership.js";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -17,12 +18,12 @@ export async function executeSyntheticScenarios(root, preset, scenarios, sdkPath
     const definition = requirePresetDefinition(preset);
     const pmRoot = join(root, ".agents", "pm");
     mkdirSync(pmRoot, { recursive: true });
-    writeFileSync(join(pmRoot, "settings.json"), JSON.stringify(await sdk.readSettings(pmRoot)), { flag: "wx", mode: 0o600 });
+    writeFileSync(join(pmRoot, "settings.json"), JSON.stringify(await initialPresetSettings()), { flag: "wx", mode: 0o600 });
     const client = new sdk.PmClient({ pmRoot, cwd: root, author: "preset-simulation", noExtensions: true });
     const commandSdk = sdk.createExtensionCommandSdk(pmRoot, client, "preset-simulation", "presets simulate");
     // Audited SDK initialization avoids the host init command's optional Git discovery.
     await commandSdk.mutateWorkspaceSettings({
-        operationId: "simulation-init", mutate: (current) => ({ ...current, id_prefix: "sim-" }),
+        operationId: "simulation-init", mutate: (current) => current,
     });
     await PRESET_HANDLERS[definition.id]({
         command: "presets simulate", args: [], options: {}, global: { quiet: true }, pm_root: pmRoot,
@@ -90,7 +91,7 @@ export function simulatePreset(options) {
     try {
         const output = join(root, "report.json");
         const script = `import {executeSyntheticScenarios} from ${JSON.stringify(import.meta.url)};\nimport {writeFileSync} from 'node:fs';\nconst report = await executeSyntheticScenarios(${JSON.stringify(root)}, ${JSON.stringify(definition.id)}, ${JSON.stringify(PRESET_SCENARIOS.filter((id) => selected.includes(id)))}, ${JSON.stringify(sdkPath)});\nwriteFileSync(${JSON.stringify(output)}, JSON.stringify(report));`;
-        const child = spawnSync(process.execPath, ["--input-type=module", "--eval", script], {
+        const child = spawnSync(process.execPath, ["--input-type=module", "--eval", script, sdkPath], {
             cwd: root, encoding: "utf8", timeout: 60_000, maxBuffer: 1024 * 1024,
             env: { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, XDG_CACHE_HOME: root, TMPDIR: root, TMP: root, TEMP: root,
                 PATH: "", GIT_CEILING_DIRECTORIES: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1", CI: "true", TZ: "UTC" },

@@ -11,6 +11,7 @@ import { PmClient } from "@unbrained/pm-cli/sdk";
 import mod from "../src/index.ts";
 import { PRESET_REGISTRY } from "../src/registry.ts";
 import { executeSyntheticScenarios, PRESET_SCENARIOS, resolveSimulationSdk, simulatePreset, SimulationRefusal } from "../src/simulation.ts";
+import { packedArchiveFilename } from "./fixtures/npm-pack.ts";
 
 const sdkPath = resolveSimulationSdk([import.meta.url]);
 
@@ -213,7 +214,7 @@ test("built output works through the real CLI in a non-git tracker with git abse
   const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
   const packed = spawnSync("npm", ["pack", "--ignore-scripts", "--pack-destination", root, "--json"], { encoding: "utf8" });
   assert.equal(packed.status, 0, packed.stderr);
-  const archive = (JSON.parse(packed.stdout) as Array<{ filename: string }>)[0].filename;
+  const archive = packedArchiveFilename(packed.stdout);
   const install = spawnSync(process.execPath, [cli, "--path", pmRoot, "package", "install", join(root, archive), "--project"], { cwd: root, encoding: "utf8", timeout: 60_000 });
   assert.equal(install.status, 0, install.stderr + install.stdout);
   const before = snapshot(pmRoot);

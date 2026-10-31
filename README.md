@@ -1,5 +1,7 @@
 # pm-presets
 
+Requires pm CLI **2026.10.25 or newer** for complete artifact reconciliation and owned settings replacement.
+
 All 7 official [pm-cli](https://github.com/unbraind/pm-cli) workspace presets in one package.
 
 Install once, get all preset setup commands:
@@ -46,9 +48,11 @@ All setup commands share the same flags:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--force` | `-f` | Overwrite existing preset template files |
-| `--dry-run` | `-n` | Preview changes without writing any files |
+| `--force` | `-f` | Reconcile changed preset templates and managed seed contents |
+| `--dry-run` | `-n` | Preview artifacts; the host audit may create a lock file |
 | `--prefix` | `-p` | Override the id_prefix in settings.json |
+| `--param <name>=<value>` | | Supply a declared preset parameter (repeatable; see [Preset parameters](#preset-parameters)) |
+| `--params-file <file>` | | Read parameter values from a JSON object file |
 
 Each setup command installs valid `pm create` templates and registers the
 `templates show` runtime handler required by the current pm CLI, so
@@ -63,7 +67,7 @@ management surface plus a generic `apply`:
 |---|---|
 | `pm presets list` | Enumerate every bundled preset and what it configures (governance, built-in + custom item types, templates). |
 | `pm presets show <id>` | Print the full definition of one preset: the settings patch it merges, every template (with its `pm create` option keys), and any custom item types it registers. |
-| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, plus which templates are missing. Add `--strict` to exit non-zero on drift (CI/compliance). |
+| `pm presets diff <id>` | Compare the current workspace (`settings.json` + installed templates) against a preset and report what `apply` would add / change, including missing or changed complete templates and managed seed contents. Add `--strict` to exit non-zero on drift (CI/compliance). |
 | `pm presets plan <id>` | Negotiate operational prerequisites before mutation; use `--composition` and `--target` for composed/provider plans. Missing required contracts exit 2. |
 | `pm presets stack --input stack.json` | Preview a canonical preset stack; conflicting settings, templates and seed identities require explicit owner choices. |
 | `pm presets validate` | Validate that all bundled presets parse and load coherently (governance enums, template names/options, registry↔export agreement). |
@@ -112,7 +116,7 @@ plus:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--with-seeds` | `-s` | Also create the preset's starter items after applying it. |
+| `--with-seeds` | `-s` | Enroll the preset's starter items as managed artifacts, creating missing items and reconciling them with later bindings. |
 | `--replace` | | Full-replace the `governance` / `validation` / `testing` trees with the preset's instead of deep-merging them. |
 
 **Idempotency & safety.** `apply` is safe to re-run:
@@ -127,21 +131,32 @@ plus:
 - `--replace` instead **swaps the `governance` / `validation` / `testing` trees
   wholesale** with the preset's trees — resetting omitted keys to host defaults
   and deriving named governance policies, for a clean reset. The host serializer
-  retains unrecognized stored fields. Unrelated top-level settings (`id_prefix`,
-  `telemetry`, `locks`, …) are still preserved in both modes.
-- Templates are **skipped if a file with that name already exists**; pass
-  `--force` to overwrite them.
+  preserves unrelated top-level settings. Omitted raw keys inside the three
+  replaced trees are removed. Unowned top-level settings (`telemetry`, `locks`,
+  …) remain preserved in both modes; the preset still sets `id_prefix`.
+- Existing templates are skipped only when their complete JSON documents already
+  match. A non-force apply that would leave changed templates or managed seeds
+  returns `stale_artifacts` (exit 2), naming their relative paths, before changing
+  settings or history. Inspect the changes and use `--force` to reconcile them.
+- Apply and diff share one desired-state planner for settings keys, complete
+  template documents, managed seed content and seed ownership. A successful real
+  apply verifies that complete postcondition before reporting success.
 - `--dry-run` previews every settings merge/replace, template write, and seed
-  item without touching disk.
+  item without writing workspace settings, templates, items or history. The host
+  may acquire an audit lock; replacement normalization uses isolated public settings.
 
 ### Drift detection: `presets diff --strict`
 
 `presets diff <id> --strict` reuses the diff logic but **exits non-zero (code
-`4`)** when the workspace is not in sync with the named preset — settings to
-add/change or templates missing. It prints what drifted (human summary, or the
+`4`)** when any managed artifact differs: settings keys, full template JSON
+documents (including options and metadata), or managed seed contents. It prints what drifted (human summary, or the
 full diff with `--json`) before exiting, so CI logs explain the failure. When
 the workspace already matches the preset it exits `0`. Plain `presets diff`
-(without `--strict`) always exits `0` and just reports.
+(without `--strict`) reports structured drift with `templates.changed`, seed
+missing/changed entries and an `artifacts` list of relative paths. Both diff forms
+accept `--prefix`, `--replace` and `--with-seeds` to mirror application choices.
+Invalid inputs still refuse with a typed error. Unreadable artifacts remain
+named drift and can never produce a synchronized result.
 
 ```bash
 # Fail a compliance/CI job if the workspace drifts from the locked preset:
@@ -162,16 +177,31 @@ pm presets export our-config --output our-config.preset.json --display-name "Our
 ```
 
 The exported document is `$schema: "pm-presets/exported-preset@1"` and records
-`settings` + `templates`. **Custom item-field _values_ are not captured**:
+`settings` + `templates`. Workspace-local `preset_artifacts` ownership is excluded;
+a portable preset cannot adopt another tracker's item ids. **Custom item-field _values_ are not captured**:
 custom scalar fields have no `pm create --<field>` setter today (pm-cli #97),
 so the snapshot reconstructs the preset from settings + templates only.
 
-**Seed creation.** `--with-seeds` uses the host SDK client and the invocation's
-workspace, author and active schema. It needs neither a `pm` executable on PATH
-nor git. Each seed remains independent: native validation failures are reported
-per item, successful seeds stay created, and any failure exits nonzero. Dry runs
-retain the same preview. Failures show the native SDK validation detail instead
-of the subprocess CLI's generic error headline. A missing host `client.create` capability fails clearly.
+**Managed seeds.** `--with-seeds` uses the host SDK client and active schema;
+it needs neither a `pm` executable on PATH nor git. Stable preset/slot item ids
+are recorded in `settings.preset_artifacts` and recovered from the host's verified
+append-only workspace audit. Removing the settings record cannot hide stale or
+missing seeds from diff. Older unmanaged starter items are not adopted implicitly. Once enrolled, later applies and
+diffs include those seeds even without repeating `--with-seeds`; prefix changes
+keep their established ids and update the controlled type/title/priority/tags/body
+and explicit no-parent state. Existing item lifecycle and unrelated user metadata
+remain host-owned. Reapplying matching content creates no duplicate seeds.
+Seed plans use the native writer's type aliases, trimmed titles, named priorities,
+canonical tag lists and body normalization. Equivalent authored values therefore
+agree across apply, strict diff, stack previews and prerequisite plans.
+
+Settings, template and seed writes share one apply admission. A preflight checks
+overwrite conflicts before settings/history mutation. Native write failures exit
+nonzero; completed audited writes remain recorded, and retrying reconciles artifacts
+that were never written. Template ownership is recorded after the whole template
+write succeeds, so a template written before a later failure in the same run is
+unowned: a retry refuses it with `artifact_conflict` until you preserve, rename or
+remove it. Seed reads use the SDK locator/parser and emit no usage/cache writes.
 
 **Seeds and custom fields.** Starter items created by `--with-seeds` set only
 **built-in** fields (`type`, `title`, `priority`, `tags`, `body`). Custom scalar
@@ -181,6 +211,134 @@ Registered item-type options are supported through `--type-option`: the
 agent-workflow templates persist `phase`, `mode`, and `model` this way while
 leaving the core pm `status` field untouched. The kanban `Card` and
 agent-workflow `AgentRun` seeds are created with their registered item types.
+
+## Preset parameters
+
+A preset can declare **typed parameters** once in a manifest and reference them
+with `${param:<name>}` binding occurrences in its settings patch, template
+options and seed items. One supplied value then reaches **every** declared
+occurrence — the `startup-roadmap` preset, for example, uses its `projectKey`
+parameter for the `id_prefix`, the roadmap template prose, and its starter
+initiative seed:
+
+```bash
+# Default resolution (projectKey defaults to "road"):
+pm presets apply startup-roadmap
+
+# Inspect the changed templates before reconciling owned artifacts:
+pm presets diff startup-roadmap --param projectKey=acme
+# One supplied value reaches every occurrence (prefix becomes "acme-",
+# templates record "acme" under "## Project", the seed title names the acme project):
+pm presets apply startup-roadmap --param projectKey=acme --with-seeds --force
+
+# Values can also come from a JSON file:
+pm presets diff startup-roadmap --params-file params.json
+pm presets apply startup-roadmap --params-file params.json --force
+```
+
+`pm presets show <id>` lists every declared parameter (type, constraints,
+default, and whether it is still **unanswered**), and `presets diff <id>`
+accepts the same `--param` flags so the drift preview resolves exactly like a
+parameterized apply.
+
+**Refusal contract.** All parameter input is validated once, before anything is
+read or written, with typed exit-2 refusals:
+
+- an unknown supplied name (`--param ghost=1`) is refused (`unknown_parameter`);
+- a required parameter with neither a value nor a default is refused and every
+  unanswered choice is listed (`unanswered_parameter`) — by `apply` and by a
+  parameterized `diff`, while `show` keeps displaying the declaration;
+- values that violate the declared pattern, enum or length bound are refused
+  (`invalid_value`); control characters and line breaks never enter prose;
+- joining values or surrounding text must not assemble new `${param:...}`
+  syntax (`invalid_value`); parameter substitution never evaluates generated bindings;
+- a binding that references a name the preset never declared is an authoring
+  error and refuses (`unknown_binding`), as does a malformed `${param:...}`
+  fragment (`malformed_binding`);
+- all manifests validate bindings, including an explicit empty `parameters: []`;
+  unresolved or malformed occurrences refuse before settings or template writes.
+
+**Secrets.** A `secret` parameter accepts only an external environment reference,
+for example `--param token=@DEPLOY_TOKEN`. Literal credentials are refused with
+`invalid_secret_reference` (exit 2); keep values in the environment, never in a
+params file or tracker. Secret defaults are forbidden.
+
+Secret-reference bindings must occupy an entire value in the explicit
+`settings.secret_references.<name>` map, for example
+`secret_references: { deploy: "${param:token}" }`. That map stores pointers only;
+it cannot receive credential values. Identifiers (`id_prefix`, seed
+IDs), titles, tags, filenames, templates and other settings are public tracked
+data; secret bindings there refuse at manifest projection, even without a
+supplied value. References cannot be interpolated into a larger string.
+
+Reference maps preserve accepted JSON names, including `__proto__` and
+`constructor`, through resolution, previews and audited storage.
+Once a reference map exists, the host audit protocol cannot add or change its
+`__proto__` entry. Such updates refuse before writes; keep a stable reference
+and rotate the external environment value.
+Public templates and seeds require nonempty trimmed field names and refuse
+`__proto__` before writes because supported host readers lose that field.
+Existing templates that would lose option names refuse reads/exports with a
+typed remedy instead of returning partial data.
+
+Apply stores **only `@DEPLOY_TOKEN`**, including in audited append-only history.
+Dry-run, diff and parameter summaries display references, never credentials.
+Static references such as `secret_references: { deploy: "@DEPLOY_TOKEN" }`
+receive the same protection: diffs hide legacy credentials at those destinations.
+Show may retain the authored occurrence for an unanswered declaration. Commands
+do not read credential environment variables. A consuming integration calls
+`resolveSecretReference("@DEPLOY_TOKEN")` only when the credential is needed;
+that API returns the current environment value in memory without logging or
+writing it. Missing or empty variables produce a privacy-safe typed refusal.
+Rotating the external value requires no tracker change. There is no automatic
+migration or rewrite of credentials already stored by older versions: revoke
+those credentials and review affected tracker history separately.
+
+Defaults and supplied public values share trimming and constraint checks; seed
+previews resolve defaults before computing identities and ownership.
+
+**One resolution, one read.** The unified apply reads your flags and params
+file exactly once, resolves every parameter at that boundary, pre-validates the
+preset's seed bindings, and threads the same effective values through the
+settings merge, the template writes and the seed creation — editing the params
+file mid-apply cannot split your workspace across two values.
+
+**Ownership and recovery.** Existing item ids, template names and customized
+settings are preserved unless recorded preset provenance proves ownership.
+**Upgrading:** workspaces configured by earlier pm-presets versions carry no
+provenance. Their templates and customized settings are unowned, so the first
+re-apply with this version refuses them with `artifact_conflict`, even when the
+contents match. Move or remove those templates and reset customized leaves before
+that apply, or keep the current configuration and only run `pm presets diff`.
+`--force` reconciles owned drift; an unowned collision returns `artifact_conflict`
+with its exact id or path. A missing managed seed with retained history returns
+`artifact_recovery_required` with a native `pm restore <id> <timestamp>` command
+for its latest verified materialized state. Run that
+command, inspect the restored item and retry; keep the history. Ownership metadata
+stays workspace-local and is omitted from exported presets.
+
+**Concurrent applies.** A real apply holds a workspace-scoped lock
+(`.agents/pm/locks/`) across the audited settings mutation *and* the template
+writes, so two concurrent parameterized applies can never leave the id prefix
+of one invocation next to the template prose of another. Dry-runs skip the
+preset apply lock. The host audit may create its own lock file and may refuse
+on a read-only tracker. Dry-runs do not change preset artifacts.
+
+Publication, stale recovery and release also hold an admission claim with a
+unique per-process pathname. Cleanup targets that exact claim, so a delayed
+reaper cannot unlink a replacement owner's claim. Live owners are never evicted
+because of age. Automatic recovery requires a verified kernel/PID namespace and
+a PID proven absent; unverifiable claims stay locked. Inspect abandoned claims
+only after confirming their writers have stopped.
+
+`--params-file` reads one regular JSON file, bounded to 64 KiB even if it grows
+while being read. Missing, unreadable, nonregular and oversized files return
+`invalid_params_file` with exit 2, without raw filesystem diagnostics.
+
+The same engine backs every read path (`show`, `diff`, `plan`, `stack`,
+`validate`): answered bindings resolve in every preview, while a declaration-mode
+projection may keep the authored `${param:...}` occurrence for an unanswered parameter. See
+[docs/params-example.md](docs/params-example.md) for the full authoring walkthrough.
 
 ## Presets in Detail
 
@@ -483,3 +641,15 @@ Seed rows describe prospective catalog contributions, without claiming existing
 items by title. Plans are observations, not transactions or replayable authority;
 replan after peer changes. Target classifications always read current settings
 and templates. See [the stack example](docs/stack-example.md).
+
+SDK callers can await `computeDesiredPresetState`, `computePresetDiff`,
+`computeParameterizedDiff` and `readWorkspaceSnapshot`; `requirePresetDefinition`
+provides resolved bundled template/seed payloads. JSON and TOON commands use
+these same APIs. SDK diff requires complete `templateDocuments` for every
+declared template and an explicit `seedItems` inventory for seed comparisons;
+summary-only definitions refuse. Final overrides and payloads must be resolved.
+Legacy SDK settings projections remain redacted and cannot report synchronization
+when application would reject their settings.
+
+Development checks use `npm run check` for typechecking and `npm run lint` for
+compiler-backed unused-local/parameter checks with the pinned TypeScript version.

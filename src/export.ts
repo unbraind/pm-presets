@@ -22,6 +22,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { resolveParameterizedPreset } from "./params.ts";
+import type { PresetSettingsPatch, PresetTemplateMap } from "./presets/shared.ts";
 import { loadTemplateSdk } from "./presets/shared.ts";
 import type { CreateTemplateOptions, StoredCreateTemplateDocument } from "./presets/shared.ts";
 
@@ -42,7 +44,7 @@ export interface ExportedPreset {
   displayName: string;
   /** id_prefix lifted from settings for convenience (mirrors bundled descriptors). */
   idPrefix: string;
-  /** The full settings.json the workspace currently has. */
+  /** Portable settings, excluding workspace-local managed seed ownership. */
   settings: Record<string, unknown>;
   /** Every user template installed in the workspace, name + options. */
   templates: ExportedTemplate[];
@@ -70,8 +72,15 @@ export function buildExportedPreset(input: {
   templates: ExportedTemplate[];
   now?: Date;
 }): ExportedPreset {
-  const settings = input.settings ?? {};
-  const idPrefixRaw = settings["id_prefix"];
+  const sourceSettings = input.settings ?? {};
+  // Export is a tracked-file/output sink too. Refuse invalid reference storage
+  // and legacy unresolved bindings rather than publishing a new copy of them.
+  resolveParameterizedPreset([], {}, {
+    settings: sourceSettings as PresetSettingsPatch,
+    templates: Object.fromEntries(input.templates.map((template, index) => [String(index), template])) as unknown as PresetTemplateMap,
+  });
+  const settings = Object.fromEntries(Object.entries(sourceSettings).filter(([key]) => key !== "preset_artifacts" && key !== "preset_ownership"));
+  const idPrefixRaw = Object.hasOwn(settings, "id_prefix") ? settings["id_prefix"] : undefined;
   const idPrefix = typeof idPrefixRaw === "string" ? idPrefixRaw : "";
   const now = input.now ?? new Date();
   const templates = [...input.templates].sort((left, right) =>

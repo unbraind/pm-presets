@@ -50,5 +50,5 @@ export function resolveSimulationSdk(anchors: readonly string[]): string {
       // The extension copy may have no node_modules; try the host next.
     }
   }
-  throw new SimulationRefusal("sdk_unavailable", "Run with a pm CLI host >=2026.9.30 or install the declared peer dependency.", 1);
+  throw new SimulationRefusal("sdk_unavailable", "Run with a pm CLI host >=2026.10.25 or install the declared peer dependency.", 1);
 }
