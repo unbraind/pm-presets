@@ -13,7 +13,7 @@
  * Boundary contract (one strict validation, before any side effect):
  *  - parameter names match `[A-Za-z][A-Za-z0-9_-]{0,31}`;
  *  - values are trimmed strings, 1..maxLength characters (default 256, at most
- *    1024), without control characters;
+ *    1024), without C0/C1 control characters or U+2028/U+2029 separators;
  *  - enum values must be declared members; string values must fully match the
  *    declared pattern;
  *  - a malformed `${param:` fragment is a refusal, never silently passed
@@ -129,7 +129,8 @@ const MAX_ALLOWED_VALUE_LENGTH = 1024;
 const MAX_MANIFEST_PARAMETERS = 32;
 const MAX_PARAMS_FILE_BYTES = 64 * 1024;
 const PARAMETER_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/;
+/** C0 and C1 controls, DEL, and the Unicode line and paragraph separators. */
+const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/;
 const BINDING_PREFIX = "${param:";
 
 /** Reject control characters so values can never corrupt settings or prose. */

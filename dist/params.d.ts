@@ -13,7 +13,7 @@
  * Boundary contract (one strict validation, before any side effect):
  *  - parameter names match `[A-Za-z][A-Za-z0-9_-]{0,31}`;
  *  - values are trimmed strings, 1..maxLength characters (default 256, at most
- *    1024), without control characters;
+ *    1024), without C0/C1 control characters or U+2028/U+2029 separators;
  *  - enum values must be declared members; string values must fully match the
  *    declared pattern;
  *  - a malformed `${param:` fragment is a refusal, never silently passed

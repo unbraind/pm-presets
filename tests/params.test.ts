@@ -140,6 +140,13 @@ test("resolveParameterValues refuses unknown, non-string, empty, control, over-l
     resolveParameterValues([{ name: "owner", type: "enum", required: true, values: ["core"] }], { owner: "community" }));
   refuses("invalid_value", () =>
     resolveParameterValues([{ name: "token", type: "secret", required: true }], { token: "bad\rkey" }));
+  const freeForm: PresetParameterManifest = [{ name: "label", type: "string", required: true }];
+  for (const separator of ["\u0085", "\u0080", "\u009F", "\u2028", "\u2029"]) {
+    refuses("invalid_value", () => resolveParameterValues(freeForm, { label: `a${separator}b` }));
+  }
+  for (const allowed of ["caf\u00E9", "\u00A0a", "a\u00A0b", "\u65E5\u672C"]) {
+    assert.equal(resolveParameterValues(freeForm, { label: allowed }).values.label, allowed.trim());
+  }
 
   const noDefault: PresetParameterManifest = [{ name: "a", type: "string", required: true }, { name: "b", type: "string", required: true }];
   refuses("unanswered_parameter", () => resolveParameterValues(noDefault, {}));
