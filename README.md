@@ -305,6 +305,11 @@ file mid-apply cannot split your workspace across two values.
 
 **Ownership and recovery.** Existing item ids, template names and customized
 settings are preserved unless recorded preset provenance proves ownership.
+**Upgrading:** workspaces configured by earlier pm-presets versions carry no
+provenance. Their templates and customized settings are unowned, so the first
+re-apply with this version refuses them with `artifact_conflict`, even when the
+contents match. Move or remove those templates and reset customized leaves before
+that apply, or keep the current configuration and only run `pm presets diff`.
 `--force` reconciles owned drift; an unowned collision returns `artifact_conflict`
 with its exact id or path. A missing managed seed with retained history returns
 `artifact_recovery_required` with a native `pm restore <id> <timestamp>` command

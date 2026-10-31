@@ -96,7 +96,7 @@ const COMMON_FLAGS = [
         long: "--dry-run",
         short: "-n",
         value_type: "boolean",
-        description: "Preview what would be written without making any changes.",
+        description: "Preview artifacts without writing preset settings, templates or items; the host audit may still create its lock file.",
     },
     {
         long: "--prefix",
