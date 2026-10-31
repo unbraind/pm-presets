@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds ([pm-qz1k](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-qz1k.toon))
+
+### Fixed
+
+- Upstream template SDK loses own keys and inherits phantom builtin names ([pm-7km8](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-7km8.toon))
+
 ## 2026.10.30 - 2026-10-30
 
 ### Fixed
