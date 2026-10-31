@@ -2,14 +2,17 @@ id: pm-7km8
 title: Upstream template SDK loses own keys and inherits phantom builtin names
 description: "Observed with @unbrained/pm-cli 2026.10.25: a valid user template containing an own __proto__ string option survives in stored JSON, but loadCreateTemplateOptions and runTemplatesShow return success while omitting that option. An ordinary option and constructor option survive. The upstream template parser and flag extractor clone arbitrary keys onto ordinary objects through indexed assignment. This is outside the pm-presets implementation; PR #170 preserves its own JSON dictionaries and refuses unsupported public-document keys and partial native projections until the host supports them safely."
 type: Issue
-status: open
+status: closed
 priority: 2
 tags[4]: host-sdk,own-keys,templates,upstream
 created_at: "2026-10-29T07:06:09.014Z"
-updated_at: "2026-10-29T18:02:56.796Z"
+updated_at: "2026-10-31T02:59:30.379Z"
+closed_at: "2026-10-31T02:59:29.453Z"
+completed_at: "2026-10-31T02:15:17.000Z"
 author: codex-sol
 acceptance_criteria: "Add adversarial own-key properties for SDK template parse/save/show and real CLI JSON/TOON, including Object.prototype names and prototype integrity on nongit trackers. Preserve expected SDK error identity. Revisit the pm-presets compatibility refusals after supported host versions preserve these keys."
 repro_steps: "Initialize a scratch tracker using PmClient with noExtensions. Write templates/own-key.json using JSON.parse for {\"name\":\"own-key\",\"options\":{\"__proto__\":\"public-data\",\"ordinary\":\"kept\",\"constructor\":\"kept\"}}. Call loadCreateTemplateOptions and runTemplatesShow through the pinned SDK. Both successful results omit __proto__ although the stored file retains the field. All data is synthetic."
+resolution: "Delivered by PR #170 (a9d3827): Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 expected_result: "Preserve every accepted option as an own data property, or return a typed refusal before accepting/writing unsupported input. Never change prototypes or silently produce partial data."
 actual_result: Both SDK reads omit __proto__; ordinary and constructor controls remain. SDK source confirms unsafe indexed assignment in template option cloning.
 affected_version: 2026.10.25
@@ -24,4 +27,5 @@ files[2]{path,scope}:
   tests/params-keys.test.ts,project
 docs[1]{path,scope}:
   README.md,project
+close_reason: "Delivered by PR #170 (a9d3827): Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 body: ""

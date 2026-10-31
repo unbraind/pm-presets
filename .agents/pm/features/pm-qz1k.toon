@@ -2,12 +2,17 @@ id: pm-qz1k
 title: "Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 description: "From the 2026-10-21 fleet backlog audit item 2. Declare required preset parameters once in a typed manifest and resolve them consistently through settings, templates and seeds, returning unanswered choices before installation. Acceptance: (1) one supplied project parameter reaches every declared occurrence; (2) unknown/missing bindings refuse before any write; (3) secret values cannot enter generated public seed prose. Deliver typed SDK surface + CLI flags, compact TOON/JSON output, typed refusals with remedies, docs, property tests and real-data validation on a read-only copy of a public fleet tracker in a non-git temp dir."
 type: Feature
-status: in_progress
+status: closed
 priority: 1
 tags[8]: authoring,bindings,"gh:unbraind/pm-presets#170","gh:unbraind/pm-presets#171","gh:unbraind/pm-presets#173",parameters,presets,sdk
 created_at: "2026-10-27T12:08:56.144Z"
-updated_at: "2026-10-31T01:37:37.556Z"
+updated_at: "2026-10-31T02:59:25.667Z"
+closed_at: "2026-10-31T02:59:24.590Z"
+completed_at: "2026-10-31T02:15:17.000Z"
 author: pi-agent
+resolution: "Delivered by PR #170 (a9d3827): Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
+expected_result: "Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
+actual_result: "PR #170 merged at 2026-10-31T02:15:17Z as a9d3827; required CI passed on the merged head."
 comments[92]{created_at,author,text}:
   "2026-10-27T12:09:22.235Z",pi-agent,"Overlap check (re-run 2026-10-27 against pm CLI 2026.10.20 SDK and sibling packages): (a) pm-cli SDK has no parameter/interpolation capability — grep over the installed SDK declarations shows settings mutations are literal audited patches (mutateWorkspaceSettings), templates are literal option maps (loadCreateTemplateOptions/runTemplatesShow), client.create takes literal fields; no 'parameter|interpolat|substitut' matches in templates/workspace-contracts/schema declarations. (b) gh search issues --repo unbraind/pm-cli 'parameter binding'/'preset parameter'/'template parameter': no open upstream work. (c) Fleet sibling scan (src/docs) for parameter-binding/interpolation features: no hits. (d) In-package status: presets accept only a few CLI overrides (--prefix, --force, --dry-run, --replace, --with-seeds) and upgrades of known settings; seed and template values are static literals. Conclusion: no overlap — this adds parameter propagation as an explicit authoring contract while the resolved native fields are still validated by the existing core path (preset validation + the host's audited settings mutation), so no core schema change is required."
   "2026-10-27T14:07:02.392Z",pi-agent,"Revert proof (2026-10-27): behaviourally reverted the parameter handling in applyPreset (resolution disabled; raw binding syntax passes through) and re-ran the focused new tests: 8 of 11 fail (one-value-reaches-every-occurrence, default resolution, refusal-before-writes, params-file, diff parity, dry-run, property round-trip, concurrent applies). Restored the implementation: 8/8 params-cli tests pass again. Full suite before the gate: 238 tests pass, 0 fail (node --test --test-concurrency=2 on a saturated 4-core host)."
@@ -379,4 +384,5 @@ docs[2]:
     note: Executable authoring and dry-run contracts
   - path: README.md
     scope: project
+close_reason: "Delivered by PR #170 (a9d3827): Typed parameter binding manifests: declare preset parameters once, resolve across settings, templates and seeds"
 body: ""
