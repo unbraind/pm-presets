@@ -18,6 +18,16 @@
 
 - Use the pm SDK for preset seed creation ([pm-1j8u](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-1j8u.toon))
 
+## 2026.10.26 - 2026-10-26
+
+### Added
+
+- Preview preset stacks through host profile composition ([pm-1eww](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/features/pm-1eww.toon))
+
+### Other
+
+- Point the npm homepage at the package catalog and link the author ([pm-39f2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-39f2.toon))
+
 ## 2026.10.25 - 2026-10-25
 
 ### Added
