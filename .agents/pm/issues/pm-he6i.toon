@@ -1,0 +1,11 @@
+id: pm-he6i
+title: "Correct the closeout record: the upstream template SDK defect is mitigated, not fixed"
+description: "Tracks gh:unbraind/pm-presets#184 (filed 2026-10-31, missed by the blind issue watch). The closeout of the upstream-template-defect item marked it delivered with PR #170 and listed it under CHANGELOG 'Fixed', but PR #170 only ships the package's fail-closed adapter mitigation: the host defects remain on upstream main (parseStoredTemplateOptions still assigns arbitrary accepted keys by indexed assignment into normalized, builtinTemplateDocument still indexes BUILTIN_TEMPLATES without an own-property check, and resolveTypeSynonym still indexes the ordinary-object synonym table — re-verified on upstream main 2026-11-02). The canonical item itself says the upstream follow-up stays open and requires host SDK/CLI own-key regression coverage before revisiting those refusals. Action: record a follow-up here that keeps the upstream fix open (watch upstream releases for own-key checks in template parsing and type synonyms), and correct the CHANGELOG wording from 'Fixed' to 'Mitigated (package-side)' so consumers do not read the host defect as repaired."
+type: Issue
+status: open
+priority: 2
+tags[3]: closeout,"gh:unbraind/pm-presets#184",upstream
+created_at: "2026-11-02T09:18:08.631Z"
+updated_at: "2026-11-02T09:18:08.631Z"
+author: pi-glm
+body: ""
