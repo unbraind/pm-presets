@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Ignore managed extension files so the scheduled issue sync can commit ([pm-11xf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-11xf.toon))
+
 ## 2026.11.1 - 2026-11-01
 
 ### Added
