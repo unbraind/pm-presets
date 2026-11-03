@@ -28,6 +28,8 @@ type JsonObject = Record<string, unknown>;
 export interface WorkspaceSnapshot {
   /** Parsed settings.json (or `undefined` if absent/unreadable). */
   settings: JsonObject | undefined;
+  /** Known sensitive stored locations, retained when legacy values lose authored bindings. */
+  secretSettingPaths?: readonly string[];
   /** Template names present in the workspace `templates/` directory. */
   templateNames: string[];
   /** Complete parsed documents; missing or unreadable contents cannot match. */
@@ -120,40 +122,72 @@ export async function computePresetDiff(
   snapshot: WorkspaceSnapshot,
   options: { withSeeds?: boolean; prefix?: string; replace?: boolean } = {},
 ): Promise<PresetDiff> {
+  // Capture the definition identity, payloads and selection once, before any
+  // await: SDK getters that mutate during normalization cannot change the
+  // compared state, and planning must consume exactly what was validated.
+  const presetId = definition.id;
+  const declaredTemplates = definition.templates;
+  const templateDocuments = definition.templateDocuments;
+  const declaredSeeds = definition.seedItems;
+  const secretSettingPaths = definition.secretSettingPaths;
+  const itemTypes = definition.itemTypes;
+  const withSeeds = options.withSeeds;
+  const prefix = options.prefix;
+  const replace = options.replace === true;
+  let desiredSettings = definition.settings;
   let record;
-  const errors = (snapshot.artifactErrors ?? []).filter((name) => name === "history/_workspace.jsonl" || name === "settings.json#preset_artifacts" || name === `settings.json#preset_artifacts.${definition.id}`);
+  const errors = (snapshot.artifactErrors ?? []).filter((name) => name === "history/_workspace.jsonl" || name === "settings.json#preset_artifacts" || name === `settings.json#preset_artifacts.${presetId}`);
   // Keep legacy SDK projections available to destination redaction, while
   // refusing to call settings synchronized when application would reject them.
-  try { resolveSettingsWithParameters([], {}, definition.settings); }
+  try { desiredSettings = resolveSettingsWithParameters([], {}, desiredSettings).settings; }
   catch { errors.push("settings.json"); }
-  try { record = presetArtifactRecord(snapshot.settings, definition.id); }
-  catch (error) {
-    errors.push(`settings.json#preset_artifacts.${definition.id}`);
+  // Both sides retain sensitivity before guards and output mapping. Inspect
+  // stored destinations directly: legacy workspace values must never pass
+  // through parameter resolution or isolated normalization to classify them.
+  const secretPaths = new Set([
+    ...collectSecretSettingPaths(desiredSettings, []),
+    ...(secretSettingPaths ?? []),
+    ...collectSecretSettingPaths(snapshot.settings, []),
+    ...(snapshot.secretSettingPaths ?? []),
+  ]);
+  // A sensitive leaf outside the external-reference destination can never
+  // be called synchronized: application owns the same refusal.
+  if ([...secretPaths].some((name) => !/^secret_references(?:\.|$)/.test(name))) errors.push("settings.json");
+  if (replace && [...secretPaths].some((name) => /^(governance|validation|testing)(?:\.|$)/.test(name))) {
+    throw new ParameterRefusal("invalid_secret_reference", "Replacement comparisons cannot copy legacy sensitive settings into normalization history. Use external references in settings.secret_references or compare without --replace.");
   }
-  const historical = ownArtifact(snapshot.applicationRecords, definition.id);
+  try { record = presetArtifactRecord(snapshot.settings, presetId); }
+  catch (error) {
+    errors.push(`settings.json#preset_artifacts.${presetId}`);
+  }
+  const historical = ownArtifact(snapshot.applicationRecords, presetId);
   if (record && historical === undefined) errors.push("history/_workspace.jsonl");
   if (historical !== undefined) {
-    if (!artifactValuesEqual(record, historical ?? undefined)) errors.push(`settings.json#preset_artifacts.${definition.id}`);
+    if (!artifactValuesEqual(record, historical ?? undefined)) errors.push(`settings.json#preset_artifacts.${presetId}`);
     record = historical ?? undefined;
   }
-  if (definition.templates.some(({ name }) => ownArtifact(definition.templateDocuments, `${name}.json`) === undefined)) {
+  if (declaredTemplates.some(({ name }) => ownArtifact(templateDocuments, `${name}.json`) === undefined)) {
     throw new ParameterRefusal("invalid_manifest", "Supply complete templateDocuments for every declared template before computing desired artifact state.");
   }
-  if ((options.withSeeds || record) && !Array.isArray(definition.seedItems)) {
+  const includeSeeds = Boolean(withSeeds || record);
+  if (includeSeeds && [...secretPaths].some((name) => /^id_prefix(?:\.|$)/.test(name))) {
+    throw new ParameterRefusal("invalid_secret_reference", "A sensitive legacy prefix cannot generate public seed identifiers. Move the credential to settings.secret_references before comparing managed seeds.");
+  }
+  if (includeSeeds && !Array.isArray(declaredSeeds)) {
     throw new ParameterRefusal("invalid_manifest", "Supply the complete seedItems inventory, including an explicit empty array for a seedless preset, before comparing managed seeds.");
   }
   const planInput = {
-    presetId: definition.id,
-    settings: { ...definition.settings, id_prefix: options.prefix ?? definition.settings.id_prefix },
-    templates: definition.templateDocuments ?? {},
-    seeds: options.withSeeds || record ? definition.seedItems ?? [] : undefined,
-    record, replace: options.replace, seedTypes: snapshot.seedTypes,
+    presetId: presetId,
+    settings: { ...desiredSettings, id_prefix: prefix ?? desiredSettings.id_prefix },
+    templates: templateDocuments ?? {},
+    seeds: includeSeeds ? declaredSeeds ?? [] : undefined,
+    record, replace: replace, seedTypes: snapshot.seedTypes,
   };
   let desired;
   try { desired = await computeDesiredPresetState(planInput); }
   catch (error) {
     if (!(error instanceof ParameterRefusal) || error.code !== "invalid_artifact_record" || !record) throw error;
-    errors.push(`settings.json#preset_artifacts.${definition.id}`);
+    errors.push(`settings.json#preset_artifacts.${presetId}`);
     desired = await computeDesiredPresetState({ ...planInput, record: undefined });
   }
   const presetSettings = desired.settings as unknown as JsonObject;
@@ -174,7 +208,7 @@ export async function computePresetDiff(
   const missing: string[] = [];
   const present: string[] = [];
   const changed: string[] = [];
-  for (const template of definition.templates) {
+  for (const template of declaredTemplates) {
     if (workspaceTemplates.has(template.name)) {
       present.push(template.name);
       const document = desired.templates.find(({ document }) => document.name === template.name)?.document;
@@ -197,20 +231,14 @@ export async function computePresetDiff(
   const settingsToAdd = settings.filter((entry) => entry.status === "add").length;
   const settingsToChange = settings.filter((entry) => entry.status === "change").length;
 
-  // Destination sensitivity is mandatory even for direct SDK definitions
-  // without authored parameter provenance or with an empty manifest.
-  const secretPaths = new Set([
-    ...collectSecretSettingPaths(definition.settings, []),
-    ...(definition.secretSettingPaths ?? []),
-  ]);
   return {
-    presetId: definition.id,
+    presetId: presetId,
     inSync: artifacts.length === 0,
-    settings: settings.map((entry) => secretPaths.has(entry.path) ? redactSettingEntry(entry) : entry),
+    settings: settings.map((entry) => [...secretPaths].some((name) => name === entry.path || name.startsWith(`${entry.path}.`) || entry.path.startsWith(`${name}.`)) ? redactSettingEntry(entry) : entry),
     templates: { missing, present, changed },
     seeds: seedDiff,
     artifacts,
-    itemTypes: definition.itemTypes.map((type) => type.name),
+    itemTypes: itemTypes.map((type) => type.name),
     summary: {
       settingsToAdd,
       settingsToChange,

@@ -1,0 +1,67 @@
+id: pm-yaji
+title: Salvage sensitive legacy setting refusals and snapshot capture from the unmerged typed-binding review
+description: "Port four hardening behaviours left unmerged from the codex review work on the typed parameter binding item: diffPreset refuses sensitive legacy id_prefix generating public seed ids; diff --replace refuses sensitive legacy governance/validation/testing trees entering normalization history; diff and apply capture definition identity/settings/templates/seeds/flags/resolved values once before any await so mutating SDK getters cannot change compared state; the seed writer requires withSeeds ids to be registered catalog members. Each refusal is typed, leaves tracker bytes unchanged, and has a must-allow twin."
+type: Issue
+status: in_progress
+priority: 1
+tags[4]: "gh:unbraind/pm-presets#191",presets,privacy,security
+created_at: "2026-11-03T09:25:10.433Z"
+updated_at: "2026-11-03T13:20:48.900Z"
+author: pi-presets-qz1k-salvage-1103
+comments[9]{created_at,author,text}:
+  "2026-11-03T09:29:33.551Z",pi-presets-qz1k-salvage-1103,"Salvage plan from the unmerged review work on the typed-binding item (leftover worktree diff, branch fix/typed-parameter-binding-review): (1) diffPreset refuses invalid_secret_reference when a sensitive legacy id_prefix would mint public seed ids; (2) diff --replace refuses invalid_secret_reference when sensitive legacy governance/validation/testing settings would enter isolated normalization history, and replacement normalization never copies a caller prefix into the scratch tracker; (3) diff and apply capture definition identity, settings, template documents, seed inventory, flags and resolved values once before any await, so mutating SDK accessors cannot change compared state (planner validates a record with undefined-sentinel semantics too); (4) the seed writer requires a withSeeds id to be a registered catalog member, refusing unknown and Object.prototype names before any write. Test-first: each behaviour gets a test that fails on current main, then the port. Each refusal is typed, leaves tracker bytes unchanged, and has a must-allow twin."
+  "2026-11-03T09:31:06.553Z",pi-presets-qz1k-salvage-1103,"Gap proof on pristine main (new tests added first, src untouched): (a) 'plans and writers retain one snapshot' rejects artifact_unreadable because the planner consumes caller objects mutated across the replacement await; (b) 'replacement diff never materializes legacy sensitive SDK settings' expects invalid_secret_reference but main copies sensitive trees into the isolated normalization tracker and surfaces a raw scratch error (invalid_manifest); (c) the accessor property test dies with invalid_manifest because the template-completeness check re-reads definition.templateDocuments once per declared template; (d) the planner accepts record: null and a record without a preset id (missing expected rejection); (e) the seed writer accepts withSeeds with absent/unknown/Object.prototype preset ids and writes settings (missing expected rejection)."
+  "2026-11-03T10:05:21.723Z",pi-presets-qz1k-salvage-1103,"Port complete; all five gap tests now pass on the branch. Revert proofs (each guard reverted in isolation, the corresponding test failed at its intended adversarial assertion, source restored exactly): (1) dropping the sensitive id_prefix refusal -> 'Missing expected rejection' for invalid_secret_reference (the credential would mint public seed ids); (2) dropping the --replace refusal -> sensitive trees reach the isolated normalization tracker and a raw scratch error surfaces as invalid_manifest instead of the typed refusal; (3a) making planInput re-read definition getters -> accessor drift masked, inSync true !== false; (3b) feeding the caller's settings object back into replacement normalization -> artifact_unreadable, host refused the mutated governance; (3c) re-reading the preset identity in the writer -> identity read 3 !== 1 times; (3d) restoring truthiness record guards -> record: null and a record without a preset id accepted, missing rejection; (4) dropping the registered-identity refusal -> withSeeds selections with absent/unknown/prototype ids write settings, missing rejection. Focused regression pass on the touched areas (artifact-state, diff, params-review, params-boundaries, settings, shared, seed-normalization, seeds): 82/82 pass."
+  "2026-11-03T11:02:37.432Z",pi-presets-qz1k-salvage-1103,"Full release gates pass on the branch head at unchanged thresholds: npm run release:check exit 0 and bun run release:check exit 0, each 341/341 tests with zero failures/skips/cancellations and the coverage gate reporting all 36 required source files at 100.00% lines/branches/functions. Typecheck, lint, docstring gate, production audit, package contents, changelog check and both release verifications all pass. dist/ rebuilt from the new source and the changelog regenerated after the item updates (identical output; this item remains unreleased). Both linked pm test commands also passed through pm test --run (14/14 and 82/82)."
+  "2026-11-03T12:36:35.937Z",codex-presets-191-1103,"Review round begins at 16c1641 after fast-forward pull: reproduce stored legacy sensitivity leaking through withSeeds diff, carry workspace provenance into guard/output classification, verify replace sibling guards and captured preset identity, then mutation-check and run unchanged release gates. Synthetic fixtures only; no review-thread replies."
+  "2026-11-03T12:38:03.663Z",codex-presets-191-1103,"Reproduced before source edits at 16c1641: CI=true node --test --test-name-pattern=\"stored sensitive|SDK diff requires complete payloads\" tests/artifact-state.test.ts failed 3/3. Stored-prefix withSeeds comparison returned rather than invalid_secret_reference; an independent receipt confirmed the workspace prefix equals the synthetic credential and serialized diff contains it. Stored governance/validation/testing provenance also bypasses the incoming-only replace guard and reaches normalization. Extended seven-preset accessor property fails with identity read count 2 instead of 1 on invalid ownership fallback."
+  "2026-11-03T12:40:09.515Z",codex-presets-191-1103,"Fix complete: WorkspaceSnapshot.secretSettingPaths retains known legacy provenance; direct stored-destination classification and incoming paths form one set before seed/replace guards and output redaction. Stored settings are inspected without resolution or normalization. Ordinary comparisons redact overlapping parent/child paths across JSON-shape changes; safe prefixes and external references remain allowed. The fallback now uses captured presetId. Revert proof: removing both workspace-provenance inputs kills all 3 stored-sensitivity tests (prefix accepted, credential escaped ordinary output, replace reached normalization); restoring definition.id kills the extended accessor test (2 reads); restoring exact-path-only mapping kills the changed-shape byte oracle. Each mutation was isolated and restored byte-for-byte; fixed focused suite passes 4/4, build:test passes."
+  "2026-11-03T13:04:29.987Z",codex-presets-191-1103,"npm run release:check passed unchanged thresholds: 344/344 tests, zero failures/skips/cancellations, all 36 required source files at 100.00% lines/branches/functions. Typecheck, lint, docstrings, production audit, package dry-run, changelog check and both release verifiers passed. The packed consumer matrix passed under npm/Node and the Bun CLI. dist rebuilt; git fetch --tags preceded npm run changelog:full, whose output is unchanged. Focused linked command also passed 4/4 via pm test pm-yaji --run --only-last --progress (result tracking is disabled in project policy; this comment records the result). The optional bun run release:check is now running on identical source."
+  "2026-11-03T13:20:41.105Z",codex-presets-191-1103,"bun run release:check also passed: 344/344 tests, zero failures/skips/cancellations/todo; all 36 required source files at 100.00% lines/branches/functions. Both complete release-check entrypoints pass on unchanged source and thresholds, including audits, packaging, changelog and release verifiers. Final review-round result: stored sensitive prefix and all three replacement trees now use snapshot provenance before guards; ordinary diffs redact across shape changes; safe twins remain allowed; captured preset identity survives the fallback. Three independent revert mutations were killed and fixed source restored. Known legacy locations outside the explicit reference destination require retained snapshot secretSettingPaths, now documented. No other issue found in scope. Leaving the item in_progress for orchestrator verification; releasing this claim before committing code, generated dist and tracker evidence."
+files[5]{path,scope}:
+  dist/diff.js,project
+  dist/params.d.ts,project
+  src/diff.ts,project
+  src/params.ts,project
+  tests/artifact-state.test.ts,project
+tests[5]:
+  - command: CI=true node --test tests/artifact-state.test.ts
+    scope: project
+    provenance:
+      author: pi-presets-qz1k-salvage-1103
+      created_at: "2026-11-03T09:31:08.314Z"
+      source_kind: local_mutation
+      source_ref: fix/sensitive-legacy-setting-refusals
+  - command: CI=true node --test --test-concurrency=2 tests/artifact-state.test.ts tests/diff.test.ts tests/params-review.test.ts tests/params-boundaries.test.ts tests/settings.test.ts tests/shared.test.ts tests/seed-normalization.test.ts tests/seeds.test.ts
+    scope: project
+    provenance:
+      author: pi-presets-qz1k-salvage-1103
+      created_at: "2026-11-03T10:05:24.184Z"
+      source_kind: local_mutation
+      source_ref: fix/sensitive-legacy-setting-refusals
+  - command: "CI=true node --test --test-name-pattern=\"stored sensitive|stored secret provenance|SDK diff requires complete payloads\" tests/artifact-state.test.ts"
+    scope: project
+    provenance:
+      author: codex-presets-191-1103
+      created_at: "2026-11-03T12:40:19.924Z"
+      source_kind: local_mutation
+      source_ref: fix/sensitive-legacy-setting-refusals
+  - command: "npm run release:check"
+    scope: project
+    timeout_seconds: 2400
+    provenance:
+      author: codex-presets-191-1103
+      created_at: "2026-11-03T13:04:34.114Z"
+      source_kind: local_mutation
+      source_ref: fix/sensitive-legacy-setting-refusals
+  - command: "bun run release:check"
+    scope: project
+    timeout_seconds: 2400
+    provenance:
+      author: codex-presets-191-1103
+      created_at: "2026-11-03T13:20:43.468Z"
+      source_kind: local_mutation
+      source_ref: fix/sensitive-legacy-setting-refusals
+docs[1]{path,scope}:
+  README.md,project
+body: ""

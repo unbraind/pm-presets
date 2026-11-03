@@ -458,9 +458,11 @@ export function redactSecretValuesDeep(value: unknown, secretValues: readonly st
  * the explicit secret_references destination even for static references and
  * empty manifests. Emitted surfaces redact those leaves regardless of the
  * value they currently hold. Arrays are atomic (mirroring the diff's model).
+ * Stored snapshots can be inspected directly, without resolving or normalizing
+ * their legacy values; absent settings have no sensitive destinations.
  */
 export function collectSecretSettingPaths(
-  settings: PresetSettingsPatch,
+  settings: unknown,
   manifest: PresetParameterManifest,
 ): string[] {
   const secretNames = new Set(

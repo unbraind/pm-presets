@@ -349,8 +349,16 @@ export async function applyPreset(
   }
 ): Promise<void> {
   const { options } = context;
+  // Capture the invocation's identity, flags and payloads once, before any
+  // await: SDK getters that mutate during normalization cannot change the
+  // applied state, and the writer must consume exactly what was validated.
+  const presetId = input.presetId;
+  const sourceSettings = input.settings;
+  const sourceTemplates = input.templates;
+  const injected = options.resolvedParameterValues as ResolvedParameterValues | undefined;
   const dryRun = readBooleanOption(options, "dryRun", "dry-run");
   const force = readBooleanOption(options, "force");
+  const withSeeds = readBooleanOption(options, "withSeeds", "with-seeds");
   const replace = readBooleanOption(options, "replace");
   const prefixOverride = readStringOption(options, "prefix");
 
@@ -362,26 +370,25 @@ export async function applyPreset(
   // from a params file), so settings, templates and the later seed step all
   // use ONE resolution of the caller's input.
   const manifest = input.parameters ?? [];
-  let effectiveSettings = input.settings;
-  let effectiveTemplates = input.templates;
+  let effectiveSettings = sourceSettings;
+  let effectiveTemplates = sourceTemplates;
   let occurrenceCount = 0;
   let parameterValues: Readonly<Record<string, string>> = {};
   try {
-    const injected = options.resolvedParameterValues as ResolvedParameterValues | undefined;
     const resolved = injected === undefined
       ? resolveParameterValues(manifest, readSuppliedParameterValues(options))
       : (assertResolvedParameterValues(manifest, injected), injected);
-    parameterValues = resolved.values;
-    const substitution = resolveParameterizedPreset(manifest, resolved.values, {
-      settings: input.settings,
-      templates: input.templates,
+    parameterValues = { ...resolved.values };
+    const substitution = resolveParameterizedPreset(manifest, parameterValues, {
+      settings: effectiveSettings,
+      templates: effectiveTemplates,
     });
     effectiveSettings = substitution.settings as PresetSettingsPatch;
     effectiveTemplates = substitution.templates as PresetTemplateMap;
     occurrenceCount = substitution.occurrences;
-    const views = buildParameterViews(manifest, resolved.values).filter((view) => Object.hasOwn(resolved.values, view.name));
+    const views = buildParameterViews(manifest, parameterValues).filter((view) => Object.hasOwn(parameterValues, view.name));
     const summary = views
-      .map((view) => `${view.name}=${resolved.values[view.name]} (${resolved.sources[view.name]})`)
+      .map((view) => `${view.name}=${parameterValues[view.name]} (${resolved.sources[view.name]})`)
           .join(", ");
     if (views.length > 0) console.log(`Resolved ${views.length} parameter(s), ${occurrenceCount} binding occurrence(s): ${summary}`);
   } catch (error) {
@@ -407,21 +414,25 @@ export async function applyPreset(
     ...effectiveSettings,
     id_prefix: prefixOverride ?? effectiveSettings.id_prefix,
   };
-  const record = input.presetId ? presetArtifactRecord(storedSettings, input.presetId) : undefined;
-  if (input.presetId) {
+  const record = presetId ? presetArtifactRecord(storedSettings, presetId) : undefined;
+  if (presetId) {
     const history = await readPresetApplicationHistory(pmDir);
     if (history.errors.length) throw new ParameterRefusal("artifact_unreadable", "Audited preset settings failed: cannot verify history/_workspace.jsonl; inspect the host history verification before applying.");
-    const historical = ownArtifact(history.records, input.presetId);
+    const historical = ownArtifact(history.records, presetId);
     if (record && historical === undefined) throw new ParameterRefusal("artifact_unreadable", "Managed seed ownership has no verified history/_workspace.jsonl application. Restore the host audit before applying.");
-    if (historical !== undefined && !artifactValuesEqual(record, historical ?? undefined)) throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${input.presetId}. Restore that record through the host SDK before reconciling items.`);
+    if (historical !== undefined && !artifactValuesEqual(record, historical ?? undefined)) throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${presetId}. Restore that record through the host SDK before reconciling items.`);
   }
   let admittedRecord = record;
-  const seeds = input.presetId && (readBooleanOption(options, "withSeeds", "with-seeds") || record)
-    ? (await import("../seeds.ts")).resolvedSeedsForPreset(input.presetId, parameterValues) : undefined;
+  // The complete seed inventory can only be inferred for a registered catalog
+  // member; an absent, unknown or prototype-inherited identity must refuse
+  // before any write instead of silently selecting an empty inventory.
+  if (withSeeds && !(await import("../registry.ts")).PRESET_REGISTRY.some(({ id }) => id === presetId)) throw new ParameterRefusal("invalid_artifact_record", "Provide a registered preset identity before selecting managed seeds; the complete seed inventory cannot otherwise be inferred.");
+  const seeds = presetId && (withSeeds || record)
+    ? (await import("../seeds.ts")).resolvedSeedsForPreset(presetId, parameterValues) : undefined;
   const client = context.sdk?.client;
   requireSeedCapabilities(seeds?.length ?? 0, client);
   const seedTypes = seeds?.length ? await readSeedTypes(pmDir, client) : undefined;
-  let desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds, record, replace, seedTypes });
+  let desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: presetId, seeds, record, replace, seedTypes });
   let effectivePatch = desired.settings;
   // Overrides are final settings input too: they must not reintroduce bindings.
   resolveSettingsWithParameters([], {}, effectivePatch);
@@ -451,18 +462,18 @@ export async function applyPreset(
   const applyWrites = async (): Promise<void> => {
     // Enrollment/ids are workspace state, so refresh them after admission. Two
     // first-time contenders must converge on the first owner's stable ids.
-    if (input.presetId) {
-      const currentRecord = presetArtifactRecord(readJsonObject(settingsPath, "settings.json"), input.presetId);
+    if (presetId) {
+      const currentRecord = presetArtifactRecord(readJsonObject(settingsPath, "settings.json"), presetId);
       const history = await readPresetApplicationHistory(pmDir);
       if (history.errors.length) throw new ParameterRefusal("artifact_unreadable", "Cannot verify history/_workspace.jsonl before writing managed artifacts.");
-      const historical = ownArtifact(history.records, input.presetId);
+      const historical = ownArtifact(history.records, presetId);
       if (currentRecord && historical === undefined) throw new ParameterRefusal("artifact_unreadable", "Managed seed ownership has no verified history/_workspace.jsonl application. Restore the host audit before writing.");
-      if (historical !== undefined && !artifactValuesEqual(currentRecord, historical ?? undefined)) throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${input.presetId}. Restore ownership before retrying.`);
+      if (historical !== undefined && !artifactValuesEqual(currentRecord, historical ?? undefined)) throw new ParameterRefusal("invalid_artifact_record", `Ownership differs from the last applied history: settings.json#preset_artifacts.${presetId}. Restore ownership before retrying.`);
       admittedRecord = currentRecord;
       if (!artifactValuesEqual(record, currentRecord)) {
-        if (record) throw new ParameterRefusal("invalid_artifact_record", `Ownership changed while waiting: settings.json#preset_artifacts.${input.presetId}. Re-diff before retrying.`);
-        const currentSeeds = (await import("../seeds.ts")).resolvedSeedsForPreset(input.presetId, parameterValues);
-        desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: input.presetId, seeds: currentSeeds, record: currentRecord, replace, seedTypes: await readSeedTypes(pmDir, client) });
+        if (record) throw new ParameterRefusal("invalid_artifact_record", `Ownership changed while waiting: settings.json#preset_artifacts.${presetId}. Re-diff before retrying.`);
+        const currentSeeds = (await import("../seeds.ts")).resolvedSeedsForPreset(presetId, parameterValues);
+        desired = await computeDesiredPresetState({ settings: settingsPatch, templates: effectiveTemplates, presetId: presetId, seeds: currentSeeds, record: currentRecord, replace, seedTypes: await readSeedTypes(pmDir, client) });
         effectivePatch = desired.settings;
         requireSeedCapabilities(desired.seeds.length, client);
       }
@@ -496,7 +507,7 @@ export async function applyPreset(
     if (stale.length > 0 && !force) throw new ParameterRefusal("stale_artifacts", `Application would leave stale artifacts: ${stale.join(", ")}. Inspect them and retry with --force to reconcile the complete desired state.`);
     try {
       await sdkMutation({
-        operationId: `pm-presets-${input.presetId ?? "custom"}-${randomUUID()}`,
+        operationId: `pm-presets-${presetId ?? "custom"}-${randomUUID()}`,
         dryRun,
         ...(replace ? { replaceSubtrees: REPLACE_SETTINGS_TREES } : {}),
         mutate: (current) => {
@@ -505,7 +516,7 @@ export async function applyPreset(
           // rotate a pre-existing literal into append-only before/after history.
           const stored = readJsonObject(settingsPath, "settings.json");
           resolveSettingsWithParameters([], {}, stored as PresetSettingsPatch);
-          if (input.presetId && !artifactValuesEqual(admittedRecord, presetArtifactRecord(stored, input.presetId))) throw new ParameterRefusal("invalid_artifact_record", `Ownership changed before the audited write: settings.json#preset_artifacts.${input.presetId}. Re-diff before retrying.`);
+          if (presetId && !artifactValuesEqual(admittedRecord, presetArtifactRecord(stored, presetId))) throw new ParameterRefusal("invalid_artifact_record", `Ownership changed before the audited write: settings.json#preset_artifacts.${presetId}. Re-diff before retrying.`);
           const mergedSettings = mergePresetSettings(
             { ...stored, ...current } as unknown as JsonObject,
             effectivePatch as unknown as JsonObject,
@@ -558,7 +569,7 @@ export async function applyPreset(
     if (!dryRun && templates.some(({ createOnly }) => createOnly)) {
       // A reservation is not a birth receipt: claim templates only after this run's
       // exclusive creations succeeded, so a failed apply cannot adopt later collisions.
-      try { await sdkMutation({ operationId: `pm-presets-${input.presetId ?? "custom"}-${randomUUID()}`, mutate: (current) => {
+      try { await sdkMutation({ operationId: `pm-presets-${presetId ?? "custom"}-${randomUUID()}`, mutate: (current) => {
         const stored = readJsonObject(settingsPath, "settings.json");
         if (!artifactValuesEqual(ownArtifact(stored, "preset_ownership"), writtenOwnership)) throw new ParameterRefusal("invalid_artifact_record", "Preset provenance changed before template ownership was recorded; inspect the tracker before retrying.");
         const ownership = { ...writtenOwnership };
@@ -593,7 +604,7 @@ export async function applyPreset(
         try { return [path.basename(templatePath), JSON.parse(fs.readFileSync(templatePath, "utf8"))]; }
         catch { return [path.basename(templatePath), undefined]; }
       }));
-      const writtenHistory = input.presetId ? await readPresetApplicationHistory(pmDir) : { records: {}, errors: [] };
+      const writtenHistory = presetId ? await readPresetApplicationHistory(pmDir) : { records: {}, errors: [] };
       const remaining = compareDesiredPresetState(desired, {
         settings: readJsonObject(settingsPath, "settings.json"), templates: documents,
         seeds: await readSeedArtifacts(pmDir, desired.seeds.map(({ id }) => id), client),

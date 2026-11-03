@@ -54,40 +54,48 @@ export function presetArtifactRecord(settings, presetId) {
 }
 /** Compute settings, complete template files, stable seeds and ownership together. */
 export async function computeDesiredPresetState(input) {
-    if (Object.hasOwn(input.settings, "preset_artifacts") || Object.hasOwn(input.settings, "preset_ownership"))
+    // Capture every caller-supplied byte before the first await: objects handed
+    // to the planner may be mutated while normalization runs, and the plan must
+    // describe the exact state that was validated.
+    const { settings: sourceSettings, templates: sourceTemplates, seeds: sourceSeeds, seedTypes, record: sourceRecord, presetId, replace } = input;
+    if (Object.hasOwn(sourceSettings, "preset_artifacts") || Object.hasOwn(sourceSettings, "preset_ownership"))
         throw new ParameterRefusal("invalid_manifest", "settings.preset_artifacts is workspace-local ownership managed by apply; omit it from authored preset settings.");
-    if (input.record)
-        presetArtifactRecord({ preset_artifacts: { [input.presetId]: input.record } }, input.presetId);
-    if (input.seeds?.length && !input.presetId)
-        throw new ParameterRefusal("invalid_artifact_record", "Provide a preset id before enrolling managed seeds.");
     try {
         // Final prefix overrides and artifact payloads use the same strict binding
         // checks. Legacy sensitive settings remain available to the diff redactor;
         // application validates its entire settings patch before planning.
-        resolveParameterizedPreset([], {}, { settings: { id_prefix: input.settings.id_prefix }, templates: input.templates, seeds: input.seeds });
-        const settings = structuredClone(input.settings);
-        if (input.replace) {
-            const canonical = await replacementSettings(input.settings);
+        const checked = resolveParameterizedPreset([], {}, { settings: { id_prefix: sourceSettings.id_prefix }, templates: sourceTemplates, seeds: sourceSeeds });
+        const settings = structuredClone(sourceSettings);
+        settings.id_prefix = checked.settings.id_prefix;
+        const templates = structuredClone(checked.templates);
+        const seedItems = checked.seeds === undefined ? undefined : structuredClone(checked.seeds);
+        const record = sourceRecord === undefined ? undefined : structuredClone(sourceRecord);
+        if (record !== undefined)
+            presetArtifactRecord({ preset_artifacts: { [presetId]: record } }, presetId);
+        if ((record !== undefined || seedItems?.length) && !presetId)
+            throw new ParameterRefusal("invalid_artifact_record", "Provide a preset id before enrolling or recovering managed seeds.");
+        if (replace) {
+            const canonical = await replacementSettings(settings);
             for (const tree of ["governance", "validation", "testing"]) {
                 delete settings[tree];
                 Object.defineProperty(settings, tree, { value: canonical[tree], enumerable: true, configurable: true, writable: true });
             }
         }
-        if (input.record && input.record.seedIds.some((id, index) => !id.endsWith(`preset-${input.presetId}-${index}`)))
+        if (record && record.seedIds.some((id, index) => !id.endsWith(`preset-${presetId}-${index}`)))
             throw new ParameterRefusal("invalid_artifact_record", "Managed seed ids must retain their preset and slot identity; restore ownership before reconciling any item.");
-        const seeds = (input.seeds ?? []).map((item, index) => ({
-            id: input.record?.seedIds[index] ?? `${settings.id_prefix}preset-${input.presetId}-${index}`,
-            item: normalizeSeedArtifact(item, input.seedTypes),
+        const seeds = (seedItems ?? []).map((item, index) => ({
+            id: record?.seedIds[index] ?? `${settings.id_prefix}preset-${presetId}-${index}`,
+            item: normalizeSeedArtifact(item, seedTypes),
         }));
         if (seeds.some(({ id }) => !/^[a-z0-9][a-z0-9-]{0,127}$/.test(id)))
             throw new ParameterRefusal("invalid_artifact_record", "Use a lowercase letter/digit/hyphen prefix before enrolling managed seeds.");
-        if (input.record && input.record.seedIds.length !== seeds.length)
+        if (record && record.seedIds.length !== seeds.length)
             throw new ParameterRefusal("invalid_artifact_record", "The managed seed inventory changed; inspect the preset's seed ownership before migrating it.");
-        const ownership = input.presetId && input.seeds !== undefined ? { presetId: input.presetId, record: { version: 1, seedIds: seeds.map(({ id }) => id) } } : undefined;
+        const ownership = presetId && seedItems !== undefined ? { presetId, record: { version: 1, seedIds: seeds.map(({ id }) => id) } } : undefined;
         if (ownership) {
             Object.defineProperty(settings, "preset_artifacts", { value: { [ownership.presetId]: ownership.record }, enumerable: true, configurable: true, writable: true });
         }
-        return { settings, templates: Object.entries(input.templates).map(([filename, document]) => ({ filename, document: structuredClone(document) })), seeds, replace: input.replace === true, ownership };
+        return { settings, templates: Object.entries(templates).map(([filename, document]) => ({ filename, document })), seeds, replace: replace === true, ownership };
     }
     catch (error) {
         if (error instanceof ParameterRefusal)
