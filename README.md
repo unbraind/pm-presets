@@ -285,6 +285,11 @@ Apply stores **only `@DEPLOY_TOKEN`**, including in audited append-only history.
 Dry-run, diff and parameter summaries display references, never credentials.
 Static references such as `secret_references: { deploy: "@DEPLOY_TOKEN" }`
 receive the same protection: diffs hide legacy credentials at those destinations.
+SDK callers retain known legacy sensitivity in `WorkspaceSnapshot.secretSettingPaths`.
+Diff combines those stored paths with incoming provenance before comparing: sensitive
+prefixes refuse managed seed comparisons, and sensitive governance, validation or
+testing paths refuse `--replace` with `invalid_secret_reference`. Ordinary comparisons
+redact both sides of those locations, including when their JSON shapes differ.
 Show may retain the authored occurrence for an unanswered declaration. Commands
 do not read credential environment variables. A consuming integration calls
 `resolveSecretReference("@DEPLOY_TOKEN")` only when the credential is needed;

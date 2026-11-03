@@ -19,6 +19,8 @@ type JsonObject = Record<string, unknown>;
 export interface WorkspaceSnapshot {
     /** Parsed settings.json (or `undefined` if absent/unreadable). */
     settings: JsonObject | undefined;
+    /** Known sensitive stored locations, retained when legacy values lose authored bindings. */
+    secretSettingPaths?: readonly string[];
     /** Template names present in the workspace `templates/` directory. */
     templateNames: string[];
     /** Complete parsed documents; missing or unreadable contents cannot match. */

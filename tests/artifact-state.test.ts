@@ -172,6 +172,13 @@ test("property: SDK diff requires complete payloads for every declared artifact"
     assert.equal(capturedSelection.inSync, false);
     assert.equal(selectionReads, 1, "seed selection must be captured once");
     assert.equal(capturedSelection.seeds.missing.length, definition.seedItems!.length);
+    let identityReads = 0;
+    const accessorIdentity = { ...definition, get id() { identityReads++; return identityReads === 1 ? definition.id : "kanban" as const; } };
+    const invalidOwnership = { ...snapshot, settings: { ...definition.settings, preset_artifacts: { [definition.id]: { version: 1, seedIds: ["foreign-id"] } } } };
+    const recoveredIdentity = await computePresetDiff(accessorIdentity, invalidOwnership, { replace: true });
+    assert.equal(identityReads, 1, "fallback drift must retain the captured preset identity");
+    assert.equal(recoveredIdentity.presetId, definition.id);
+    assert.ok(recoveredIdentity.artifacts.includes(`settings.json#preset_artifacts.${definition.id}`));
     const unresolved = { ...definition, settings: { ...definition.settings, public_note: "${param:missing}" } };
     const sameInvalidState = { ...snapshot, settings: unresolved.settings };
     for (const diff of [await computePresetDiff(unresolved, sameInvalidState), await computeParameterizedDiff(unresolved, [], {}, sameInvalidState)]) {
@@ -229,6 +236,92 @@ test("plans and writers retain one snapshot across asynchronous normalization an
   const items = (await client.listAllComplete()).items;
   assert.equal(items.length, 1); assert.equal(items[0].title, "Define the alpha first roadmap initiative");
   assert.equal((await computePresetDiff(requirePresetDefinition("startup-roadmap", { projectKey: "alpha" }), await readWorkspaceSnapshot(root, client))).inSync, true);
+});
+
+test("stored sensitive prefix refuses seeded comparison against a safe incoming prefix", async (t) => {
+  const root = fs.mkdtempSync(join(tmpdir(), "preset-stored-sensitive-prefix-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const credential = "sc-0123456789abcdef-", definition = requirePresetDefinition("indie-dev");
+  fs.writeFileSync(join(root, "settings.json"), JSON.stringify({ id_prefix: credential }));
+  const snapshot = { ...await readWorkspaceSnapshot(root), secretSettingPaths: ["id_prefix"] };
+  const before = trackerBytes(root);
+  for (const compare of [
+    () => computePresetDiff(definition, snapshot, { withSeeds: true }),
+    () => computePresetDiff(definition, snapshot, { withSeeds: true, replace: true }),
+    () => computeParameterizedDiff(definition, [], {}, snapshot, { withSeeds: true }),
+    () => computePresetDiff(definition, snapshot, { withSeeds: true, prefix: "override-" }),
+    () => computePresetDiff(definition, { ...snapshot, settings: { ...snapshot.settings, preset_artifacts: { [definition.id]: { version: 1, seedIds: [] } } } }),
+  ]) await assert.rejects(compare, (error: any) => {
+    assert.equal(error.code, "invalid_secret_reference"); assert.equal(error.exitCode, 2);
+    assertNoCredentials(String(error), [credential]); return true;
+  });
+  const unseeded = await computePresetDiff(definition, snapshot);
+  assertNoCredentials(JSON.stringify(unseeded), [credential]);
+  assert.deepEqual(unseeded.settings.find(({ path }) => path === "id_prefix"), { path: "id_prefix", status: "change", preset: "<redacted>", workspace: "<redacted>" });
+  assert.equal(trackerBytes(root), before);
+
+  const safe = { ...snapshot, settings: { id_prefix: "previous-" }, secretSettingPaths: [] };
+  for (const replace of [false, true]) {
+    const diff = await computePresetDiff(definition, safe, { withSeeds: true, replace });
+    assert.deepEqual(diff.settings.find(({ path }) => path === "id_prefix"), { path: "id_prefix", status: "change", preset: definition.settings.id_prefix, workspace: "previous-" });
+    assert.equal(diff.seeds.missing.length, definition.seedItems!.length);
+    assert.equal(diff.inSync, false);
+  }
+});
+
+test("stored secret provenance redacts ordinary comparisons across changed JSON shapes", async () => {
+  const definition = requirePresetDefinition("indie-dev"), credential = "synthetic-stored-shape-credential";
+  for (const { stored, incoming, secretPath, diffPath } of [
+    { stored: credential, incoming: "public-value", secretPath: "hook.token", diffPath: "hook.token" },
+    { stored: [credential], incoming: "public-value", secretPath: "hook.token", diffPath: "hook.token" },
+    { stored: { nested: credential }, incoming: "public-value", secretPath: "hook.token.nested", diffPath: "hook.token" },
+    { stored: { nested: [credential] }, incoming: { nested: "public-value" }, secretPath: "hook.token", diffPath: "hook.token.nested" },
+  ]) {
+    const input = { ...definition, settings: { ...definition.settings, hook: { token: incoming } } };
+    const snapshot = { settings: { hook: { token: stored } }, templateNames: [], secretSettingPaths: [secretPath] };
+    const before = JSON.stringify({ input, snapshot });
+    for (const diff of [await computePresetDiff(input, snapshot), await computeParameterizedDiff(input, [], {}, snapshot)]) {
+      assertNoCredentials(JSON.stringify(diff), [credential]);
+      assert.equal(diff.settings.find(({ path }) => path === diffPath)?.preset, "<redacted>");
+      assert.equal(diff.settings.find(({ path }) => path === diffPath)?.workspace, "<redacted>");
+      assert.equal(diff.inSync, false);
+    }
+    assert.equal(JSON.stringify({ input, snapshot }), before);
+  }
+  const referenceOnly = { ...definition, settings: { ...definition.settings, secret_references: { deploy: "@NEW_TOKEN" } } };
+  const permitted = await computePresetDiff(referenceOnly, { settings: { id_prefix: "previous-", secret_references: { deploy: "@PREVIOUS_TOKEN" } }, templateNames: [], secretSettingPaths: ["secret_references.deploy"] }, { withSeeds: true, replace: true });
+  assert.equal(permitted.settings.find(({ path }) => path === "secret_references.deploy")?.workspace, "@PREVIOUS_TOKEN");
+});
+
+test("stored sensitive replacement trees refuse safe incoming settings before normalization", async (t) => {
+  const definition = requirePresetDefinition("indie-dev"), credential = "synthetic-stored-tree-credential";
+  let attempted = 0;
+  const original = fs.promises.mkdtemp;
+  const mock = t.mock.method(fs.promises, "mkdtemp", (async (prefix: any, options: any) => {
+    if (String(prefix).includes("preset-replacement-")) { attempted++; throw new Error("unexpected normalization tracker"); }
+    return original(prefix, options);
+  }) as typeof fs.promises.mkdtemp);
+  syncBuiltinESMExports();
+  try {
+    for (const tree of ["governance", "validation", "testing"] as const) {
+      const incoming = { ...definition, settings: { ...definition.settings, [tree]: { ...definition.settings[tree], legacy_credential: "public-value" } } };
+      const snapshot = { settings: { ...definition.settings, [tree]: { ...definition.settings[tree], legacy_credential: credential } }, templateNames: [], secretSettingPaths: [`${tree}.legacy_credential`] };
+      const before = JSON.stringify(snapshot);
+      for (const compare of [() => computePresetDiff(incoming, snapshot, { replace: true }), () => computeParameterizedDiff(incoming, [], {}, snapshot, { replace: true })]) {
+        await assert.rejects(compare, (error: any) => {
+          assert.equal(error.code, "invalid_secret_reference"); assert.equal(error.exitCode, 2);
+          assertNoCredentials(String(error), [credential]); return true;
+        });
+      }
+      const unseeded = await computePresetDiff(incoming, snapshot);
+      assertNoCredentials(JSON.stringify(unseeded), [credential]);
+      assert.equal(unseeded.settings.find(({ path }) => path === `${tree}.legacy_credential`)?.workspace, "<redacted>");
+      assert.equal(JSON.stringify(snapshot), before);
+    }
+    assert.equal(attempted, 0, "stored sensitivity must be checked before normalization starts");
+  } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+  const permitted = await computePresetDiff(definition, { settings: { ...definition.settings, governance: { preset: "minimal" } }, templateNames: [] }, { replace: true });
+  assert.equal(permitted.settings.find(({ path }) => path === "governance.preset")?.workspace, "minimal");
 });
 
 test("replacement diff never materializes legacy sensitive SDK settings in temporary tracker history", async (t) => {

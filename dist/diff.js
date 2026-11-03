@@ -71,11 +71,14 @@ export async function computePresetDiff(definition, snapshot, options = {}) {
     catch {
         errors.push("settings.json");
     }
-    // Destination sensitivity is mandatory even for direct SDK definitions
-    // without authored parameter provenance or with an empty manifest.
+    // Both sides retain sensitivity before guards and output mapping. Inspect
+    // stored destinations directly: legacy workspace values must never pass
+    // through parameter resolution or isolated normalization to classify them.
     const secretPaths = new Set([
         ...collectSecretSettingPaths(desiredSettings, []),
         ...(secretSettingPaths ?? []),
+        ...collectSecretSettingPaths(snapshot.settings, []),
+        ...(snapshot.secretSettingPaths ?? []),
     ]);
     // A sensitive leaf outside the external-reference destination can never
     // be called synchronized: application owns the same refusal.
@@ -122,7 +125,7 @@ export async function computePresetDiff(definition, snapshot, options = {}) {
     catch (error) {
         if (!(error instanceof ParameterRefusal) || error.code !== "invalid_artifact_record" || !record)
             throw error;
-        errors.push(`settings.json#preset_artifacts.${definition.id}`);
+        errors.push(`settings.json#preset_artifacts.${presetId}`);
         desired = await computeDesiredPresetState({ ...planInput, record: undefined });
     }
     const presetSettings = desired.settings;
@@ -169,7 +172,7 @@ export async function computePresetDiff(definition, snapshot, options = {}) {
     return {
         presetId: presetId,
         inSync: artifacts.length === 0,
-        settings: settings.map((entry) => secretPaths.has(entry.path) ? redactSettingEntry(entry) : entry),
+        settings: settings.map((entry) => [...secretPaths].some((name) => name === entry.path || name.startsWith(`${entry.path}.`) || entry.path.startsWith(`${name}.`)) ? redactSettingEntry(entry) : entry),
         templates: { missing, present, changed },
         seeds: seedDiff,
         artifacts,
