@@ -6,9 +6,7 @@ status: in_progress
 priority: 1
 tags[3]: presets,privacy,security
 created_at: "2026-11-03T09:25:10.433Z"
-updated_at: "2026-11-03T11:02:37.432Z"
-assignee: pi-presets-qz1k-salvage-1103
-claim_principal: pi-presets-qz1k-salvage-1103
+updated_at: "2026-11-03T11:03:06.592Z"
 author: pi-presets-qz1k-salvage-1103
 comments[4]{created_at,author,text}:
   "2026-11-03T09:29:33.551Z",pi-presets-qz1k-salvage-1103,"Salvage plan from the unmerged review work on the typed-binding item (leftover worktree diff, branch fix/typed-parameter-binding-review): (1) diffPreset refuses invalid_secret_reference when a sensitive legacy id_prefix would mint public seed ids; (2) diff --replace refuses invalid_secret_reference when sensitive legacy governance/validation/testing settings would enter isolated normalization history, and replacement normalization never copies a caller prefix into the scratch tracker; (3) diff and apply capture definition identity, settings, template documents, seed inventory, flags and resolved values once before any await, so mutating SDK accessors cannot change compared state (planner validates a record with undefined-sentinel semantics too); (4) the seed writer requires a withSeeds id to be a registered catalog member, refusing unknown and Object.prototype names before any write. Test-first: each behaviour gets a test that fails on current main, then the port. Each refusal is typed, leaves tracker bytes unchanged, and has a must-allow twin."
