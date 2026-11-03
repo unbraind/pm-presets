@@ -10,8 +10,9 @@ import { applyPreset } from "../src/presets/shared.ts";
 import { SETTINGS, TEMPLATES, PARAMETERS } from "../src/presets/startup-roadmap/index.ts";
 import { requirePresetDefinition } from "../src/catalog.ts";
 import { computeParameterizedDiff, computePresetDiff, readWorkspaceSnapshot } from "../src/diff.ts";
-import { trackerBytes } from "./fixtures/params-secret-oracle.ts";
-import { artifactValuesEqual, computeDesiredPresetState, compareDesiredPresetState, ownArtifact, presetArtifactRecord, seedArtifactMatches } from "../src/desired-state.ts";
+import { assertNoCredentials, secretCorpus, trackerBytes } from "./fixtures/params-secret-oracle.ts";
+import { resolveParameterValues } from "../src/params.ts";
+import { artifactValuesEqual, computeDesiredPresetState, compareDesiredPresetState, normalizeSeedArtifact, ownArtifact, presetArtifactRecord, seedArtifactMatches } from "../src/desired-state.ts";
 import { readSeedArtifacts } from "../src/artifact-reader.ts";
 import { replacementSettings } from "../src/settings-replacement.ts";
 import { createExtensionTestHarness } from "@unbrained/pm-cli/sdk/testing";
@@ -119,6 +120,8 @@ test("complete planner validates ownership and compares every controlled field w
   assert.deepEqual(presetArtifactRecord(desired.settings as any, "p"), record);
   assert.equal((await computeDesiredPresetState(input)).seeds[0].id, "new-preset-p-0");
   await assert.rejects(() => computeDesiredPresetState({ ...input, presetId: undefined }), { code: "invalid_artifact_record" });
+  await assert.rejects(() => computeDesiredPresetState({ ...input, record: null as any }), { code: "invalid_artifact_record" });
+  await assert.rejects(() => computeDesiredPresetState({ settings: { id_prefix: "p-" }, templates: {}, record: { version: 1, seedIds: [] } }), { code: "invalid_artifact_record" });
   await assert.rejects(() => computeDesiredPresetState({ ...input, record: { version: 1, seedIds: [] } }), { code: "invalid_artifact_record" });
   await assert.rejects(() => computeDesiredPresetState({ ...input, record: { version: 1, seedIds: ["foreign-id"] } }), { code: "invalid_artifact_record" });
   await assert.rejects(() => computeDesiredPresetState({ ...input, settings: { id_prefix: "bad_" } }), { code: "invalid_artifact_record" });
@@ -145,6 +148,30 @@ test("property: SDK diff requires complete payloads for every declared artifact"
     const definition = requirePresetDefinition(id);
     const snapshot = { settings: definition.settings as any, templateNames: definition.templates.map(({ name }) => name), templateDocuments: definition.templateDocuments };
     assert.equal((await computePresetDiff(definition, snapshot)).inSync, true);
+    let documentReads = 0;
+    const accessorDocuments = { ...definition, get templateDocuments() { documentReads++; return documentReads === 1 ? definition.templateDocuments : {}; } };
+    const editedDocuments = structuredClone(definition.templateDocuments!);
+    const firstDocument = Object.keys(editedDocuments)[0];
+    if (firstDocument !== undefined) (editedDocuments[firstDocument].options as any).body = "Synthetic manual snapshot drift";
+    const documentDiff = await computePresetDiff(accessorDocuments, { ...snapshot, templateDocuments: editedDocuments });
+    assert.equal(documentDiff.inSync, firstDocument === undefined);
+    if (firstDocument !== undefined) assert.ok(documentDiff.artifacts.includes(`templates/${firstDocument}`));
+    assert.equal(documentReads, 1, "template payloads must be captured once");
+    let settingsReads = 0;
+    const accessorSettings = { ...definition, get settings() { settingsReads++; return settingsReads === 1 ? definition.settings : { id_prefix: "changed-" }; } };
+    assert.equal((await computePresetDiff(accessorSettings, { ...snapshot, settings: { ...definition.settings, id_prefix: "changed-" } })).inSync, false);
+    assert.equal(settingsReads, 1, "planning must consume the exact settings it validated");
+    let inventoryReads = 0;
+    const accessorDefinition = { ...definition, get seedItems() { inventoryReads++; return inventoryReads === 1 ? definition.seedItems : undefined; } };
+    const capturedInventory = await computePresetDiff(accessorDefinition, snapshot, { withSeeds: true });
+    assert.equal(capturedInventory.inSync, false);
+    assert.equal(inventoryReads, 1, "planning must consume the exact inventory it validated");
+    assert.equal(capturedInventory.seeds.missing.length, definition.seedItems!.length);
+    let selectionReads = 0;
+    const capturedSelection = await computePresetDiff(definition, snapshot, { get withSeeds() { selectionReads++; return selectionReads === 1; } });
+    assert.equal(capturedSelection.inSync, false);
+    assert.equal(selectionReads, 1, "seed selection must be captured once");
+    assert.equal(capturedSelection.seeds.missing.length, definition.seedItems!.length);
     const unresolved = { ...definition, settings: { ...definition.settings, public_note: "${param:missing}" } };
     const sameInvalidState = { ...snapshot, settings: unresolved.settings };
     for (const diff of [await computePresetDiff(unresolved, sameInvalidState), await computeParameterizedDiff(unresolved, [], {}, sameInvalidState)]) {
@@ -165,6 +192,90 @@ test("property: SDK diff requires complete payloads for every declared artifact"
       await assert.rejects(() => computePresetDiff({ ...definition, templateDocuments }, snapshot), { code: "unknown_binding", exitCode: 2 });
     }
   }
+});
+
+test("plans and writers retain one snapshot across asynchronous normalization and SDK admission", async (t) => {
+  const definition = requirePresetDefinition("startup-roadmap");
+  const settings = structuredClone(definition.settings), templates = structuredClone(definition.templateDocuments!), seeds = structuredClone(definition.seedItems!);
+  const record = { version: 1 as const, seedIds: ["old-preset-startup-roadmap-0"] };
+  const planned = computeDesiredPresetState({ settings, templates, seeds, record, presetId: definition.id, replace: true });
+  settings.id_prefix = "changed-"; (settings.governance as any).preset = "invalid";
+  (Object.values(templates)[0].options as any).body = "${param:missing}";
+  (seeds[0] as any).title = "${param:missing}";
+  record.seedIds[0] = "changed-preset-startup-roadmap-0";
+  const desired = await planned;
+  assert.equal(desired.settings.id_prefix, definition.settings.id_prefix);
+  assert.equal((desired.settings.governance as any).preset, (definition.settings.governance as any).preset);
+  assert.equal(desired.seeds[0].id, "old-preset-startup-roadmap-0");
+  assert.deepEqual(desired.seeds[0].item, normalizeSeedArtifact(definition.seedItems![0]));
+  assert.deepEqual(desired.templates, Object.entries(definition.templateDocuments!).map(([filename, document]) => ({ filename, document })));
+
+  const root = fs.mkdtempSync(join(tmpdir(), "preset-artifact-capture-")); t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const client = new PmClient({ pmRoot: root, noExtensions: true }); await client.init();
+  const sdk = createExtensionCommandSdk(root, client);
+  const resolved = resolveParameterValues(PARAMETERS, { projectKey: "alpha" });
+  const injected = { ...resolved, values: { ...resolved.values }, sources: { ...resolved.sources } };
+  const options = { withSeeds: true, force: true, resolvedParameterValues: injected };
+  let identityReads = 0;
+  const saved = [console.log, console.warn]; console.log = console.warn = () => {};
+  t.after(() => { [console.log, console.warn] = saved; });
+  const applying = applyPreset({ command: "capture", args: [], options, global: {}, pm_root: root, sdk }, {
+    label: "Roadmap", get presetId() { identityReads++; return identityReads === 1 ? "startup-roadmap" : "unknown-preset"; }, settings: SETTINGS, templates: TEMPLATES, parameters: PARAMETERS, nextSteps: [],
+  });
+  options.withSeeds = false; injected.values["projectKey"] = "beta";
+  await applying;
+  assert.equal(identityReads, 1, "planning must consume the exact identity it validated");
+  assert.equal(JSON.parse(fs.readFileSync(join(root, "settings.json"), "utf8")).id_prefix, "alpha-");
+  const items = (await client.listAllComplete()).items;
+  assert.equal(items.length, 1); assert.equal(items[0].title, "Define the alpha first roadmap initiative");
+  assert.equal((await computePresetDiff(requirePresetDefinition("startup-roadmap", { projectKey: "alpha" }), await readWorkspaceSnapshot(root, client))).inSync, true);
+});
+
+test("replacement diff never materializes legacy sensitive SDK settings in temporary tracker history", async (t) => {
+  const credentials = ["sc-0123456789abcdef-", ...secretCorpus()], definition = requirePresetDefinition("indie-dev");
+  let attempted = 0;
+  const original = fs.promises.mkdtemp;
+  const mock = t.mock.method(fs.promises, "mkdtemp", (async (prefix: any, options: any) => {
+    if (String(prefix).includes("preset-replacement-")) { attempted++; throw new Error("unexpected normalization tracker"); }
+    return original(prefix, options);
+  }) as typeof fs.promises.mkdtemp);
+  syncBuiltinESMExports();
+  try {
+    for (const credential of credentials) for (const tree of ["governance", "validation", "testing"]) {
+      const sensitive = { ...definition, settings: { ...definition.settings, [tree]: { ...(definition.settings as any)[tree], legacy_credential: credential } }, secretSettingPaths: [`${tree}.legacy_credential`] };
+      const snapshot = { settings: sensitive.settings, templateNames: definition.templates.map(({ name }) => name), templateDocuments: definition.templateDocuments };
+      assertNoCredentials(JSON.stringify(await computePresetDiff(sensitive, snapshot)), credentials);
+      await assert.rejects(() => computePresetDiff(sensitive, snapshot, { replace: true }), { code: "invalid_secret_reference", exitCode: 2 });
+      await assert.rejects(() => computeParameterizedDiff(sensitive, [], {}, snapshot, { replace: true }), { code: "invalid_secret_reference", exitCode: 2 });
+    }
+    for (const credential of credentials) {
+      const identity = { ...definition, settings: { ...definition.settings, id_prefix: credential }, secretSettingPaths: ["id_prefix"] };
+      await assert.rejects(() => computePresetDiff(identity, { settings: identity.settings, templateNames: [] }, { withSeeds: true }), { code: "invalid_secret_reference", exitCode: 2 });
+    }
+    assert.equal(attempted, 0, "refusal must precede every temporary tracker write");
+  } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+  const originalRm = fs.promises.rm, observed = new Set<string>();
+  const cleanup = t.mock.method(fs.promises, "rm", (async (file: any, options: any) => {
+    if (typeof file === "string" && basename(file).startsWith("preset-replacement-")) { observed.add(file); assertNoCredentials(trackerBytes(file), credentials); }
+    return originalRm(file, options);
+  }) as typeof fs.promises.rm);
+  syncBuiltinESMExports();
+  try {
+    for (const credential of credentials) {
+      const identity = { ...definition, settings: { ...definition.settings, id_prefix: credential }, secretSettingPaths: ["id_prefix"] };
+      const compared = await computePresetDiff(identity, { settings: identity.settings, templateNames: [], templateDocuments: {} }, { replace: true });
+      assertNoCredentials(JSON.stringify(compared), credentials);
+      assert.ok(compared.artifacts.includes("settings.json"));
+    }
+    assert.ok(observed.size > 0);
+  } finally {
+    cleanup.mock.restore(); syncBuiltinESMExports();
+    for (const root of observed) fs.rmSync(root, { recursive: true, force: true });
+  }
+  const referenceOnly = { ...definition, settings: { ...definition.settings, secret_references: { deploy: "@SAFE_TOKEN" } } };
+  const permitted = await computePresetDiff(referenceOnly, { settings: undefined, templateNames: [] }, { replace: true, withSeeds: true });
+  assert.equal(permitted.settings.find(({ path }) => path === "secret_references.deploy")?.preset, "@SAFE_TOKEN");
+  assertNoCredentials(JSON.stringify(permitted), credentials);
 });
 
 test("unrelated corrupt seeds cannot manufacture drift after another preset applies successfully", async (t) => {
@@ -418,6 +529,11 @@ test("missing capabilities and incomplete native writes never report successful 
   const noAuditBefore = trackerBytes(noAudit);
   await assert.rejects(() => applyPreset({ command: "fault", args: [], options: {}, global: {}, pm_root: noAudit }, { label: "No audit", settings: { id_prefix: "p-" }, templates: {}, nextSteps: [] }), /audited settings capability/);
   assert.equal(trackerBytes(noAudit), noAuditBefore);
+  const nativeClient = new PmClient({ pmRoot: noAudit, noExtensions: true });
+  for (const presetId of [undefined, "", "unknown-preset", ...Object.getOwnPropertyNames(Object.prototype), "prototype"]) {
+    await assert.rejects(() => applyPreset({ command: "fault", args: [], options: { withSeeds: true }, global: {}, pm_root: noAudit, sdk: createExtensionCommandSdk(noAudit, nativeClient) }, { label: "Unknown identity", presetId, settings: { id_prefix: "p-" }, templates: {}, nextSteps: [] }), { code: "invalid_artifact_record", exitCode: 2 });
+    assert.equal(trackerBytes(noAudit), noAuditBefore, "a selected seed inventory cannot silently disappear when identity is absent or unknown");
+  }
 });
 
 test("concurrent first enrollment converges on one managed seed identity under the apply admission", async (t) => {

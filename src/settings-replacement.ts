@@ -16,7 +16,10 @@ export async function replacementSettings(patch: PresetSettingsPatch): Promise<R
   try {
     const sdk = createRequire(import.meta.url)(resolveSimulationSdk([import.meta.url, process.argv[1]])) as typeof import("@unbrained/pm-cli/sdk");
     const client = new sdk.PmClient({ pmRoot: scratch, noExtensions: true });
-    await client.init(patch.id_prefix);
+    // The scratch tracker is public normalization state: a fixed prefix keeps
+    // caller-controlled values (including sensitive legacy prefixes) out of
+    // its settings and history. Only the three public owned trees are copied.
+    await client.init("preset-normalization-");
     const isolated = sdk.createExtensionCommandSdk(scratch, client);
     await isolated.mutateWorkspaceSettings({ operationId: "preset-replacement-plan", replaceSubtrees: trees, mutate: (current) => {
       const result = structuredClone(current);
