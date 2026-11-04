@@ -6,6 +6,10 @@
 
 - Ignore managed extension files so the scheduled issue sync can commit ([pm-11xf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-11xf.toon))
 
+### Security
+
+- Salvage sensitive legacy setting refusals and snapshot capture from the unmerged typed-binding review ([pm-yaji](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-yaji.toon))
+
 ## 2026.11.1 - 2026-11-01
 
 ### Added
