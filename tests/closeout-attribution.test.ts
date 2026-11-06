@@ -51,7 +51,7 @@ test("closeout rejects mitigation-only completion for every explicitly unresolve
   const workflow = readFileSync(".github/workflows/pm-github-closeout.yml", "utf8");
   assert.match(workflow, /post-closeout-script: "closeout:check"/);
   const manifest = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
-  assert.equal(manifest.scripts["closeout:check"], "npm run verify:closeout-attribution && npm run changelog:full");
+  assert.equal(manifest.scripts["closeout:check"], "npm run verify:closeout-attribution && npm run changelog:full -- --no-pending-release");
   assert.ok(manifest.scripts["release:check"].includes("npm run verify:closeout-attribution"));
 });
 
