@@ -2,10 +2,27 @@ id: pm-he6i
 title: "Correct the closeout record: the upstream template SDK defect is mitigated, not fixed"
 description: "Tracks gh:unbraind/pm-presets#184 (filed 2026-10-31, missed by the blind issue watch). The closeout of the upstream-template-defect item marked it delivered with PR #170 and listed it under CHANGELOG 'Fixed', but PR #170 only ships the package's fail-closed adapter mitigation: the host defects remain on upstream main (parseStoredTemplateOptions still assigns arbitrary accepted keys by indexed assignment into normalized, builtinTemplateDocument still indexes BUILTIN_TEMPLATES without an own-property check, and resolveTypeSynonym still indexes the ordinary-object synonym table — re-verified on upstream main 2026-11-02). The canonical item itself says the upstream follow-up stays open and requires host SDK/CLI own-key regression coverage before revisiting those refusals. Action: record a follow-up here that keeps the upstream fix open (watch upstream releases for own-key checks in template parsing and type synonyms), and correct the CHANGELOG wording from 'Fixed' to 'Mitigated (package-side)' so consumers do not read the host defect as repaired."
 type: Issue
-status: open
+status: in_progress
 priority: 2
-tags[3]: closeout,"gh:unbraind/pm-presets#184",upstream
+tags[2]: closeout,"gh:unbraind/pm-presets#184"
 created_at: "2026-11-02T09:18:08.631Z"
-updated_at: "2026-11-02T09:18:08.631Z"
+updated_at: "2026-11-06T13:07:00.445Z"
 author: pi-glm
+comments[6]{created_at,author,text}:
+  "2026-11-06T12:40:00.601Z",codex-sol,"Main still attributes the upstream defect to adapter PR 170. Plan: append a status correction preserving all native history, retain compatibility refusals, and add a real nongit SDK tracker regression that checks unresolved upstream work cannot be emitted as Fixed by the closeout workflow."
+  "2026-11-06T12:44:20.929Z",codex-sol,"Failing-first reproduction: the canonical tracker copied to a nongit scratch tracker and read with PmClient reports pm-7km8 closed instead of open; generated Fixed notes include its host-defect title. The correction appends native history, clears completion/resolution fields and keeps the host follow-up open. A generic upstream:unresolved gate will reject done-role closure before closeout changelog generation."
+  "2026-11-06T12:48:01.617Z",codex-sol,"The pinned changelog generator deliberately restores closed snapshots from immutable release tags, so reopening alone does not remove the old Fixed claim. All package/release generator invocations now exclude upstream-tagged follow-ups: these are foreign implementation work, not package fixes. Package mitigation/correction items remain eligible. The explicit upstream:unresolved marker separately guards automatic completion; no tagged snapshots or existing audit records are edited. The first native reopen attempt rejected unsupported timestamp unsets without changing state; the supported status transition cleared completion fields automatically."
+  "2026-11-06T12:52:45.093Z",codex-sol,"Behavioral reverts in a disposable copy all fail as intended: restoring the original upstream item fails closed-versus-open; removing verifyCloseoutAttribution enforcement fails the real SDK fixture's expected finding; removing generator upstream exclusion fails the invocation contract. Restoring all three passes 3/3. Native status roles (including a custom terminal_done alias) and real CLI gate exit are covered. No reviewed-checkout files were mutated for these proofs."
+  "2026-11-06T13:02:38.694Z",codex-sol,"Local verification passes: 37/37 closeout/workflow/changelog-date regressions, and the combined diff/closeout focus passes 11/11 with no skips. Compiler lint, typecheck, test compilation and complete docstrings pass. Native histories remain prefix extensions of main, and the generated changelog removes only the false upstream Fixed section while retaining the adapter feature entry. Full release gates will run in PR CI."
+  "2026-11-06T13:06:55.169Z",codex-sol,"Implementation and three revert proofs are complete; the upstream follow-up stays open and unclaimed. Isolated-home strict tracker health passes with append-only histories and the corrected generated changelog. PR CI and bot review are the remaining external checks. Releasing this implementation claim, leaving status in_progress for orchestrator verification."
+files[5]{path,scope}:
+  .github/workflows/pm-github-closeout.yml,project
+  .github/workflows/release.yml,project
+  package.json,project
+  scripts/verify-closeout-attribution.ts,project
+  tests/closeout-attribution.test.ts,project
+tests[1]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test --test-concurrency=2 tests/closeout-attribution.test.ts,project,codex-sol,"2026-11-06T12:51:41.026Z",local_mutation,coverage-gate-and-closeout-attribution
+docs[1]{path,scope}:
+  docs/closeout-attribution.md,project
 body: ""
