@@ -6,9 +6,9 @@ status: in_progress
 priority: 2
 tags[2]: closeout,"gh:unbraind/pm-presets#184"
 created_at: "2026-11-02T09:18:08.631Z"
-updated_at: "2026-11-06T14:41:04.801Z"
+updated_at: "2026-11-06T17:51:39.508Z"
 author: pi-glm
-comments[9]{created_at,author,text}:
+comments[12]{created_at,author,text}:
   "2026-11-06T12:40:00.601Z",codex-sol,"Main still attributes the upstream defect to adapter PR 170. Plan: append a status correction preserving all native history, retain compatibility refusals, and add a real nongit SDK tracker regression that checks unresolved upstream work cannot be emitted as Fixed by the closeout workflow."
   "2026-11-06T12:44:20.929Z",codex-sol,"Failing-first reproduction: the canonical tracker copied to a nongit scratch tracker and read with PmClient reports pm-7km8 closed instead of open; generated Fixed notes include its host-defect title. The correction appends native history, clears completion/resolution fields and keeps the host follow-up open. A generic upstream:unresolved gate will reject done-role closure before closeout changelog generation."
   "2026-11-06T12:48:01.617Z",codex-sol,"The pinned changelog generator deliberately restores closed snapshots from immutable release tags, so reopening alone does not remove the old Fixed claim. All package/release generator invocations now exclude upstream-tagged follow-ups: these are foreign implementation work, not package fixes. Package mitigation/correction items remain eligible. The explicit upstream:unresolved marker separately guards automatic completion; no tagged snapshots or existing audit records are edited. The first native reopen attempt rejected unsupported timestamp unsets without changing state; the supported status transition cleared completion fields automatically."
@@ -18,6 +18,9 @@ comments[9]{created_at,author,text}:
   "2026-11-06T14:08:10.865Z",codex-sol,"Review round 1 on PR 203 found a possible closeout compatibility regression: the new guarded hook may lose historical-only generation when the package version is untagged. All current-head CI gates are green, including 348/348 tests in each npm/Bun full release gate and both Node matrix jobs. Reproducing the untagged-version scenario against the pinned generator before choosing a fix; no review finding is accepted without evidence."
   "2026-11-06T14:28:21.805Z",codex-sol,"Confirmed review finding PRRT_kwDOSp_1PM60iOzn with a real SDK tracker and disposable Git history: an untagged package version fails closeout with MISSING_REQUESTED_RELEASE. The hook now explicitly suppresses pending-release generation. CI delegates exact-byte checks to the pinned generator in either legitimate historical or prepared-release mode. Publication additionally requires the original strict release checker via prepublishOnly; actual release workflow generation/check semantics remain strict. The regression accepts historical closeouts, rejects them for publication, accepts prepared release notes, and rejects corrupted artifacts without rewriting them."
   "2026-11-06T14:41:03.068Z",codex-sol,"Round 1 fix verified: reverting only the closeout no-pending-release flag fails with MISSING_REQUESTED_RELEASE; reverting only historical checker support fails the CI check on the valid historical artifact. Restoring both passes. Final linked real-SDK/Git fixture tests pass 4/4, workflow/date regressions pass 34/34, and lint/typecheck/test compilation/docstrings pass. The fixture uses fixed historical completion/tag timestamps, explicit synthetic Git identity, and scrubbed credential/Git-routing variables. Prepared release notes pass the strict publisher check; historical-only and corrupted notes are refused. No publication or target-repository tags were created. The previously pushed head passed all CI, but this code fix requires fresh exact-head CI and re-review. Releasing the claim pending those checks."
+  "2026-11-06T17:43:02.424Z",codex-sol,"Resumed for CodeRabbit round 2. Confirmed the tracker-copy filter incorrectly examines absolute ancestors: an excluded parent segment can skip the entire source. Add a failing real-SDK nongit regression covering every excluded parent name, retained tracker data and relative exclusions, then scope the shared fixture copy filter to the source root. Existing issue fixes and completed gate receipts remain unchanged. GitHub GraphQL quota currently blocks pr-state; REST supplied the full review body and finding."
+  "2026-11-06T17:47:36.508Z",codex-sol,"Round 2 regression first failed because an excluded locks ancestor skipped the whole tracker. Shared copyTracker now filters relative to its absolute source root and matches complete segments at the path start or after a separator. The real SDK regression exercises all five excluded parent names, top-level and nested exclusions, similarly named retained directories, unchanged settings/item/history bytes and complete nongit copied-tracker reads. Two disposable behavioral reverts independently fail: restoring absolute-path matching skips the root; removing the first-segment boundary retains excluded runtime data. Restoring the helper passes. Lint, typecheck, test compilation and docstrings pass. An initial combined run hit the existing history subprocess timeout; a serial rerun is pending without changing any timeout or threshold."
+  "2026-11-06T17:51:34.807Z",codex-sol,"Round 2 validation complete: the serial closeout/history command passes 5/5 with no skips, both directly and through pm test --run --only-last --progress. The initial concurrent local run hit the unchanged history subprocess timeout; serial execution passes without relaxing it. Both isolated filter reverts fail and restoration passes. Lint, typecheck, test compilation, docstrings and append-only history-prefix verification pass. Ready to commit the test-only correction together with this native tracker evidence; fresh exact-head CI and queued full review follow the push."
 files[7]{path,scope}:
   .github/workflows/pm-github-closeout.yml,project
   .github/workflows/release.yml,project
@@ -26,7 +29,7 @@ files[7]{path,scope}:
   scripts/verify-closeout-attribution.ts,project
   tests/closeout-attribution.test.ts,project
   tests/closeout-history.test.ts,project
-tests[2]:
+tests[3]:
   - command: node --test --test-concurrency=2 tests/closeout-attribution.test.ts
     scope: project
     provenance:
@@ -40,6 +43,14 @@ tests[2]:
     provenance:
       author: codex-sol
       created_at: "2026-11-06T14:28:25.544Z"
+      source_kind: local_mutation
+      source_ref: coverage-gate-and-closeout-attribution
+  - command: node --test --test-concurrency=1 tests/closeout-history.test.ts tests/closeout-attribution.test.ts
+    scope: project
+    timeout_seconds: 240
+    provenance:
+      author: codex-sol
+      created_at: "2026-11-06T17:47:43.786Z"
       source_kind: local_mutation
       source_ref: coverage-gate-and-closeout-attribution
 docs[1]{path,scope}:

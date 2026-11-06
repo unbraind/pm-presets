@@ -1,19 +1,63 @@
 /** Keep unresolved upstream work distinct from delivered adapter mitigations. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { test } from "node:test";
 import { PmClient } from "@unbrained/pm-cli/sdk";
 import { generateChangelog } from "pm-changelog";
 import { verifyCloseoutAttribution } from "../scripts/verify-closeout-attribution.ts";
 
+/** Copy persisted tracker data without local runtime state. */
+function copyTracker(sourceRoot: string, pmRoot: string): void {
+  cpSync(sourceRoot, pmRoot, { recursive: true, filter: (source) => !/(?:^|[\\/])(locks|runtime|search|extensions|transactions)(?:[\\/]|$)/.test(relative(sourceRoot, source)) });
+}
+
+test("tracker copies ignore excluded parent names while preserving persisted SDK data", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "preset-closeout-copy-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const excluded = ["locks", "runtime", "search", "extensions", "transactions"];
+  for (const parent of excluded) {
+    const project = join(root, parent, "package");
+    mkdirSync(project, { recursive: true });
+    const sourceRoot = join(project, ".agents", "pm");
+    const client = new PmClient({ cwd: project, pmRoot: sourceRoot, noExtensions: true, author: "test-author" });
+    await client.init();
+    const { item } = await client.create({ type: "Issue", title: `Persisted tracker under ${parent}` });
+    for (const name of excluded) {
+      for (const prefix of [sourceRoot, join(sourceRoot, "nested")]) {
+        mkdirSync(join(prefix, name), { recursive: true });
+        writeFileSync(join(prefix, name, "ephemeral.txt"), "local runtime state");
+        mkdirSync(join(prefix, `${name}-data`), { recursive: true });
+        writeFileSync(join(prefix, `${name}-data`, "retained.txt"), "persisted fixture data");
+      }
+    }
+    const pmRoot = join(root, `copy-${parent}`);
+    copyTracker(sourceRoot, pmRoot);
+    assert.ok(existsSync(pmRoot), `the ${parent} ancestor must not exclude the tracker root`);
+    for (const name of excluded) {
+      for (const prefix of [pmRoot, join(pmRoot, "nested")]) {
+        assert.ok(!existsSync(join(prefix, name)), `${name} must be excluded within the tracker`);
+        assert.equal(readFileSync(join(prefix, `${name}-data`, "retained.txt"), "utf8"), "persisted fixture data");
+      }
+    }
+    for (const file of ["settings.json", join("issues", `${item.id}.toon`), join("history", `${item.id}.jsonl`)]) {
+      assert.deepEqual(readFileSync(join(pmRoot, file)), readFileSync(join(sourceRoot, file)));
+    }
+    const copied = new PmClient({ cwd: root, pmRoot, noExtensions: true });
+    const { items } = await copied.listAllComplete();
+    assert.equal(items.length, 1);
+    assert.equal(items[0].id, item.id);
+    assert.equal(items[0].title, item.title);
+  }
+});
+
 test("the canonical upstream follow-up stays open and out of generated Fixed entries", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-closeout-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const pmRoot = join(root, "tracker");
-  cpSync(resolve(".agents/pm"), pmRoot, { recursive: true, filter: (source) => !/[\\/](locks|runtime|search|extensions|transactions)([\\/]|$)/.test(source) });
+  copyTracker(resolve(".agents/pm"), pmRoot);
   const client = new PmClient({ cwd: root, pmRoot, noExtensions: true });
   const { items } = await client.listAllComplete();
   const followup = items.find(({ id }) => id === "pm-7km8");
