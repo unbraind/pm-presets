@@ -1,0 +1,26 @@
+id: pm-xm9t
+title: Certify saved typed-binding snapshot hardening against current main
+description: "Follow up pm-qz1k by reconciling the saved typed-binding review against main. PR #191 already delivered all saved source and test hunks. Add independent end-to-end regression coverage and isolated behavioral revert proofs for captured binding values, catalog membership and privacy before normalization; preserve subsequent ownership and seed-normalization fixes. Rebuild dist rather than copy saved artifacts. Avoid the open coverage and closeout PR files."
+type: Issue
+status: in_progress
+priority: 2
+tags[3]: bindings,regression,snapshot
+created_at: "2026-11-07T14:35:29.769Z"
+updated_at: "2026-11-07T14:57:47.330Z"
+author: codex-agent
+dependencies[1]{id,kind,created_at,author,source_kind,author_source}:
+  pm-qz1k,related,"2026-11-07T14:35:29.769Z",codex-agent,"cli:create:dep",detected
+comments[4]{created_at,author,text}:
+  "2026-11-07T14:35:55.235Z",codex-agent,"Saved-WIP comparison: all four source changes and their artifact-state regressions already landed through PR #191 (d1087cf). No source hunks remain to reapply. Copying the WIP would remove later seed normalization and artifact ownership. Keep main source intact, add focused independent black-box regression coverage and mutation proofs, rebuild dist and run npm/Bun release gates. PR #203 remains open; its implementation, tests and tracker items are excluded. The generated changelog will be refreshed as required after final tracker writes."
+  "2026-11-07T14:39:15.993Z",codex-agent,"Focused acceptance passes 4/4 with zero failures or skips. Reproducible disposable-copy revert verifier passes baseline 4/4; kills seven isolated mutations (binding alias, template alias, seed alias, ownership record alias, catalog guard removal, replacement privacy guard removal, sensitive seed-prefix guard removal); all seven restored scenarios pass. No production source was altered: these certify behaviors already delivered by PR #191. Every fixture is synthetic and uses real nongit SDK trackers."
+  "2026-11-07T14:45:58.225Z",codex-agent,"Expanded the disposable verifier with a settings-alias mutation: baseline 4/4, now 8/8 independent behavioral reverts fail with assertions and all 8 restorations pass. npm typecheck, lint, build:test and docstrings pass (95 files, 227 declarations). Both linked pm tests passed with result tracking disabled as required; no run artifacts were written to the package tracker. Isolated strict health passes; ordinary host health reports the existing global pm-github version skew. Current source, rebuilt dist and generated CHANGELOG are byte-identical to main; no paths owned by open PR #203 are changed."
+  "2026-11-07T14:57:46.146Z",codex-agent,"Final local gates pass on unchanged source at unchanged thresholds: npm run release:check 348/348 tests, zero failures/skips/cancellations, test duration 418812 ms; bun run release:check 348/348 tests, zero failures/skips/cancellations. Both report 100.00% lines/branches/functions across all 36 required source files. Typecheck, lint, docstrings (95 files and 227 declarations), test compilation, production audit, package inspection, changelog and both release verifiers pass. Focused suite passes 4/4. Linked disposable verifier now passes all 8 isolated revert proofs and all 8 restorations. Source, rebuilt dist and generated changelog are identical to main. Only this new issue, its history, focused tests, verifier and verification notes are changed. No saved source/test hunk remains to port because PR #191 already delivered them; saved dist and closed-feature tracker edits are dropped. No merge, package release or bot trigger performed. Item remains in_progress for orchestrator verification; CI will start when the single follow-up PR opens. Existing global extension/host version skew remains outside scope; isolated strict tracker health passes."
+files[2]{path,scope}:
+  tests/fixtures/typed-binding-revert.ts,project
+  tests/typed-binding-hardening.test.ts,project
+tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  node --test --test-concurrency=2 tests/typed-binding-hardening.test.ts,project,codex-agent,"2026-11-07T14:39:11.790Z",local_mutation,typed-binding-snapshot-hardening
+  node tests/fixtures/typed-binding-revert.ts,project,codex-agent,"2026-11-07T14:39:13.904Z",local_mutation,typed-binding-snapshot-hardening
+docs[1]{path,scope}:
+  docs/typed-binding-hardening.md,project
+body: ""

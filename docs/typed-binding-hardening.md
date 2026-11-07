@@ -1,0 +1,43 @@
+# Typed-binding hardening verification
+
+The saved review commit `39a68ea` contains no remaining source or test hunks
+to port onto main. PR #191 (`d1087cf`) already delivered its snapshot capture,
+legacy-sensitive diff refusals, fixed scratch prefix, registered seed identity
+check and regression tests. Later changes added artifact ownership and native
+seed normalization. Replacing current files with the saved versions would
+remove those protections. The old tracker changes belong to the closed feature
+and are superseded by the related follow-up issue.
+
+The follow-up adds independent acceptance checks in
+`tests/typed-binding-hardening.test.ts`:
+
+- Three project keys retain coherent settings, complete template documents and
+  managed seed title/body when injected values and selection flags change after
+  invocation. Replacement apply and diff agree in real nongit trackers.
+- Desired settings, template documents, seed contents and ownership survive
+  caller mutation during asynchronous replacement normalization.
+- Absent, unknown and prototype-named seed identities refuse without changing
+  any tracker bytes. Released catalog definitions remain accepted.
+- Sensitive replacement trees refuse before scratch tracker creation and
+  ordinary diffs redact their values. Sensitive prefixes cannot generate public
+  seed identifiers. External references remain accepted.
+
+Run the focused checks and reproducible behavioral reverts with:
+
+```sh
+node --test --test-concurrency=2 tests/typed-binding-hardening.test.ts
+node tests/fixtures/typed-binding-revert.ts
+```
+
+The verifier copies sources and the focused fixtures into a disposable directory,
+shares installed dependencies, and changes one behavior at a time. It verifies a
+passing baseline, eight failing reverts, and a passing restoration after each.
+The reverts remove binding-value capture, settings capture, template capture, seed capture,
+ownership-record capture, catalog membership, replacement privacy, and seed
+identifier privacy. The checkout under review is never mutated. Cleanup and
+restoration run even when an assertion fails.
+
+Rebuild `dist/` from current source; do not copy generated files from the saved
+commit. The open coverage/closeout PR #203 owns its source, test and tracker
+changes separately. This verification does not claim to repair that gate or the
+upstream closeout attribution.
