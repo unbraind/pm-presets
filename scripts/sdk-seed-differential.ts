@@ -114,16 +114,18 @@ try {
   let cases = 0;
   for (const snapshot of snapshots.map((path) => resolve(path))) {
     const before = snapshotDigest(snapshot);
+    let snapshotCases = 0;
     for (const preset of PRESET_REGISTRY) {
       for (const dryRun of [true, false]) {
         const old = await observe(resolve(baseline), snapshot, preset.id, dryRun);
         const current = await observe(candidate, snapshot, preset.id, dryRun);
         assert.deepEqual(current, old, `${preset.id} dryRun=${dryRun}`);
         cases++;
+        snapshotCases++;
       }
     }
     assert.equal(snapshotDigest(snapshot), before, "Public tracker snapshot is a read-only input");
-    console.log(`snapshot: sha256=${before}; 14 matching command observations`);
+    console.log(`snapshot: sha256=${before}; ${snapshotCases} matching command observations`);
   }
   await comparePartialFailure();
   console.log(`${cases} differential cases passed; zero output or item-content differences; input snapshots unchanged`);

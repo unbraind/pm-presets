@@ -26,6 +26,8 @@ Run the focused checks and reproducible behavioral reverts with:
 
 ```sh
 node --test --test-concurrency=2 tests/typed-binding-hardening.test.ts
+node --test --test-concurrency=2 tests/revert-evidence.test.ts
+node --test --test-concurrency=2 tests/evidence-counts.test.ts
 node tests/fixtures/typed-binding-revert.ts
 ```
 
@@ -36,6 +38,24 @@ The reverts remove binding-value capture, settings capture, template capture, se
 ownership-record capture, catalog membership, replacement privacy, and seed
 identifier privacy. The checkout under review is never mutated. Cleanup and
 restoration run even when an assertion fails.
+
+Baseline, mutation and restoration all use the same named-result validator.
+The [Node custom reporter](https://nodejs.org/api/test.html#custom-reporters)
+emits terminal events rather than interpreting console text. Each run must
+contain the four required test names exactly once, without skips, todo or
+cancellation. A mutation must fail its designated test with its own assertion
+cause while every other test passes. Every restoration must pass all four.
+Counts are printed only after those checks succeed. The adversarial tests
+exercise missing and filtered cases, misleading assertion text, failures in the
+wrong test, malformed records and skipped restorations through real processes.
+
+The broader evidence audit also removed fixed cardinalities from the seed
+differential and public plan reporting scripts. Snapshot observations count
+completed comparisons, and backend-pair counts increment after the equality
+assertion. Property checks execute their actual reporting blocks across varied
+inventory sizes and failed comparisons; plan checks use real SDK contracts in
+a synthetic nongit tracker. They do not run either script's filesystem admission
+or permission-changing cleanup.
 
 Rebuild `dist/` from current source; do not copy generated files from the saved
 commit. The open coverage/closeout PR #203 owns its source, test and tracker

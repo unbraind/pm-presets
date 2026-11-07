@@ -45,7 +45,7 @@ try {
   assert.deepEqual(harness.activation.failed, []);
   const contracts = await getWorkspaceContracts(pmRoot, { cwd: root, extensionRegistrations: harness.activation.registrations });
   const started = performance.now();
-  let ready = 0, refused = 0, optional = 0, maxJsonBytes = 0;
+  let ready = 0, refused = 0, optional = 0, maxJsonBytes = 0, pairedSemantics = 0;
   for (const descriptor of PRESET_REGISTRY) {
     const composition = bundledPresetComposition(descriptor.id, true);
     const paired = [];
@@ -66,12 +66,13 @@ try {
       for (const result of [plan, blocked, omitted]) maxJsonBytes = Math.max(maxJsonBytes, Buffer.byteLength(JSON.stringify(summarizePresetPlan(result))));
     }
     assert.deepEqual(paired[0], paired[1]);
+    pairedSemantics++;
   }
   const elapsedMs = Math.round((performance.now() - started) * 100) / 100;
   const after = fingerprint();
   assert.deepEqual(after, before, "Read-only source copy must remain byte-identical, including history");
   console.log(JSON.stringify({ source: source.stdout.trim(), items: census.items.length, snapshot: before,
-    plans: ready + refused + optional, ready, refused, optionalOmissions: optional, pairedSemantics: 7,
+    plans: ready + refused + optional, ready, refused, optionalOmissions: optional, pairedSemantics,
     maxJsonBytes, elapsedMs, unchanged: true, gitDirectory: false }, null, 2));
 } finally {
   chmodSync(root, 0o755);
