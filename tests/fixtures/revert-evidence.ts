@@ -17,6 +17,18 @@ function ownField(value: unknown, key: string): unknown {
     ? (value as Record<string, unknown>)[key] : undefined;
 }
 
+/** Identify trusted runner modules or required slots without echoing arbitrary names or private paths. */
+function resultLocation(name: unknown, names: readonly string[]): string {
+  if (typeof name !== "string") return `<${name === null ? "null" : typeof name} name>`;
+  const slot = names.indexOf(name);
+  if (slot >= 0) return `required test ${slot + 1}`;
+  const normalized = name.replaceAll("\\", "/").toLowerCase();
+  for (const file of ["tests/typed-binding-hardening.test.ts", "tests/evidence-counts.test.ts"]) {
+    if (normalized === file || normalized.endsWith(`/${file}`) || normalized === file.slice("tests/".length)) return file;
+  }
+  return "<unregistered string name>";
+}
+
 /** Emit only terminal Node test events; ordinary stdout/stderr cannot impersonate evidence. */
 export default async function* evidenceReporter(source: AsyncIterable<TestEvent>): AsyncGenerator<string> {
   for await (const event of source) {
@@ -46,18 +58,21 @@ export function assertNamedResults(
   assert.ok(expected.size > 0 && expected.size === names.length, "required test inventory must be nonempty and unique");
   assert.ok(failingTest === undefined || expected.has(failingTest), "failing test must belong to the required inventory");
   for (const line of result.stdout.split("\n").filter((line) => line.trim() !== "")) {
-    const row: unknown = JSON.parse(line);
+    let row: unknown;
+    try { row = JSON.parse(line); }
+    catch { assert.fail("invalid structured test result JSON; inspect reporter encoding"); }
     const name = ownField(row, "name");
-    assert.ok(typeof name === "string" && expected.has(name), "unexpected test result");
-    assert.ok(!seen.has(name), "duplicate test result");
+    const location = resultLocation(name, names);
+    assert.ok(typeof name === "string" && expected.has(name), `unexpected test result: ${location}; module syntax/import failures are not regression evidence`);
+    assert.ok(!seen.has(name), `duplicate test result: ${location}`);
     seen.add(name);
-    assert.equal(ownField(row, "nesting"), 0, "expected a top-level acceptance test");
-    assert.equal(ownField(row, "skip"), false, "required test was skipped");
-    assert.equal(ownField(row, "todo"), false, "required test was marked todo");
-    assert.equal(ownField(row, "verdict"), name === failingTest ? "fail" : "pass", "wrong named test verdict");
+    assert.ok(Object.is(ownField(row, "nesting"), 0), `expected a top-level acceptance test: ${location}`);
+    assert.ok(ownField(row, "skip") === false, `required test was skipped: ${location}`);
+    assert.ok(ownField(row, "todo") === false, `required test was marked todo: ${location}`);
+    assert.ok(ownField(row, "verdict") === (name === failingTest ? "fail" : "pass"), `wrong named test verdict: ${location}`);
     if (name === failingTest) {
-      assert.equal(ownField(row, "errorCode"), "ERR_ASSERTION", "target test must fail its own regression assertion");
-      assert.equal(ownField(row, "failureType"), "testCodeFailure", "target failure must come from test code");
+      assert.ok(ownField(row, "errorCode") === "ERR_ASSERTION", `target test must fail its own regression assertion: ${location}`);
+      assert.ok(ownField(row, "failureType") === "testCodeFailure", `target failure must come from test code: ${location}`);
     }
   }
   assert.equal(seen.size, expected.size, "required named tests are missing");

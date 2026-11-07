@@ -5,8 +5,10 @@ import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writ
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inspect } from "node:util";
 import test from "node:test";
 import { ACCEPTANCE_TEST_NAMES as names, assertNamedResults } from "./fixtures/revert-evidence.ts";
+import { assertNoCredentials } from "./fixtures/params-secret-oracle.ts";
 
 const repo = resolve(import.meta.dirname, "..");
 const reporter = pathToFileURL(join(repo, "tests/fixtures/revert-evidence.ts")).href;
@@ -90,6 +92,63 @@ test("evidence rejects malformed, duplicate, nested, interrupted and truncated t
   assert.throws(() => assertNamedResults(baseline, []));
   assert.throws(() => assertNamedResults(baseline, [...names, names[0]]));
   assert.throws(() => assertNamedResults(baseline, names, "unknown"));
+});
+
+test("evidence diagnostics identify public runner files and required slots without exposing private payloads", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "presets-evidence-diagnostics-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const baseline = runFixture(root, declarations());
+  assert.equal(assertNamedResults(baseline, names), names.length);
+  const rows = baseline.stdout.trim().split("\n").map((line): Record<string, unknown> => JSON.parse(line));
+  const secret = "synthetic-private-diagnostic-value-0123456789";
+  assert.throws(() => assertNamedResults({ ...baseline, stdout: baseline.stdout.replace('"nesting":0', '"nesting":-0') }, names));
+  for (const stdout of [secret, `{"name":"${secret}`]) {
+    assert.throws(() => assertNamedResults({ ...baseline, stdout }, names), (error: unknown) => {
+      const message = inspect(error);
+      assert.match(message, /invalid structured test result JSON/);
+      assertNoCredentials(message, [secret]);
+      return true;
+    });
+  }
+  for (const name of [join(root, secret, "tests/typed-binding-hardening.test.ts"), `C:\\${secret}\\tests\\evidence-counts.test.ts`, secret, { private: secret }, [secret], null]) {
+    const stdout = JSON.stringify({ ...rows[0], name });
+    assert.throws(() => assertNamedResults({ ...baseline, stdout }, names), (error: unknown) => {
+      const message = inspect(error);
+      assert.match(message, /unexpected test result:/);
+      if (typeof name === "string" && name.endsWith(".test.ts")) assert.match(message, /tests[\/]\w[\w-]*\.test\.ts/);
+      assertNoCredentials(message, [secret]);
+      assert.ok(!message.includes(root));
+      return true;
+    });
+  }
+  for (let slot = 0; slot < names.length; slot++) {
+    for (const field of ["nesting", "skip", "todo", "verdict", "errorCode", "failureType"]) {
+      const failing = field === "errorCode" || field === "failureType";
+      const changed = rows.map((row, index) => index === slot ? { ...row, verdict: failing ? "fail" : row.verdict, errorCode: "ERR_ASSERTION", failureType: "testCodeFailure", [field]: secret } : row);
+      const result = { ...baseline, status: failing ? 1 : 0, stdout: changed.map((row) => JSON.stringify(row)).join("\n") };
+      assert.throws(() => assertNamedResults(result, names, failing ? names[slot] : undefined), (error: unknown) => {
+        const message = inspect(error);
+        assert.match(message, new RegExp(`required test ${slot + 1}`));
+        assertNoCredentials(message, [secret]);
+        return true;
+      });
+    }
+  }
+  const file = join(root, "tests/typed-binding-hardening.test.ts");
+  mkdirSync(join(root, "tests"));
+  for (const source of ['import "./missing-module.ts";', 'import test from "node:test"; test(']) {
+    writeFileSync(file, source);
+    const failed = spawnSync(process.execPath, ["--test", "--test-concurrency=2", `--test-reporter=${reporter}`, file], { cwd: root, env: childEnv, encoding: "utf8", timeout: 30_000 });
+    assert.equal(failed.error, undefined);
+    assert.equal(failed.status, 1);
+    assert.throws(() => assertNamedResults(failed, names, names[0]), (error: unknown) => {
+      const message = inspect(error);
+      assert.match(message, /unexpected test result: tests\/typed-binding-hardening\.test\.ts/);
+      assert.match(message, /syntax\/import failures are not regression evidence/);
+      assert.ok(!message.includes(root));
+      return true;
+    });
+  }
 });
 
 test("the actual verifier never prints success for incomplete baselines or unrelated assertion failures", (t) => {

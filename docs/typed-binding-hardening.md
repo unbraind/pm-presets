@@ -49,6 +49,10 @@ cause while every other test passes. Every restoration must pass all four.
 Counts are printed only after those checks succeed. The adversarial tests
 exercise missing and filtered cases, misleading assertion text, failures in the
 wrong test, malformed records and skipped restorations through real processes.
+Diagnostics identify required test positions or allowlisted repository-relative
+runner files. Unknown names, private path prefixes, malformed JSON contents and
+invalid metadata values are omitted from assertion details. Real syntax/import
+failure fixtures verify this boundary without turning loader errors into proof.
 
 The broader evidence audit also removed fixed cardinalities from the seed
 differential and public plan reporting scripts. Snapshot observations count
