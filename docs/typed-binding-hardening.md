@@ -28,6 +28,7 @@ Run the focused checks and reproducible behavioral reverts with:
 node --test --test-concurrency=2 tests/typed-binding-hardening.test.ts
 node --test --test-concurrency=2 tests/revert-evidence.test.ts
 node --test --test-concurrency=2 tests/evidence-counts.test.ts
+node --test --test-concurrency=2 tests/evidence-formatting.test.ts
 node tests/fixtures/typed-binding-revert.ts
 ```
 
@@ -52,10 +53,13 @@ wrong test, malformed records and skipped restorations through real processes.
 The broader evidence audit also removed fixed cardinalities from the seed
 differential and public plan reporting scripts. Snapshot observations count
 completed comparisons, and backend-pair counts increment after the equality
-assertion. Property checks execute their actual reporting blocks across varied
-inventory sizes and failed comparisons; plan checks use real SDK contracts in
-a synthetic nongit tracker. They do not run either script's filesystem admission
-or permission-changing cleanup.
+assertion. Both CLIs and property tests call the same exported reporting
+functions across varied inventory sizes and failed comparisons; plan checks use
+real SDK contracts in a synthetic nongit tracker. Importing either script does
+not run filesystem admission or permission-changing cleanup. A disposable-copy
+regression reruns the complete reporting properties after LF/CRLF conversion,
+alternate brace placement and timing-variable renaming. Tests do not extract or
+evaluate TypeScript source fragments.
 
 Rebuild `dist/` from current source; do not copy generated files from the saved
 commit. The open coverage/closeout PR #203 owns its source, test and tracker
