@@ -20,5 +20,5 @@ jobs:
     with:
       pm-github-version: "2026.10.16"
       npm-project-dir: "." # Use tools/oracle or another contained npm project when needed.
-      post-closeout-script: "changelog:full" # Missing script skips; "" disables it.
+      post-closeout-script: "closeout:check" # Missing script skips; "" disables it.
       ci-workflows: "ci.yml" # Whitespace-separated workflow filenames; "" disables dispatch.

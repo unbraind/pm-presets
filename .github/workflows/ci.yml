@@ -146,3 +146,6 @@ jobs:
 
       - name: Exercise the real Windows command parser
         run: node --test tests/windows-prepare.integration.ts
+
+      - name: Verify Windows closeout npm launcher and behavioral revert
+        run: node --test --test-concurrency=1 tests/windows-closeout.integration.ts tests/closeout-history.test.ts tests/closeout-spawn.test.ts

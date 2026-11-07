@@ -180,7 +180,10 @@ export async function computePresetDiff(
     presetId: presetId,
     settings: { ...desiredSettings, id_prefix: prefix ?? desiredSettings.id_prefix },
     templates: templateDocuments ?? {},
-    seeds: includeSeeds ? declaredSeeds ?? [] : undefined,
+    // Selected inventories have already passed the array guard above. A
+    // nullish fallback here is unreachable and leaves a zero V8 branch whose
+    // appearance in the aggregate report depends on process merge order.
+    seeds: includeSeeds ? declaredSeeds : undefined,
     record, replace: replace, seedTypes: snapshot.seedTypes,
   };
   let desired;
