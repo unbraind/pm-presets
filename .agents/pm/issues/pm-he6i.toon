@@ -4,11 +4,11 @@ description: "Tracks gh:unbraind/pm-presets#184 (filed 2026-10-31, missed by the
 type: Issue
 status: in_progress
 priority: 2
-tags[2]: closeout,"gh:unbraind/pm-presets#184"
+tags[3]: closeout,"gh:unbraind/pm-presets#184","gh:unbraind/pm-presets#203"
 created_at: "2026-11-02T09:18:08.631Z"
-updated_at: "2026-11-06T17:51:39.508Z"
+updated_at: "2026-11-07T01:34:22.936Z"
 author: pi-glm
-comments[12]{created_at,author,text}:
+comments[17]{created_at,author,text}:
   "2026-11-06T12:40:00.601Z",codex-sol,"Main still attributes the upstream defect to adapter PR 170. Plan: append a status correction preserving all native history, retain compatibility refusals, and add a real nongit SDK tracker regression that checks unresolved upstream work cannot be emitted as Fixed by the closeout workflow."
   "2026-11-06T12:44:20.929Z",codex-sol,"Failing-first reproduction: the canonical tracker copied to a nongit scratch tracker and read with PmClient reports pm-7km8 closed instead of open; generated Fixed notes include its host-defect title. The correction appends native history, clears completion/resolution fields and keeps the host follow-up open. A generic upstream:unresolved gate will reject done-role closure before closeout changelog generation."
   "2026-11-06T12:48:01.617Z",codex-sol,"The pinned changelog generator deliberately restores closed snapshots from immutable release tags, so reopening alone does not remove the old Fixed claim. All package/release generator invocations now exclude upstream-tagged follow-ups: these are foreign implementation work, not package fixes. Package mitigation/correction items remain eligible. The explicit upstream:unresolved marker separately guards automatic completion; no tagged snapshots or existing audit records are edited. The first native reopen attempt rejected unsupported timestamp unsets without changing state; the supported status transition cleared completion fields automatically."
@@ -21,15 +21,25 @@ comments[12]{created_at,author,text}:
   "2026-11-06T17:43:02.424Z",codex-sol,"Resumed for CodeRabbit round 2. Confirmed the tracker-copy filter incorrectly examines absolute ancestors: an excluded parent segment can skip the entire source. Add a failing real-SDK nongit regression covering every excluded parent name, retained tracker data and relative exclusions, then scope the shared fixture copy filter to the source root. Existing issue fixes and completed gate receipts remain unchanged. GitHub GraphQL quota currently blocks pr-state; REST supplied the full review body and finding."
   "2026-11-06T17:47:36.508Z",codex-sol,"Round 2 regression first failed because an excluded locks ancestor skipped the whole tracker. Shared copyTracker now filters relative to its absolute source root and matches complete segments at the path start or after a separator. The real SDK regression exercises all five excluded parent names, top-level and nested exclusions, similarly named retained directories, unchanged settings/item/history bytes and complete nongit copied-tracker reads. Two disposable behavioral reverts independently fail: restoring absolute-path matching skips the root; removing the first-segment boundary retains excluded runtime data. Restoring the helper passes. Lint, typecheck, test compilation and docstrings pass. An initial combined run hit the existing history subprocess timeout; a serial rerun is pending without changing any timeout or threshold."
   "2026-11-06T17:51:34.807Z",codex-sol,"Round 2 validation complete: the serial closeout/history command passes 5/5 with no skips, both directly and through pm test --run --only-last --progress. The initial concurrent local run hit the unchanged history subprocess timeout; serial execution passes without relaxing it. Both isolated filter reverts fail and restoration passes. Lint, typecheck, test compilation, docstrings and append-only history-prefix verification pass. Ready to commit the test-only correction together with this native tracker evidence; fresh exact-head CI and queued full review follow the push."
-files[7]{path,scope}:
+  "2026-11-07T01:17:58.202Z",codex-agent,"Review round: fetched every review thread and all comments; one unresolved Windows npm launcher finding (PRRT_kwDOSp_1PM60sUkZ). Latest CodeRabbit review has no outside-diff findings. Remote branch includes current main. Reuse only validated launcher and regression hunks from saved WIP; exclude local artifacts. Verify the whole PR for related platform-launch defects, record behavioral reverts, and run unchanged targeted and release gates before push."
+  "2026-11-07T01:20:05.897Z",codex-agent,"Validated PRRT_kwDOSp_1PM60sUkZ: closeout history now uses the shared launcher, selecting npm.cmd with shell execution only for Windows npm while preserving direct Git/Node execution elsewhere. Reused only the saved-WIP launcher/history/Windows-CI hunks, added portable real-process regressions and ignored .local. Whole-PR review found no further instance: other new child processes use process.execPath; existing npx coverage spawning already enables the Windows shell. Targeted suite: 8 passed, 0 failed, 1 Windows-only skip. Disposable-copy behavioral reverts independently restore legacy direct spawning, remove npm.cmd selection, or remove shell execution: each fails the regression; restoring the fixed helper passes 2/2 after each mutation. Actual Windows npm.cmd/parser acceptance is delegated to the Windows CI job, which now also runs the complete closeout-history regression."
+  "2026-11-07T01:23:22.744Z",codex-agent,"Linked targeted test run passes (8 executed tests, 0 failures, 1 intentional Windows-only skip). Typecheck, lint and test compilation pass. All changed history streams retain main as a byte-identical prefix; the coverage item history is new on this branch. Fresh build leaves committed dist unchanged. Strict CI-style tracker health passes all 10 checks with an advisory telemetry queue notice. Default-environment health instead reports an ambient global pm-github host-version skew (pinned host 2026.11.2 versus extension install host 2026.11.6); no package dependency or global installation was changed. Full npm and Bun release checks use isolated HOME and stripped credentials, sequentially with at most two test workers."
+  "2026-11-07T01:27:25.395Z",codex-agent,"Full npm run release:check passes in 352 seconds with isolated HOME and credential-free child environment: 352 tests passed, 0 failed, 0 skipped, 100% lines/branches/functions across all 36 configured gated sources. Also passes typecheck, lint, 102-file/228-declaration docstring coverage, production audit, package dry run, closeout attribution, canonical changelog, publication attestation and version-derived changelog dates. Committed dist matches the build. Full Bun release gate is running sequentially at unchanged thresholds."
+  "2026-11-07T01:34:21.934Z",codex-agent,"Final review-round result: full npm and Bun release:check both pass at unchanged thresholds (npm 352 seconds; Bun 415 seconds). Each executes 352/352 tests with 0 failures and 0 skips and measures 100% lines, branches and functions across all 36 configured gated sources; docstrings cover 102 files and 228 declarations. Typecheck, lint, test compilation, build, audit, package dry run, closeout attribution, changelog, publish-attestation and changelog-date checks pass. Targeted and linked PM runs each pass 8 tests with 1 intentional Windows-only skip. Three independently failing helper reverts and passing 2/2 restorations are recorded above. Native Windows npm launch/revert and full history acceptance are configured in Windows CI and remain pending the pushed head. No finding was refused; no other valid instance found in the whole PR. No threshold, dependency pin or product source changed this round. Release my claim while leaving the item in progress for orchestrator verification; regenerate changelog after this final tracker write, verify final commit identity/privacy and history-prefix integrity, then push only the PR branch and delete its saved local WIP branch."
+files[12]{path,scope}:
+  .github/workflows/ci.yml,project
   .github/workflows/pm-github-closeout.yml,project
   .github/workflows/release.yml,project
+  .gitignore,project
   package.json,project
   scripts/check-changelog.ts,project
   scripts/verify-closeout-attribution.ts,project
   tests/closeout-attribution.test.ts,project
   tests/closeout-history.test.ts,project
-tests[3]:
+  tests/closeout-spawn.test.ts,project
+  tests/fixtures/closeout-spawn.ts,project
+  tests/windows-closeout.integration.ts,project
+tests[4]:
   - command: node --test --test-concurrency=2 tests/closeout-attribution.test.ts
     scope: project
     provenance:
@@ -51,6 +61,14 @@ tests[3]:
     provenance:
       author: codex-sol
       created_at: "2026-11-06T17:47:43.786Z"
+      source_kind: local_mutation
+      source_ref: coverage-gate-and-closeout-attribution
+  - command: node --test --test-concurrency=2 tests/closeout-spawn.test.ts tests/closeout-history.test.ts tests/closeout-attribution.test.ts tests/diff-coverage.test.ts tests/windows-closeout.integration.ts
+    scope: project
+    timeout_seconds: 240
+    provenance:
+      author: codex-agent
+      created_at: "2026-11-07T01:20:14.080Z"
       source_kind: local_mutation
       source_ref: coverage-gate-and-closeout-attribution
 docs[1]{path,scope}:

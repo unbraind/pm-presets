@@ -1,11 +1,11 @@
 /** Preserve historical closeouts while keeping actual publication checks strict. */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { PmClient } from "@unbrained/pm-cli/sdk";
+import { spawnCloseoutTool } from "./fixtures/closeout-spawn.ts";
 
 test("untagged closeouts generate and verify history without accepting it for publication", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-closeout-history-mode-"));
@@ -28,8 +28,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
     PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" });
   /** Run real tools only against the disposable fixture, preserving failure diagnostics. */
   function run(command: string, args: string[], status = 0) {
-    const result = spawnSync(command, args, { cwd: root, env, encoding: "utf8", timeout: 30_000 });
-    assert.equal(result.status, status, result.stdout + result.stderr);
+    const result = spawnCloseoutTool(command, args, { cwd: root, env, encoding: "utf8", timeout: 30_000 });
+    assert.equal(result.status, status, `${command}: ${result.error?.message ?? ""}\n${result.stdout}${result.stderr}`);
     return result;
   }
   const pmRoot = join(root, ".agents", "pm");
