@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { PmClient } from "@unbrained/pm-cli/sdk";
@@ -17,7 +18,23 @@ test("untagged closeouts generate and verify history without accepting it for pu
   cpSync("scripts", join(root, "scripts"), { recursive: true });
   mkdirSync(join(root, "src"));
   cpSync("src/sdk-loader.ts", join(root, "src", "sdk-loader.ts"));
-  symlinkSync(resolve("node_modules"), join(root, "node_modules"), "junction");
+  // Keep the pinned packages available without giving the fixture a working pm
+  // shim. Changelog must use its installed-host Node launcher on every OS.
+  const modules = join(root, "node_modules");
+  const bin = join(modules, ".bin");
+  mkdirSync(bin, { recursive: true });
+  mkdirSync(join(modules, "@unbrained"));
+  for (const name of ["pm-changelog", "@unbrained/pm-cli"]) {
+    symlinkSync(resolve("node_modules", name), join(modules, name), "junction");
+  }
+  const changelogCli = createRequire(import.meta.url).resolve("pm-changelog/cli");
+  if (process.platform === "win32") {
+    writeFileSync(join(bin, "pm-changelog.cmd"), `@"${process.execPath}" "${changelogCli}" %*\r\n`);
+    writeFileSync(join(bin, "pm.cmd"), "@exit /b 79\r\n");
+  } else {
+    symlinkSync(changelogCli, join(bin, "pm-changelog"));
+    writeFileSync(join(bin, "pm"), "#!/bin/sh\nexit 79\n", { mode: 0o755 });
+  }
   const env: NodeJS.ProcessEnv = { ...process.env };
   const config = createEmptyToolConfig(root);
   for (const key of Object.keys(env)) if (key.startsWith("GIT_") || /TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key) || key.toLowerCase() === "npm_config_userconfig") delete env[key];

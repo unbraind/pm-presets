@@ -340,7 +340,6 @@ export function verify(root: string, today: string): VerifierResult {
     ...lead,
     "--pm-root", ".agents/pm",
     "--stdout",
-    "--pm-bin", "./node_modules/.bin/pm",
     "--pm-arg=--output-budget", "--pm-arg=unbounded",
     "--pm-arg=--output-limit", "--pm-arg=unbounded",
     "--release-version", probe,
