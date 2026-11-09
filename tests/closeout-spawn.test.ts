@@ -1,10 +1,11 @@
 /** Exercise launcher selection and argument handling with real disposable processes. */
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { devNull, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { spawnCloseoutTool } from "./fixtures/closeout-spawn.ts";
+import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
 
 test("closeout tools preserve direct process arguments and failure diagnostics", () => {
   const args = ["space separated", "$literal", "%literal%", "semi;colon"];
@@ -29,7 +30,7 @@ test("Windows dispatch selects the npm shim and shell while other tools stay dir
     writeFileSync(join(root, tool), `#!/bin/sh\nprintf '%s:%s' '${tool}' "$1"\n`, { mode: 0o755 });
   }
   const env: NodeJS.ProcessEnv = { PATH: root + delimiter + (process.env.PATH ?? ""),
-    HOME: root, NPM_CONFIG_USERCONFIG: devNull, CLOSEOUT_LAUNCHER_PROBE: "expanded-fixture-argument" };
+    HOME: root, NPM_CONFIG_USERCONFIG: createEmptyToolConfig(root), CLOSEOUT_LAUNCHER_PROBE: "expanded-fixture-argument" };
   const options = { cwd: root, env, encoding: "utf8" as const, timeout: 30_000 };
   const windows = spawnCloseoutTool("npm", ["$CLOSEOUT_LAUNCHER_PROBE"], options, "win32");
   assert.equal(windows.status, 0, windows.error?.message ?? windows.stderr);

@@ -1,11 +1,12 @@
 /** Preserve historical closeouts while keeping actual publication checks strict. */
 import assert from "node:assert/strict";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { devNull, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { PmClient } from "@unbrained/pm-cli/sdk";
 import { spawnCloseoutTool } from "./fixtures/closeout-spawn.ts";
+import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
 
 test("untagged closeouts generate and verify history without accepting it for publication", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-closeout-history-mode-"));
@@ -18,9 +19,10 @@ test("untagged closeouts generate and verify history without accepting it for pu
   cpSync("src/sdk-loader.ts", join(root, "src", "sdk-loader.ts"));
   symlinkSync(resolve("node_modules"), join(root, "node_modules"), "junction");
   const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const key of Object.keys(env)) if (key.startsWith("GIT_") || /TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key)) delete env[key];
+  const config = createEmptyToolConfig(root);
+  for (const key of Object.keys(env)) if (key.startsWith("GIT_") || /TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key) || key.toLowerCase() === "npm_config_userconfig") delete env[key];
   Object.assign(env, { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root,
-    GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: "1", NPM_CONFIG_USERCONFIG: devNull,
+    GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: "1", NPM_CONFIG_USERCONFIG: config,
     NPM_CONFIG_UPDATE_NOTIFIER: "false",
     GIT_AUTHOR_NAME: "SteveBot", GIT_AUTHOR_EMAIL: "1153461+unbraind@users.noreply.github.com",
     GIT_COMMITTER_NAME: "SteveBot", GIT_COMMITTER_EMAIL: "1153461+unbraind@users.noreply.github.com",

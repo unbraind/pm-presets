@@ -2,9 +2,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { devNull, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
 
 test("Windows closeout launcher rejects the legacy spawn and executes the npm shim", { skip: process.platform !== "win32" }, (t) => {
   const root = mkdtempSync(join(tmpdir(), "closeout npm "));
@@ -29,7 +30,7 @@ assert.match(result.stdout.trim(), /^\\d+\\.\\d+\\.\\d+/);
       || key.toLowerCase() === "npm_config_userconfig") delete env[key];
   }
   Object.assign(env, { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root,
-    NPM_CONFIG_USERCONFIG: devNull, NPM_CONFIG_UPDATE_NOTIFIER: "false" });
+    NPM_CONFIG_USERCONFIG: createEmptyToolConfig(root), NPM_CONFIG_UPDATE_NOTIFIER: "false" });
   /** Run the copied launcher in a fresh Node process with the actual Windows PATH. */
   function probe() {
     return spawnSync(process.execPath, [join(root, "probe.mjs")], { cwd: root, env, encoding: "utf8", timeout: 45_000 });

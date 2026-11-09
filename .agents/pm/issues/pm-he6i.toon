@@ -6,9 +6,11 @@ status: in_progress
 priority: 2
 tags[3]: closeout,"gh:unbraind/pm-presets#184","gh:unbraind/pm-presets#203"
 created_at: "2026-11-02T09:18:08.631Z"
-updated_at: "2026-11-07T01:34:22.936Z"
+updated_at: "2026-11-09T10:58:58.158Z"
+assignee: codex-agent
+claim_principal: codex-agent
 author: pi-glm
-comments[17]{created_at,author,text}:
+comments[20]{created_at,author,text}:
   "2026-11-06T12:40:00.601Z",codex-sol,"Main still attributes the upstream defect to adapter PR 170. Plan: append a status correction preserving all native history, retain compatibility refusals, and add a real nongit SDK tracker regression that checks unresolved upstream work cannot be emitted as Fixed by the closeout workflow."
   "2026-11-06T12:44:20.929Z",codex-sol,"Failing-first reproduction: the canonical tracker copied to a nongit scratch tracker and read with PmClient reports pm-7km8 closed instead of open; generated Fixed notes include its host-defect title. The correction appends native history, clears completion/resolution fields and keeps the host follow-up open. A generic upstream:unresolved gate will reject done-role closure before closeout changelog generation."
   "2026-11-06T12:48:01.617Z",codex-sol,"The pinned changelog generator deliberately restores closed snapshots from immutable release tags, so reopening alone does not remove the old Fixed claim. All package/release generator invocations now exclude upstream-tagged follow-ups: these are foreign implementation work, not package fixes. Package mitigation/correction items remain eligible. The explicit upstream:unresolved marker separately guards automatic completion; no tagged snapshots or existing audit records are edited. The first native reopen attempt rejected unsupported timestamp unsets without changing state; the supported status transition cleared completion fields automatically."
@@ -26,20 +28,26 @@ comments[17]{created_at,author,text}:
   "2026-11-07T01:23:22.744Z",codex-agent,"Linked targeted test run passes (8 executed tests, 0 failures, 1 intentional Windows-only skip). Typecheck, lint and test compilation pass. All changed history streams retain main as a byte-identical prefix; the coverage item history is new on this branch. Fresh build leaves committed dist unchanged. Strict CI-style tracker health passes all 10 checks with an advisory telemetry queue notice. Default-environment health instead reports an ambient global pm-github host-version skew (pinned host 2026.11.2 versus extension install host 2026.11.6); no package dependency or global installation was changed. Full npm and Bun release checks use isolated HOME and stripped credentials, sequentially with at most two test workers."
   "2026-11-07T01:27:25.395Z",codex-agent,"Full npm run release:check passes in 352 seconds with isolated HOME and credential-free child environment: 352 tests passed, 0 failed, 0 skipped, 100% lines/branches/functions across all 36 configured gated sources. Also passes typecheck, lint, 102-file/228-declaration docstring coverage, production audit, package dry run, closeout attribution, canonical changelog, publication attestation and version-derived changelog dates. Committed dist matches the build. Full Bun release gate is running sequentially at unchanged thresholds."
   "2026-11-07T01:34:21.934Z",codex-agent,"Final review-round result: full npm and Bun release:check both pass at unchanged thresholds (npm 352 seconds; Bun 415 seconds). Each executes 352/352 tests with 0 failures and 0 skips and measures 100% lines, branches and functions across all 36 configured gated sources; docstrings cover 102 files and 228 declarations. Typecheck, lint, test compilation, build, audit, package dry run, closeout attribution, changelog, publish-attestation and changelog-date checks pass. Targeted and linked PM runs each pass 8 tests with 1 intentional Windows-only skip. Three independently failing helper reverts and passing 2/2 restorations are recorded above. Native Windows npm launch/revert and full history acceptance are configured in Windows CI and remain pending the pushed head. No finding was refused; no other valid instance found in the whole PR. No threshold, dependency pin or product source changed this round. Release my claim while leaving the item in progress for orchestrator verification; regenerate changelog after this final tracker write, verify final commit identity/privacy and history-prefix integrity, then push only the PR branch and delete its saved local WIP branch."
-files[12]{path,scope}:
+  "2026-11-09T10:46:34.466Z",codex-agent,"Continuation inspected existing branch, PR 203, all review-thread comments and tracker evidence without reading raw agent transcripts. Remote head already includes main and no unresolved review threads remain. Latest review scope request is satisfied by the existing direct link to issue 184. Windows CI still fails on the null-device Git config; replace every Git/npm config null-device path with a real empty temporary file, add behavioral regressions, verify unchanged full npm/Bun gates and native Windows CI."
+  "2026-11-09T10:49:18.814Z",codex-agent,"Confirmed Windows failure in job 128536469508: Git rejects the null-device global config path. Replaced every package Git/npm config null-device with the shared ordinary empty-file helper, scoped to caller cleanup; the audit also strips inherited credentials and preserves status. Whole-PR review found no other null-device config use. Targeted suite passes 10 tests with 1 intentional Windows-only skip; docstrings pass for 111 files and 241 declarations. Two isolated behavioral reverts fail: returning the null device from the shared helper fails both config regressions; routing only audit config back to the null device fails its process regression. Each restoration passes 2/2. Real Git/npm reads and fake-audit processes cover paths with spaces, exact audit arguments, both exit outcomes and cleanup. Windows CI now runs these same portable regressions alongside the complete history fixture."
+  "2026-11-09T10:58:58.158Z",codex-agent,"Full npm run release:check passes with isolated HOME, ordinary empty Git/npm config and stripped credential variables: 367/367 tests, no failures or skips, 512.6 seconds. Coverage remains 100% lines, branches and functions across the unchanged 36-source scope; typecheck, lint, build/test compilation, docstrings (111 files, 241 declarations), production audit, package inspection, attribution, canonical changelog, publish attestation and changelog-date checks pass. Strict tracker health passes 10/10 and histories preserve main prefixes. Existing maintainer-authored merge 67271ad remains intact and passes the repository identity audit; the author range therefore includes that earlier merge in addition to bot commits. New continuation commits use the required SteveBot identity. Bun release validation will run sequentially."
+files[15]{path,scope}:
   .github/workflows/ci.yml,project
   .github/workflows/pm-github-closeout.yml,project
   .github/workflows/release.yml,project
   .gitignore,project
   package.json,project
+  scripts/audit-prod.ts,project
   scripts/check-changelog.ts,project
+  scripts/empty-tool-config.ts,project
   scripts/verify-closeout-attribution.ts,project
   tests/closeout-attribution.test.ts,project
   tests/closeout-history.test.ts,project
   tests/closeout-spawn.test.ts,project
   tests/fixtures/closeout-spawn.ts,project
+  tests/tool-config.test.ts,project
   tests/windows-closeout.integration.ts,project
-tests[4]:
+tests[5]:
   - command: node --test --test-concurrency=2 tests/closeout-attribution.test.ts
     scope: project
     provenance:
@@ -69,6 +77,14 @@ tests[4]:
     provenance:
       author: codex-agent
       created_at: "2026-11-07T01:20:14.080Z"
+      source_kind: local_mutation
+      source_ref: coverage-gate-and-closeout-attribution
+  - command: node --test --test-concurrency=2 tests/tool-config.test.ts tests/closeout-history.test.ts tests/closeout-spawn.test.ts tests/closeout-attribution.test.ts tests/windows-closeout.integration.ts tests/diff-coverage.test.ts
+    scope: project
+    timeout_seconds: 240
+    provenance:
+      author: codex-agent
+      created_at: "2026-11-09T10:49:20.146Z"
       source_kind: local_mutation
       source_ref: coverage-gate-and-closeout-attribution
 docs[1]{path,scope}:
