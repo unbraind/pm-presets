@@ -24,3 +24,6 @@ coverage/
 # any untracked path outside its commit scope.
 .agents/pm/extensions/*
 !.agents/pm/extensions/.managed-extensions.json
+
+# Local review evidence and drafts are never package sources.
+.local/
