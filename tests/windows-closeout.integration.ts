@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
+import { stripToolEnv } from "../scripts/tool-env.ts";
 
 test("Windows closeout launcher rejects the legacy spawn and executes the npm shim", { skip: process.platform !== "win32" }, (t) => {
   const root = mkdtempSync(join(tmpdir(), "closeout npm "));
@@ -24,11 +25,7 @@ const result = spawnCloseoutTool("npm", ["--version"], {
 assert.equal(result.status, 0, result.error?.message ?? result.stderr);
 assert.match(result.stdout.trim(), /^\\d+\\.\\d+\\.\\d+/);
 `);
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const key of Object.keys(env)) {
-    if (/TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key)
-      || key.toLowerCase() === "npm_config_userconfig") delete env[key];
-  }
+  const env = stripToolEnv(process.env);
   Object.assign(env, { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root,
     NPM_CONFIG_USERCONFIG: createEmptyToolConfig(root), NPM_CONFIG_UPDATE_NOTIFIER: "false" });
   /** Run the copied launcher in a fresh Node process with the actual Windows PATH. */

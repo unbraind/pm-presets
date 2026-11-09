@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { PmClient } from "@unbrained/pm-cli/sdk";
 import { spawnCloseoutTool } from "./fixtures/closeout-spawn.ts";
 import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
+import { stripToolEnv } from "../scripts/tool-env.ts";
 
 test("untagged closeouts generate and verify history without accepting it for publication", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "preset-closeout-history-mode-"));
@@ -35,9 +36,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
     symlinkSync(changelogCli, join(bin, "pm-changelog"));
     writeFileSync(join(bin, "pm"), "#!/bin/sh\nexit 79\n", { mode: 0o755 });
   }
-  const env: NodeJS.ProcessEnv = { ...process.env };
+  const env = stripToolEnv(process.env, (key) => key.startsWith("GIT_"));
   const config = createEmptyToolConfig(root);
-  for (const key of Object.keys(env)) if (key.startsWith("GIT_") || /TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key) || key.toLowerCase() === "npm_config_userconfig") delete env[key];
   Object.assign(env, { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root,
     GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: "1", NPM_CONFIG_USERCONFIG: config,
     NPM_CONFIG_UPDATE_NOTIFIER: "false",

@@ -7,14 +7,11 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { createEmptyToolConfig } from "../scripts/empty-tool-config.ts";
 import { spawnCloseoutTool } from "./fixtures/closeout-spawn.ts";
+import { stripToolEnv } from "../scripts/tool-env.ts";
 
 /** Strip inherited credentials and config routing before running disposable tools. */
 function fixtureEnv(root: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const key of Object.keys(env)) {
-    if (/TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key)
-      || key.startsWith("GIT_") || key.toLowerCase() === "npm_config_userconfig") delete env[key];
-  }
+  const env = stripToolEnv(process.env, (key) => key.startsWith("GIT_"));
   return { ...env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, NPM_CONFIG_UPDATE_NOTIFIER: "false" };
 }
 
@@ -49,9 +46,10 @@ assert.ok(statSync(config).isFile(), "audit config must be a regular file");
 assert.equal(readFileSync(config, "utf8"), "");
 assert.equal(process.env.npm_config_userconfig, config);
 for (const key of Object.keys(process.env)) {
-  assert.ok(!/TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY|NPM_MEDIA_SERVER/i.test(key));
+  assert.ok(!["TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "COOKIE", "PRIVATE_KEY", "NPM_MEDIA_SERVER"].some((part) => key.toUpperCase().includes(part)));
   assert.notEqual(key.toLowerCase(), "npm_config_allow_scripts");
 }
+for (const key of JSON.parse(process.env.AUDIT_FIXTURE_EXCLUDED_KEYS)) assert.ok(!Object.hasOwn(process.env, key));
 console.log(JSON.stringify({ config }));
 process.exitCode = Number(process.env.AUDIT_FIXTURE_STATUS);
 `);
@@ -66,7 +64,11 @@ process.exitCode = Number(process.env.AUDIT_FIXTURE_STATUS);
   const [runtime, ...args] = manifest.scripts["audit:prod"].split(" ");
   assert.equal(runtime, "node");
   for (const status of [0, 7]) {
+    const excluded = ["TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "COOKIE", "PRIVATE_KEY", "NPM_MEDIA_SERVER"]
+      .flatMap((part) => [part, `prefix_${part.toLowerCase()}_suffix`, `Mixed_${part.toLowerCase()}_Value`]);
     const env: NodeJS.ProcessEnv = { ...fixtureEnv(root), PATH: root + delimiter + (process.env.PATH ?? ""),
+      ...Object.fromEntries(excluded.map((key) => [key, "synthetic-fixture"])),
+      AUDIT_FIXTURE_EXCLUDED_KEYS: JSON.stringify([...excluded, "npm_config_allow_scripts"]),
       NPM_CONFIG_USERCONFIG: "invalid inherited config", npm_config_userconfig: "invalid inherited config",
       NPM_TOKEN: "synthetic-fixture", NODE_AUTH_TOKEN: "synthetic-fixture", NPM_MEDIA_SERVER: "synthetic-fixture",
       npm_config_allow_scripts: "true", AUDIT_FIXTURE_STATUS: String(status) };
