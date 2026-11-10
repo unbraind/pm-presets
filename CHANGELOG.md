@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026.11.10 - 2026-11-10
+
+### Dependencies
+
+- Bump the pm-toolchain group across 1 directory with 3 updates ([#206](https://github.com/unbraind/pm-presets/pull/206))
+- Bump unbraind/pm-github/.github/workflows/pm-github-sync.yml ([#202](https://github.com/unbraind/pm-presets/pull/202))
+- Bump unbraind/pm-github/.github/workflows/pm-github-closeout.yml ([#201](https://github.com/unbraind/pm-presets/pull/201))
+- Bump @unbrained/pm-cli ([#200](https://github.com/unbraind/pm-presets/pull/200))
+
 ## 2026.11.5 - 2026-11-05
 
 ### Fixed
