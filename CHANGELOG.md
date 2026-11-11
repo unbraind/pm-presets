@@ -165,10 +165,10 @@
 
 ### Fixed
 
-- A failed provenance publish silently falls back to an unattested one ([pm-acsd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-acsd.toon))
-- Stabilise the changelog gate release date by deriving it from the calendar version instead of the clock ([pm-rwp3](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-rwp3.toon))
 - Finish suffix-safe changelog date verification ([pm-75jv](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-75jv.toon))
 - Harden publish attestation scanner against review bypasses ([pm-scbd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-scbd.toon))
+- A failed provenance publish silently falls back to an unattested one ([pm-acsd](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-acsd.toon))
+- Stabilise the changelog gate release date by deriving it from the calendar version instead of the clock ([pm-rwp3](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-rwp3.toon))
 
 ## 2026.8.28 - 2026-08-28
 
