@@ -2,15 +2,18 @@ id: pm-xm9t
 title: Certify saved typed-binding snapshot hardening against current main
 description: "Follow up pm-qz1k by reconciling the saved typed-binding review against main. PR #191 already delivered all saved source and test hunks. Add independent end-to-end regression coverage and isolated behavioral revert proofs for captured binding values, catalog membership and privacy before normalization; preserve subsequent ownership and seed-normalization fixes. Rebuild dist rather than copy saved artifacts. Avoid the open coverage and closeout PR files."
 type: Issue
-status: in_progress
+status: closed
 priority: 2
 tags[3]: bindings,regression,snapshot
 created_at: "2026-11-07T14:35:29.769Z"
-updated_at: "2026-11-07T18:37:29.263Z"
+updated_at: "2026-11-14T10:13:01.882Z"
+closed_at: "2026-11-14T08:58:26.631Z"
+completed_at: "2026-11-07T19:47:29.000Z"
 author: codex-agent
+release: 2026.11.10
 dependencies[1]{id,kind,created_at,author,source_kind,author_source}:
   pm-qz1k,related,"2026-11-07T14:35:29.769Z",codex-agent,"cli:create:dep",detected
-comments[19]{created_at,author,text}:
+comments[20]{created_at,author,text}:
   "2026-11-07T14:35:55.235Z",codex-agent,"Saved-WIP comparison: all four source changes and their artifact-state regressions already landed through PR #191 (d1087cf). No source hunks remain to reapply. Copying the WIP would remove later seed normalization and artifact ownership. Keep main source intact, add focused independent black-box regression coverage and mutation proofs, rebuild dist and run npm/Bun release gates. PR #203 remains open; its implementation, tests and tracker items are excluded. The generated changelog will be refreshed as required after final tracker writes."
   "2026-11-07T14:39:15.993Z",codex-agent,"Focused acceptance passes 4/4 with zero failures or skips. Reproducible disposable-copy revert verifier passes baseline 4/4; kills seven isolated mutations (binding alias, template alias, seed alias, ownership record alias, catalog guard removal, replacement privacy guard removal, sensitive seed-prefix guard removal); all seven restored scenarios pass. No production source was altered: these certify behaviors already delivered by PR #191. Every fixture is synthetic and uses real nongit SDK trackers."
   "2026-11-07T14:45:58.225Z",codex-agent,"Expanded the disposable verifier with a settings-alias mutation: baseline 4/4, now 8/8 independent behavioral reverts fail with assertions and all 8 restorations pass. npm typecheck, lint, build:test and docstrings pass (95 files, 227 declarations). Both linked pm tests passed with result tracking disabled as required; no run artifacts were written to the package tracker. Isolated strict health passes; ordinary host health reports the existing global pm-github version skew. Current source, rebuilt dist and generated CHANGELOG are byte-identical to main; no paths owned by open PR #203 are changed."
@@ -30,6 +33,7 @@ comments[19]{created_at,author,text}:
   "2026-11-07T18:07:44.447Z",codex-agent,"Diagnostic regression and behavioral revert proof: the linked command node --test --test-concurrency=2 tests/revert-evidence.test.ts passed 5/5 with zero failures, cancellations, skips or todo. In a disposable package copy, the focused diagnostic test independently rejected four mutations: restore generic runner diagnostics; echo raw rejected names; restore assertion actual/expected payload retention; restore raw JSON.parse diagnostics. Every mutation exited 1 with ERR_ASSERTION, and the same focused test passed after each restoration (4/4 detected and restored). The reviewed worktree was never mutated for these proofs."
   "2026-11-07T18:09:23.936Z",codex-agent,"Compatibility confirmation for the additional diagnostic change: node --test --test-concurrency=2 tests/revert-evidence.test.ts passes 5/5 on both Node 22.18.0 and Node 26.13.0, with zero failures, skips, cancellations or todo. Current origin/main is fully contained in this branch; PR #203 remains open and none of its files are modified. Starting fresh npm and Bun full release gates serially with the existing two-worker limit and unchanged thresholds."
   "2026-11-07T18:37:27.067Z",codex-agent,"Additional diagnostic final gates pass: npm run release:check and bun run release:check each complete 357/357 tests, zero failures/skips/cancellations, and 100.00% lines/branches/functions across all 36 gated files at unchanged thresholds. Test durations: npm 772349 ms; Bun 798760 ms. Typecheck, lint, test compilation, docstrings (99 files, 237 declarations), production audit, package inspection, changelog and both release verifiers pass. The linked diagnostic command passes 5/5, also on Node 22.18.0 and 26.13.0. Four diagnostic/privacy behavioral reverts are detected and all four restorations pass; three formatting/import-guard proofs and all earlier typed-binding/named-evidence/count receipts remain intact. The safe refusal now identifies public runner modules or required test positions without echoing arbitrary names, parser snippets or rejected metadata. This addresses the additional review finding without adopting its unsafe raw-name suggestion. All 11 PR paths pass private-path and symlink checks; history is append-only. Current main is fully contained in the branch. Production src, rebuilt dist, package configuration, changelog and every file owned by open PR #203 remain unchanged. No existing behavioral assertion was weakened or removed. PR https://github.com/unbraind/pm-presets/pull/205 will receive this verified commit and another requested review. Final-head CI/re-review remain pending evidence. Leave item in_progress for orchestrator verification and release this claim."
+  "2026-11-14T10:13:01.880Z",codex-sweep-1114,"Release-attribution correction: completed_at = 2026-11-07T19:47:29Z from https://github.com/unbraind/pm-presets/pull/205 (merge SHA bc37ff60520f7654d6ade8087ea975d8e1cdbe78); first containing release tag v2026.11.10, recorded release 2026.11.10."
 files[8]{path,scope}:
   scripts/sdk-seed-differential.ts,project
   scripts/validate-plan-public.ts,project
@@ -48,4 +52,5 @@ tests[6]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test --test-concurrency=2 tests/revert-evidence.test.ts,project,codex-agent,"2026-11-07T18:04:59.876Z",local_mutation,typed-binding-snapshot-hardening
 docs[1]{path,scope}:
   docs/typed-binding-hardening.md,project
+close_reason: "https://github.com/unbraind/pm-presets/pull/205 merged 2026-11-07T19:47:29Z; merge SHA bc37ff60520f7654d6ade8087ea975d8e1cdbe78; PR head 15c9e5791df9a5d1499a5ba2e27926c073d425b1. Delivered: Independent typed-binding snapshot, catalog-membership and pre-normalization privacy regressions plus isolated behavioral reverts and stable execution evidence. Green at that head: test (22), codeql, test (26), simulation-release-gates, windows-prepare-lifecycle, CodeQL, CodeRabbit, Greptile Review, Hound. Other check outcomes: enable-auto-merge: SKIPPED; cubic · AI code reviewer: NEUTRAL; Sourcery review: SKIPPED (not counted as green)."
 body: ""

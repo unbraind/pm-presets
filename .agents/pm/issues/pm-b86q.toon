@@ -2,18 +2,22 @@ id: pm-b86q
 title: Make diff coverage deterministic across supported Node runtimes
 description: "Identify the missed diff branch behind 99.95 percent aggregate coverage on main. Add deterministic behavioral coverage with real nongit SDK trackers and OS processes for races, without changing thresholds or exclusions. CI verifies full Node 22 and 26 gates."
 type: Issue
-status: in_progress
+status: closed
 priority: 1
 tags[3]: coverage,"gh:unbraind/pm-presets#194",regression
 created_at: "2026-11-06T12:40:14.800Z"
-updated_at: "2026-11-06T13:06:58.234Z"
+updated_at: "2026-11-14T10:12:55.134Z"
+closed_at: "2026-11-14T08:58:16.716Z"
+completed_at: "2026-11-09T18:42:51.000Z"
 author: codex-sol
-comments[5]{created_at,author,text}:
+release: 2026.11.10
+comments[6]{created_at,author,text}:
   "2026-11-06T12:40:38.715Z",codex-sol,"Main history contains no coverage repair after the reported failures. Capturing branch-level LCOV from the existing focused diff consumers on Node 22, then adding deterministic cases before changing implementation. Local work runs targeted tests, lint and typecheck; the full unchanged release gates run in CI as requested."
   "2026-11-06T12:51:58.275Z",codex-sol,"Focused existing diff consumers passed on unchanged main source with the pinned SDK: Node 22 and Node 26 each report 100 percent lines/branches/functions over diff.ts. Both LCOV reports contain 146 branches. The reported failure implies 146 of 147 branches; investigating the additional range with a broader reproduction rather than weakening thresholds. Latest main release CI has successful Node 22 and 26 jobs but failed simulation-release-gates, so those green legs do not close the issue."
   "2026-11-06T13:01:07.505Z",codex-sol,"Root cause established from real V8 data: merging 17 process captures in a deterministic shuffled order reproduces 147 branches with exactly one zero range, the nullish fallback in planInput.seeds (declaredSeeds ?? []). The earlier Array.isArray guard rejects every selected nullish inventory, making that fallback unexecutable. Other merge orders omit that range and show 146/146. A failing-first real-process SDK regression now reports the uncovered range as ?? []; it exercises both selection orders, explicit empty arrays, missing/null/object/string refusals, and audited managed enrollment on nongit trackers. Removing only the redundant fallback preserves every supported behavior and threshold. Stopped the broader local reproduction after capturing this cause; final full gates belong to CI as requested."
   "2026-11-06T13:02:36.646Z",codex-sol,"Behavioral revert proof: restoring only the old selected-inventory fallback in a disposable source copy makes tests/diff-coverage.test.ts fail with the zero-count range ?? []; restoring the fixed expression passes. No guard, accepted value, runtime behavior, percentage threshold or source exclusion changed. The focused real-process regression is deterministic independently of native report merge order."
   "2026-11-06T13:06:51.941Z",codex-sol,"Fixed-source Node 22 targeted coverage passes 79/79 tests, zero failures/skips/cancellations, with 100 percent lines, branches and functions for diff.ts under unchanged 100 percent thresholds. Node 26 combined real-process diff/closeout regressions pass 11/11. The exact one-expression revert fails the counter assertion and restoration passes. Lint, typecheck, test compilation, build, complete docstrings and isolated-home strict tracker health pass. Default-home health correctly reports a global extension/host version skew; isolated CI-style state has no finding. Full Node 22/26 and npm/Bun gates plus bot review remain pending in PR CI. Releasing the implementation claim for external verification; item remains in_progress."
+  "2026-11-14T10:12:55.133Z",codex-sweep-1114,"Release-attribution correction: completed_at = 2026-11-09T18:42:51Z from https://github.com/unbraind/pm-presets/pull/203 (merge SHA f21bf7c80b9a770594022b0d0d3583d36732ee0d); first containing release tag v2026.11.10, recorded release 2026.11.10."
 files[5]{path,scope}:
   scripts/coverage-gate.ts,project
   src/diff.ts,project
@@ -23,4 +27,5 @@ files[5]{path,scope}:
 tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test --test-concurrency=2 tests/diff.test.ts,project,codex-sol,"2026-11-06T12:52:06.457Z",local_mutation,coverage-gate-and-closeout-attribution
   node --test --test-concurrency=2 tests/diff-coverage.test.ts tests/diff.test.ts,project,codex-sol,"2026-11-06T13:01:12.113Z",local_mutation,coverage-gate-and-closeout-attribution
+close_reason: "https://github.com/unbraind/pm-presets/pull/203 merged 2026-11-09T18:42:51Z; merge SHA f21bf7c80b9a770594022b0d0d3583d36732ee0d; PR head 1dbdc89fbf785e19b3094fafb8054b2ac1b59584. Delivered: Deterministic selected-inventory diff coverage across Node runtimes with an exact-expression behavioral revert and unchanged runtime semantics and thresholds. Green at that head: test (22), codeql, test (26), simulation-release-gates, windows-prepare-lifecycle, CodeQL, CodeRabbit, Greptile Review, Hound. Other check outcomes: enable-auto-merge: SKIPPED; cubic · AI code reviewer: NEUTRAL; Sourcery review: SKIPPED (not counted as green)."
 body: ""
