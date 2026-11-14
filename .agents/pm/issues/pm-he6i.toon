@@ -1,12 +1,12 @@
 id: pm-he6i
-title: "Correct the closeout record: the upstream template SDK defect is mitigated, not fixed"
-description: "Tracks gh:unbraind/pm-presets#184 (filed 2026-10-31, missed by the blind issue watch). The closeout of the upstream-template-defect item marked it delivered with PR #170 and listed it under CHANGELOG 'Fixed', but PR #170 only ships the package's fail-closed adapter mitigation: the host defects remain on upstream main (parseStoredTemplateOptions still assigns arbitrary accepted keys by indexed assignment into normalized, builtinTemplateDocument still indexes BUILTIN_TEMPLATES without an own-property check, and resolveTypeSynonym still indexes the ordinary-object synonym table — re-verified on upstream main 2026-11-02). The canonical item itself says the upstream follow-up stays open and requires host SDK/CLI own-key regression coverage before revisiting those refusals. Action: record a follow-up here that keeps the upstream fix open (watch upstream releases for own-key checks in template parsing and type synonyms), and correct the CHANGELOG wording from 'Fixed' to 'Mitigated (package-side)' so consumers do not read the host defect as repaired."
+title: Closeout marks unresolved upstream template SDK defect as fixed by adapter mitigation
+description: "GH issue #184: https://github.com/unbraind/pm-presets/issues/184 · author @unbraind · created 2026-10-31T03:29:17Z · updated 2026-10-31T03:29:17Z"
 type: Issue
-status: in_progress
+status: open
 priority: 2
-tags[3]: closeout,"gh:unbraind/pm-presets#184","gh:unbraind/pm-presets#203"
-created_at: "2026-11-02T09:18:08.631Z"
-updated_at: "2026-11-09T16:06:10.549Z"
+tags[2]: "gh:unbraind/pm-presets#184","github_author:unbraind"
+created_at: "2026-10-31T03:29:17Z"
+updated_at: "2026-11-14T12:27:03.775Z"
 author: pi-glm
 comments[27]{created_at,author,text}:
   "2026-11-06T12:40:00.601Z",codex-sol,"Main still attributes the upstream defect to adapter PR 170. Plan: append a status correction preserving all native history, retain compatibility refusals, and add a real nongit SDK tracker regression that checks unresolved upstream work cannot be emitted as Fixed by the closeout workflow."
@@ -113,4 +113,14 @@ tests[7]:
       source_ref: coverage-gate-and-closeout-attribution
 docs[1]{path,scope}:
   docs/closeout-attribution.md,project
-body: ""
+github_close_reason: ""
+github_closed_at: ""
+github_created_at: "2026-10-31T03:29:17Z"
+github_link_only: false
+github_number: 184
+github_release: ""
+github_state: open
+github_state_reason: unspecified
+github_updated_at: "2026-10-31T03:29:17Z"
+github_url: "https://github.com/unbraind/pm-presets/issues/184"
+body: "## Finding: inaccurate closeout, not an upstream repair claim\nAt pm-presets default commit `8d4ac9d1e0febf32b1bfb3d343d097776e96703e`, [PR #183](https://github.com/unbraind/pm-presets/pull/183) closes [pm-7km8](https://github.com/unbraind/pm-presets/blob/8d4ac9d1e0febf32b1bfb3d343d097776e96703e/.agents/pm/issues/pm-7km8.toon) as delivered by [PR #170](https://github.com/unbraind/pm-presets/pull/170), and adds its upstream-template-defect title under [Unreleased / Fixed](https://github.com/unbraind/pm-presets/blob/8d4ac9d1e0febf32b1bfb3d343d097776e96703e/CHANGELOG.md).\n\nThe same canonical item distinguishes the package's fail-closed compatibility mitigation from the upstream parser/flag-extractor fix, explicitly says the upstream follow-up stays open, and requires host SDK/CLI own-key regression coverage before revisiting those refusals. PR #170's merge and timestamp are real; they do not establish that the host defect was repaired.\n\n## Current source evidence and bounded reproduction\nReviewed host source at `unbraind/pm-cli@1a72d089ddf83d7347c40431bb0bd2e769f3c43d`:\n- [templates.ts](https://github.com/unbraind/pm-cli/blob/1a72d089ddf83d7347c40431bb0bd2e769f3c43d/src/sdk/templates.ts): `parseStoredTemplateOptions` initializes `normalized = {}` and assigns arbitrary accepted keys using indexed assignment; `builtinTemplateDocument` directly indexes `BUILTIN_TEMPLATES[normalizedName]` without an own-property check.\n- [type-synonyms.ts](https://github.com/unbraind/pm-cli/blob/1a72d089ddf83d7347c40431bb0bd2e769f3c43d/src/core/item/type-synonyms.ts): `resolveTypeSynonym` directly indexes the ordinary-object table.\n\nA Node v24.22.1 isolated probe using extracted exact pure functions (not the full SDK/CLI) passed six assertions:\n1. Input `JSON.parse('{\"__proto__\":\"public-data\",\"ordinary\":\"kept\",\"constructor\":\"kept\"}')` owns `__proto__`.\n2. `parseStoredTemplateOptions(input,\"own-key\")` does not own that key.\n3–4. Ordinary and constructor string controls remain.\n5. `builtinTemplateDocument(\"constructor\")` returns a document with that name despite no own builtin entry.\n6. `typeof resolveTypeSynonym(\"constructor\") === \"function\"`, rather than the documented string-or-undefined result.\n\nThese are source-qualified helper reproductions supporting the status discrepancy, not an end-to-end installed release test, exploit claim, or evidence of live impact. No provider operations were performed. No source/runtime/dependency files changed in #183.\n\n## Expected / actual / impact\nExpected: close and attribute the delivered adapter mitigation accurately while retaining an explicit unresolved upstream follow-up unless separate upstream repair evidence exists.\nActual: the unresolved host defect itself is marked closed and appears as Fixed, even though the canonical record and current source still distinguish it from the delivered mitigation.\nImpact: generated release notes and agent work selection can incorrectly treat host fidelity work as completed. This is not a new regression in the adapter's fail-closed protection and does not imply any npm publication.\n\n## Acceptance criteria\n- Correct the pm-7km8 status/resolution and generated changelog, or split the completed adapter mitigation from the still-open upstream follow-up with verified links.\n- If closure is intended, supply the actual upstream repair revision and relevant SDK/CLI regression evidence; do not cite an adapter-only merge as the host fix.\n- Preserve existing tracker/history evidence; append a corrective event rather than rewriting old history.\n- Add a focused closeout/regression check that a mitigation-only merge cannot attribute an explicitly unresolved upstream defect as Fixed.\n- Keep the adapter's compatibility refusals until the documented host support criteria are met.\n\nDeduplication: reviewed all 183 all-status pm-presets issues/PRs and the canonical item, plus PR #183 conversation; no separate existing corrective issue found."
