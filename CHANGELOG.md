@@ -53,6 +53,10 @@
 
 - Resolve the host SDK through symlinked pm entry points ([pm-jzy6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jzy6.toon))
 
+## 2026.10.29 - 2026-10-29
+
+No changes.
+
 ## 2026.10.28 - 2026-10-28
 
 ### Other
@@ -88,6 +92,10 @@
 - Preserve SDK refusal identity when loading create templates ([pm-bzvf](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-bzvf.toon))
 - Clarify reconciliation evidence limits in merge-safety documentation ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
 
+## 2026.10.24 - 2026-10-24
+
+No changes.
+
 ## 2026.10.23 - 2026-10-23
 
 ### Changed
@@ -112,11 +120,43 @@
 
 - Closed: Fix release publish ordering before protected main push ([pm-g33z](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-g33z.toon))
 
+## 2026.10.21 - 2026-10-21
+
+No changes.
+
+## 2026.10.20 - 2026-10-20
+
+No changes.
+
+## 2026.10.17 - 2026-10-17
+
+No changes.
+
+## 2026.10.16 - 2026-10-16
+
+No changes.
+
+## 2026.10.15 - 2026-10-15
+
+No changes.
+
+## 2026.10.14 - 2026-10-14
+
+No changes.
+
 ## 2026.10.12 - 2026-10-12
 
 ### Fixed
 
 - Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior ([pm-0czt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-0czt.toon))
+
+## 2026.10.7 - 2026-10-07
+
+No changes.
+
+## 2026.10.6 - 2026-10-06
+
+No changes.
 
 ## 2026.10.5 - 2026-10-05
 
@@ -124,11 +164,19 @@
 
 - Auto-merge green Dependabot updates and group the pm toolchain into one daily PR ([pm-v1it](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-v1it.toon))
 
+## 2026.10.4 - 2026-10-04
+
+No changes.
+
 ## 2026.9.26 - 2026-09-26
 
 ### Other
 
 - Certify pm CLI 2026.9.23 and adopt the guarded pm-ops merge-driver launcher ([pm-deqt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-deqt.toon))
+
+## 2026.9.25 - 2026-09-25
+
+No changes.
 
 ## 2026.9.22 - 2026-09-22
 
@@ -169,6 +217,10 @@
 ### Security
 
 - Consume the canonical attestation gate instead of carrying a copy of it ([pm-y0j0](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-y0j0.toon))
+
+## 2026.9.4 - 2026-09-04
+
+No changes.
 
 ## 2026.9.1 - 2026-09-01
 
@@ -252,6 +304,10 @@
 
 - Release commits discard the rebuilt dist, so the git-install path serves the previous version ([pm-hcjp](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-hcjp.toon))
 
+## 2026.7.31 - 2026-07-31
+
+No changes.
+
 ## 2026.7.29 - 2026-07-29
 
 ### Added
@@ -286,6 +342,14 @@
 - Adopt --respect-item-release in changelog scripts and bump pm-changelog to 2026.7.24 ([pm-yg8d](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-yg8d.toon))
 - Enable governance duplicate-detection advisory mode and adopt pm-cli 2026.7.25 ([pm-ra66](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-ra66.toon))
 
+## 2026.7.25 - 2026-07-25
+
+No changes.
+
+## 2026.7.24 - 2026-07-24
+
+No changes.
+
 ## 2026.7.23 - 2026-07-23
 
 ### Other
@@ -296,6 +360,10 @@
 
 - Closed: Recommend pm merge reconcile (2026.7.22) over raw history-repair in Multi-agent merge safety docs ([pm-jau2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jau2.toon))
 
+## 2026.7.22 - 2026-07-22
+
+No changes.
+
 ## 2026.7.19 - 2026-07-19
 
 ### Other
@@ -304,12 +372,28 @@
 - Finish PR \#15: agent-workflow preset + unified presets flags (merge-conflict resolve, bot-review fixes, functional verify) ([pm-mnug](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-mnug.toon))
 - Harden release bun-verify so registry-mirror lag cannot block the GitHub release ([pm-0f48](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-0f48.toon))
 
+## 2026.7.17 - 2026-07-17
+
+No changes.
+
+## 2026.7.11 - 2026-07-11
+
+No changes.
+
 ## 2026.7.10-1 - 2026-07-10
 
 ### Other
 
 - Production hardening and consolidated-preset governance pass 2026-07-09 ([pm-0y8x](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-0y8x.toon))
 - SDK 2026.7.10 alignment and production readiness pass ([pm-fw94](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-fw94.toon))
+
+## 2026.7.10 - 2026-07-10
+
+No changes.
+
+## 2026.7.7 - 2026-07-07
+
+No changes.
 
 ## 2026.7.6 - 2026-07-06
 
@@ -322,12 +406,28 @@
 - Align Node engine with pm CLI runtime ([pm-wf6l](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-wf6l.toon))
 - Regenerate CHANGELOG after pm close item ([pm-65i9](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-65i9.toon))
 
+## 2026.6.14 - 2026-06-14
+
+No changes.
+
 ## 2026.6.13 - 2026-06-13
 
 ### Other
 
 - Full-cycle hardening wave: pm-presets ([pm-mpyn](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-mpyn.toon))
 - Daily Release publish step runs prepublishOnly post-tag: align npm publish with --ignore-scripts ([pm-is8q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-is8q.toon))
+
+## 2026.6.10 - 2026-06-10
+
+No changes.
+
+## 2026.6.9 - 2026-06-09
+
+No changes.
+
+## 2026.6.8 - 2026-06-08
+
+No changes.
 
 ## 2026.6.7 - 2026-06-07
 
@@ -370,11 +470,31 @@
 - Implement presets diff <name\> (workspace vs preset, --json) ([pm-xa8m](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-xa8m.toon))
 - Implement presets show <name\> (full definition, --json, exit 3) ([pm-0r28](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-0r28.toon))
 
+## 2026.6.2 - 2026-06-02
+
+No changes.
+
 ## 2026.6.1 - 2026-06-01
 
 ### Fixed
 
 - Preset handlers threw plain Error (no exitCode) → runtime double-invocation ([pm-xp9p](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xp9p.toon))
+
+## 2026.5.31 - 2026-05-31
+
+No changes.
+
+## 2026.5.30 - 2026-05-30
+
+No changes.
+
+## 2026.5.29-1 - 2026-05-29
+
+No changes.
+
+## 2026.5.29 - 2026-05-28
+
+No changes.
 
 ## 2026.5.28 - 2026-05-28
 
