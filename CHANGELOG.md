@@ -7,6 +7,10 @@
 - Certify saved typed-binding snapshot hardening against current main ([pm-xm9t](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xm9t.toon))
 - Make diff coverage deterministic across supported Node runtimes ([pm-b86q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-b86q.toon))
 
+### Other
+
+- Close delivered pm items and reserve in progress for active work (2026-10-24) ([pm-wefh](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-wefh.toon))
+
 ## 2026.11.13 - 2026-11-13
 
 ### Dependencies
