@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Certify saved typed-binding snapshot hardening against current main ([pm-xm9t](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xm9t.toon))
+- Make diff coverage deterministic across supported Node runtimes ([pm-b86q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-b86q.toon))
+
 ## 2026.11.13 - 2026-11-13
 
 ### Dependencies

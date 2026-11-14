@@ -2,11 +2,13 @@ id: pm-xm9t
 title: Certify saved typed-binding snapshot hardening against current main
 description: "Follow up pm-qz1k by reconciling the saved typed-binding review against main. PR #191 already delivered all saved source and test hunks. Add independent end-to-end regression coverage and isolated behavioral revert proofs for captured binding values, catalog membership and privacy before normalization; preserve subsequent ownership and seed-normalization fixes. Rebuild dist rather than copy saved artifacts. Avoid the open coverage and closeout PR files."
 type: Issue
-status: in_progress
+status: closed
 priority: 2
 tags[3]: bindings,regression,snapshot
 created_at: "2026-11-07T14:35:29.769Z"
-updated_at: "2026-11-07T18:37:29.263Z"
+updated_at: "2026-11-14T08:58:26.696Z"
+closed_at: "2026-11-14T08:58:26.631Z"
+completed_at: "2026-11-14T08:58:26.631Z"
 author: codex-agent
 dependencies[1]{id,kind,created_at,author,source_kind,author_source}:
   pm-qz1k,related,"2026-11-07T14:35:29.769Z",codex-agent,"cli:create:dep",detected
@@ -48,4 +50,5 @@ tests[6]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test --test-concurrency=2 tests/revert-evidence.test.ts,project,codex-agent,"2026-11-07T18:04:59.876Z",local_mutation,typed-binding-snapshot-hardening
 docs[1]{path,scope}:
   docs/typed-binding-hardening.md,project
+close_reason: "https://github.com/unbraind/pm-presets/pull/205 merged 2026-11-07T19:47:29Z; merge SHA bc37ff60520f7654d6ade8087ea975d8e1cdbe78; PR head 15c9e5791df9a5d1499a5ba2e27926c073d425b1. Delivered: Independent typed-binding snapshot, catalog-membership and pre-normalization privacy regressions plus isolated behavioral reverts and stable execution evidence. Green at that head: test (22), codeql, test (26), simulation-release-gates, windows-prepare-lifecycle, CodeQL, CodeRabbit, Greptile Review, Hound. Other check outcomes: enable-auto-merge: SKIPPED; cubic · AI code reviewer: NEUTRAL; Sourcery review: SKIPPED (not counted as green)."
 body: ""
