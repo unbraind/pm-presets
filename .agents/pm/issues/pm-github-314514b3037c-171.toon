@@ -1,0 +1,25 @@
+id: pm-github-314514b3037c-171
+title: Parameter defaults validate trimmed values but resolve raw whitespace
+description: "GH issue #171: https://github.com/unbraind/pm-presets/issues/171 · author @unbraind · state reason completed · created 2026-10-27T15:43:22Z · updated 2026-10-29T18:22:32Z"
+type: Issue
+status: closed
+priority: 2
+tags[2]: "gh:unbraind/pm-presets#171","github_author:unbraind"
+created_at: "2026-10-27T15:43:22Z"
+updated_at: "2026-11-14T12:27:03.808Z"
+closed_at: "2026-10-29T18:22:32Z"
+completed_at: "2026-10-29T18:22:32Z"
+author: pm-github
+release: v2026.10.30
+close_reason: "Closed on GitHub as completed on 2026-10-29T18:22:32Z"
+github_close_reason: "Closed on GitHub as completed on 2026-10-29T18:22:32Z"
+github_closed_at: "2026-10-29T18:22:32Z"
+github_created_at: "2026-10-27T15:43:22Z"
+github_link_only: false
+github_number: 171
+github_release: v2026.10.30
+github_state: closed
+github_state_reason: completed
+github_updated_at: "2026-10-29T18:22:32Z"
+github_url: "https://github.com/unbraind/pm-presets/issues/171"
+body: "## Reproduced source defect\nTested PR #170 head `8c6277ad59e5198b25672e3ec66587f04faca66e`, Node 24.22.1, isolated exact `src/params.ts`; no tracker writes or live integrations. This is not a published-package or full-release certification.\n\nThe documented boundary says values are trimmed strings and string parameters fully match their pattern. The accepted [pm-qz1k record](https://github.com/unbraind/pm-presets/blob/8c6277ad59e5198b25672e3ec66587f04faca66e/.agents/pm/features/pm-qz1k.toon) requires consistent parameter resolution across settings/templates/seeds with invalid inputs refused before writes.\n\n## Minimal reproduction\n```js\nconst manifest = [{\n  name: \"projectKey\", type: \"string\", required: true,\n  pattern: \"[a-z]+\", default: \" acme \"\n}];\nresolveParameterValues(manifest, {}).values.projectKey; // \" acme \"\nresolveParameterValues(manifest, { projectKey: \" acme \" }).values.projectKey; // \"acme\"\n```\nPassing the first result to `resolveParameterizedPreset` with settings `id_prefix: \"${param:projectKey}-\"` produces `\" acme -\"`; a seed title bound to the same value becomes `\" acme \"`.\n\n## Cause and impact\nIn [src/params.ts](https://github.com/unbraind/pm-presets/blob/8c6277ad59e5198b25672e3ec66587f04faca66e/src/params.ts), manifest validation checks `assertValueConstraints(parameter, assertPlainValue(...))`, but the default branch of `resolveParameterValues` assigns raw `parameter.default`. Caller-supplied values retain the normalized value instead. Thus an accepted default can emit characters outside its declared full-match pattern or exceed a maxLength validated only after trimming. Authoring the same logical value as a default versus an explicit input yields different native fields/prose and can trigger later native validation rather than the promised boundary.\n\n## Expected / regression criteria\n- Use one normalized effective-value path for defaults and supplied inputs (or explicitly reject noncanonical defaults consistently).\n- Add default-versus-supplied parity regressions covering spaces/Unicode whitespace, full-match patterns and length boundaries, across settings/templates/seeds.\n- Preserve input immutability and pre-write refusal behavior; keep secret-default refusal.\n- Verify SDK and CLI consumers on the final head.\n\nSeven bounded assertions confirmed the discrepancy, immutability, required/unknown-input refusals and secret-in-prose refusal. Full SDK/CLI/build suites were not run here; current PR gates were queued. The bundled default without surrounding whitespace is not claimed broken. All 170 all-status issue/PR records, current PR conversation/inline comments, and canonical item checked; no equivalent finding found.\n\n---\n\n### GitHub comments (1)\n\n> **@unbraind** (2026-10-29T18:22:31Z)\n>\n> Fixed in PR #170 by ce38e2e and the expanded normalization class fix 8fa45a0. Defaults and supplied inputs use one normalized effective-value path. The 120-case default-versus-supplied property passes; reverting only the default normalization fails its targeted test (1/1). The restored combined regression corpus passes 6/6, and the linked native/template class focus passes 3/3. Real packed Node/Bun complete-artifact checks pass. Full npm and Bun release gates are running serially."

@@ -1,13 +1,16 @@
 id: pm-b86q
-title: Make diff coverage deterministic across supported Node runtimes
-description: "Identify the missed diff branch behind 99.95 percent aggregate coverage on main. Add deterministic behavioral coverage with real nongit SDK trackers and OS processes for races, without changing thresholds or exclusions. CI verifies full Node 22 and 26 gates."
+title: Node 22 main coverage gate fails at 99.95% despite 344 passing tests
+description: "GH issue #194: https://github.com/unbraind/pm-presets/issues/194 · author @unbraind · state reason completed · created 2026-11-03T20:07:52Z · updated 2026-11-09T18:42:52Z"
 type: Issue
-status: in_progress
+status: closed
 priority: 1
-tags[3]: coverage,"gh:unbraind/pm-presets#194",regression
-created_at: "2026-11-06T12:40:14.800Z"
-updated_at: "2026-11-06T13:06:58.234Z"
+tags[2]: "gh:unbraind/pm-presets#194","github_author:unbraind"
+created_at: "2026-11-03T20:07:52Z"
+updated_at: "2026-11-14T12:27:03.757Z"
+closed_at: "2026-11-09T18:42:52Z"
+completed_at: "2026-11-09T18:42:52Z"
 author: codex-sol
+release: v2026.11.10
 comments[5]{created_at,author,text}:
   "2026-11-06T12:40:38.715Z",codex-sol,"Main history contains no coverage repair after the reported failures. Capturing branch-level LCOV from the existing focused diff consumers on Node 22, then adding deterministic cases before changing implementation. Local work runs targeted tests, lint and typecheck; the full unchanged release gates run in CI as requested."
   "2026-11-06T12:51:58.275Z",codex-sol,"Focused existing diff consumers passed on unchanged main source with the pinned SDK: Node 22 and Node 26 each report 100 percent lines/branches/functions over diff.ts. Both LCOV reports contain 146 branches. The reported failure implies 146 of 147 branches; investigating the additional range with a broader reproduction rather than weakening thresholds. Latest main release CI has successful Node 22 and 26 jobs but failed simulation-release-gates, so those green legs do not close the issue."
@@ -23,4 +26,15 @@ files[5]{path,scope}:
 tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
   node --test --test-concurrency=2 tests/diff.test.ts,project,codex-sol,"2026-11-06T12:52:06.457Z",local_mutation,coverage-gate-and-closeout-attribution
   node --test --test-concurrency=2 tests/diff-coverage.test.ts tests/diff.test.ts,project,codex-sol,"2026-11-06T13:01:12.113Z",local_mutation,coverage-gate-and-closeout-attribution
-body: ""
+close_reason: "Closed on GitHub as completed on 2026-11-09T18:42:52Z; closing PR https://github.com/unbraind/pm-presets/pull/203 (\"Fix deterministic diff coverage and upstream closeout attribution\")"
+github_close_reason: "Closed on GitHub as completed on 2026-11-09T18:42:52Z; closing PR https://github.com/unbraind/pm-presets/pull/203 (\"Fix deterministic diff coverage and upstream closeout attribution\")"
+github_closed_at: "2026-11-09T18:42:52Z"
+github_created_at: "2026-11-03T20:07:52Z"
+github_link_only: false
+github_number: 194
+github_release: v2026.11.10
+github_state: closed
+github_state_reason: completed
+github_updated_at: "2026-11-09T18:42:52Z"
+github_url: "https://github.com/unbraind/pm-presets/issues/194"
+body: "Current main `d1087cf1c84267524f272bdb7edd7a7ed4fe9bb2` has a failing Node 22 coverage gate despite all 344 test assertions passing.\n\n**Observed evidence**\n- [Node 22 job](https://github.com/unbraind/pm-presets/actions/runs/41679600489/job/126069425768), Node v22.23.4: 344 tests, 344 pass, zero failed assertions; then `99.95% branch coverage does not meet threshold of 100%`.\n- The report attributes the only displayed branch shortfall to `src/diff.ts`: 99.32% branches, with 100% lines and functions. Aggregate lines/functions are 100%.\n- Main and the latest check collection were rechecked on 2026-11-03 at 20:07 UTC. This remains the latest Node 22 result for that exact SHA. Node 26 and simulation-release-gates succeed; they do not replace the Node 22 failure.\n\n**Goal and impact**\nThe [coverage mandate](https://github.com/unbraind/pm-presets/blob/d1087cf1c84267524f272bdb7edd7a7ed4fe9bb2/.agents/pm/chores/pm-kqnt.toon) requires 100% gated coverage without deleting live behavior. [The current gate](https://github.com/unbraind/pm-presets/blob/d1087cf1c84267524f272bdb7edd7a7ed4fe9bb2/scripts/coverage-gate.ts) enforces the manifest thresholds and fails on the test runner's coverage result. Expected: the full Node 22 suite meets the unchanged coverage mandate. Actual: CI exits nonzero after successful assertions because the branch threshold is missed.\n\n**Limits**\nThis is an evidenced CI/coverage regression, not proof of a product behavior defect. The exact missing branch or nondeterministic trigger has not been identified. The workflow run exposes no uploaded coverage artifact, and no local full suite, rerun, dependency install or source change was performed in this review. Earlier identical-source green runs are historical evidence, not grounds to dismiss this failed run.\n\n**Suggested acceptance**\n1. Capture the failing branch-level LCOV/V8 evidence and establish whether the gap is deterministic or coverage instability.\n2. Add a targeted behavioral test or correct the measurement issue without weakening thresholds, excluding runtime code, or deleting valid assertions.\n3. Verify full Node 22 and Node 26 coverage gates on the fixed exact commit, including repeatability where relevant; retain all existing privacy/refusal tests.\n\nAll-status issue/PR bodies, relevant PR191/192 conversations and all 89 current canonical tracker records were checked. The closed original coverage mandate and PR191 privacy-fix records do not track this current 99.95% Node 22 result.\n\n---\n\n### GitHub comments (1)\n\n> **@unbraind** (2026-11-04T06:50:37Z)\n>\n> New evidence from 2026-11-04: the same coverage shortfall also occurs on Node 26, so this is not confined to the Node 22 leg.\n> \n> At main `f0166a3d6f3f55a87b837eebae97573b33cd8961`, [Node 26 job 126414806972](https://github.com/unbraind/pm-presets/actions/runs/41781800769/job/126414806972) used Node v26.13.0 and completed 344 tests with 344 passes, zero failures, skips or cancellations. It then exited 1 because `99.95% branch coverage does not meet threshold of 100%`. The report again identifies `src/diff.ts` at 99.32% branch coverage, with 100% lines/functions. The same run's [Node 22 job](https://github.com/unbraind/pm-presets/actions/runs/41781800769/job/126414807086) succeeded.\n> \n> The latest commit only closes an earlier privacy-fix tracker item and updates its history/changelog; it does not alter runtime tests or coverage code. The [100% coverage mandate](https://github.com/unbraind/pm-presets/blob/f0166a3d6f3f55a87b837eebae97573b33cd8961/.agents/pm/chores/pm-kqnt.toon) remains the expected behavior. The failing gate remains a CI blocker despite passing assertions.\n> \n> All 195 all-status issue/PR records and 89 canonical PM records at this SHA were rechecked; adding this evidence here rather than opening a duplicate. This observation comes from hosted logs, not an independent local rerun. It does not establish the exact missing branch or prove nondeterminism. Existing acceptance still applies: retain branch-level evidence, identify the cause without weakening thresholds, and demonstrate repeatable full Node 22 and 26 coverage passes on the fix."

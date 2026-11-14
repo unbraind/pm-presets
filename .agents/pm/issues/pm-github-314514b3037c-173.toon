@@ -1,0 +1,25 @@
+id: pm-github-314514b3037c-173
+title: Secret parameter redaction misses JSON-escaped values in dry-run settings output
+description: "GH issue #173: https://github.com/unbraind/pm-presets/issues/173 · author @unbraind · state reason completed · created 2026-10-28T00:05:23Z · updated 2026-10-29T18:22:35Z"
+type: Issue
+status: closed
+priority: 2
+tags[2]: "gh:unbraind/pm-presets#173","github_author:unbraind"
+created_at: "2026-10-28T00:05:23Z"
+updated_at: "2026-11-14T12:27:03.795Z"
+closed_at: "2026-10-29T18:22:35Z"
+completed_at: "2026-10-29T18:22:35Z"
+author: pm-github
+release: v2026.10.30
+close_reason: "Closed on GitHub as completed on 2026-10-29T18:22:35Z"
+github_close_reason: "Closed on GitHub as completed on 2026-10-29T18:22:35Z"
+github_closed_at: "2026-10-29T18:22:35Z"
+github_created_at: "2026-10-28T00:05:23Z"
+github_link_only: false
+github_number: 173
+github_release: v2026.10.30
+github_state: closed
+github_state_reason: completed
+github_updated_at: "2026-10-29T18:22:35Z"
+github_url: "https://github.com/unbraind/pm-presets/issues/173"
+body: "## Reproduced helper defect with exact CLI call-site evidence\n\nPR #170 source `38c33adbb232d441be43bbec1dbe3e0a2513afbd`, unchanged in current `ca2b52c63f2d8432157dd6643844ce748b237085`; Node 24.22.1, isolated exact params.ts. No real credential, live provider or tracker mutation. Not a released-version or complete CLI reproduction.\n\nThe dry-run output at [shared.ts:454](https://github.com/unbraind/pm-presets/blob/ca2b52c63f2d8432157dd6643844ce748b237085/src/presets/shared.ts#L454) serializes settings before calling the raw-string redactor:\n\n```js\nconst synthetic = 'synthetic\"marker';\nconst output = redactSecretValues(JSON.stringify({token: synthetic}, null, 2), [synthetic]);\nJSON.parse(output).token === synthetic; // true: value remains recoverable\n```\n\nJSON escapes the quote, so the serialized text does not contain the unescaped raw string. The redactor's split/join therefore leaves it intact. Quote and backslash values are valid ordinary strings under the parameter contract; no control character is needed.\n\nThe [accepted feature record](https://github.com/unbraind/pm-presets/blob/ca2b52c63f2d8432157dd6643844ce748b237085/.agents/pm/features/pm-qz1k.toon) explicitly requires secrets never enter emitted output, including dry-run patches. The expected result is a redacted value; actual helper output contains a reversible serialization of the input.\n\nImpact: a dry-run JSON dump can expose a secret-typed value in logs or agent output despite its privacy-safe guarantee. This is an unreleased PR finding; actual user disclosure is not claimed.\n\nAcceptance/regression criteria:\n- Redact secret-bearing structured values before serialization, or otherwise cover JSON encoding without losing the complete capability of valid input strings.\n- Add synthetic quote/backslash and combined-escape regressions for the actual dry-run output and every serialized diff output.\n- Assert neither raw nor reversibly JSON-encoded synthetic values survive; keep ordinary text redaction and default secret refusal.\n- Re-run real CLI/SDK consumers on the final head; preserve pre-write refusal and input immutability.\n\nAll 172 all-status issue/PR records, current PR conversation/inline collections and canonical feature record checked. Existing #171 is a separate normalization defect. Full CLI/build/integration coverage remains untested here.\n\n\n---\n\n### GitHub comments (1)\n\n> **@unbraind** (2026-10-29T18:22:34Z)\n>\n> Fixed in PR #170 by ce38e2e and 506a090, retained and reverified with source 8fa45a0. Structured redaction precedes serialization, legacy sensitive destinations are hidden on both sides of rotations, and new secret inputs are external references; literal credentials refuse before writes. Reverting JSON-escaped matching or legacy destination protection independently fails the targeted regression (1/1 each). Restored combined properties pass 6/6 without skips. Packed Node/Bun complete-artifact checks pass; full npm and Bun release gates are running serially."
