@@ -1,3 +1,4 @@
+import { testTime } from "../support/depth.ts";
 /** Reproduce ownership replacement at the last possible point before unlink in real processes. */
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -9,6 +10,9 @@ import { PmClient, readSettings } from "@unbrained/pm-cli/sdk";
 
 /** Exercise stale takeover AND delayed release without relying on scheduler timing. */
 export async function verifyLockInterleavings(t: TestContext, moduleFile: string, runtimes: readonly string[], phases: readonly string[] = ["stale", "release"]): Promise<void> {
+  // Validate every scaled budget before creating state or launching a worker.
+  const workerTimeout = testTime(60_000);
+  const barrierTimeout = testTime(45_000);
   for (const phase of phases) {
     const root = mkdtempSync(join(tmpdir(), "preset-generation-race-"));
     const pmRoot = join(root, ".agents", "pm");
@@ -23,14 +27,14 @@ export async function verifyLockInterleavings(t: TestContext, moduleFile: string
     const children: Array<{ child: ChildProcess; done: Promise<void> }> = [];
     /** Start a fully independent runtime and retain its exit/error evidence. */
     function start(actor: string, runtime: string) {
-      const child = spawn(runtime, [resolve("tests/fixtures/params-lock-worker.ts"), root, actor, phase, moduleFile], {
+      const child = spawn(runtime, [resolve("tests/fixtures/params-lock-worker.ts"), root, actor, phase, moduleFile, String(workerTimeout)], {
         stdio: ["ignore", "ignore", "pipe"], env: { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" },
       });
       let errors = "";
       child.stderr!.on("data", (value) => { errors += String(value); });
-      const timeout = setTimeout(() => child.kill("SIGTERM"), 60_000);
+      const timeout = setTimeout(() => child.kill("SIGTERM"), workerTimeout);
       const done = new Promise<void>((resolveExit, reject) => {
-        child.once("error", reject);
+        child.once("error", (error) => { clearTimeout(timeout); reject(error); });
         child.once("exit", (code) => { clearTimeout(timeout); code === 0 ? resolveExit() : reject(new Error(`Apply worker failed (${code}): ${errors}`)); });
       });
       // Retain rejection until cleanup joins every child, even if a barrier assertion fails.
@@ -41,7 +45,7 @@ export async function verifyLockInterleavings(t: TestContext, moduleFile: string
     }
     /** Wait for an actual process phase, refusing early exits instead of sleeping blindly. */
     async function barrier(name: string, worker: { child: ChildProcess; done: Promise<void> }) {
-      const deadline = Date.now() + 45_000;
+      const deadline = Date.now() + barrierTimeout;
       while (!existsSync(join(root, name))) {
         if (worker.child.exitCode !== null) { await worker.done; assert.fail(`Missing worker phase ${name}`); }
         assert.ok(Date.now() < deadline, `Worker phase timed out: ${name}`);

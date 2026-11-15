@@ -14,10 +14,11 @@ test("all seven presets preserve audited settings history through merge, replace
   const root = mkdtempSync(join(tmpdir(), "pm-presets-audited-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const pmRoot = join(root, ".agents", "pm");
+  // Explicit roots override tracker routing inherited from linked-test runners.
   const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
-  const init = spawnSync(process.execPath, [cli, "--no-extensions", "init", "--yes"], { cwd: root, encoding: "utf8" });
+  const init = spawnSync(process.execPath, [cli, "--path", join(root, ".agents", "pm"), "--no-extensions", "init", "--yes"], { cwd: root, encoding: "utf8" });
   assert.equal(init.status, 0, init.stderr);
-  const baseline = spawnSync(process.execPath, [cli, "--no-extensions", "create", "task", "Synthetic audit baseline", "--create-mode", "progressive"], { cwd: root, encoding: "utf8" });
+  const baseline = spawnSync(process.execPath, [cli, "--path", join(root, ".agents", "pm"), "--no-extensions", "create", "task", "Synthetic audit baseline", "--create-mode", "progressive"], { cwd: root, encoding: "utf8" });
   assert.equal(baseline.status, 0, baseline.stderr);
   const client = new PmClient({ pmRoot, noExtensions: true });
   const sdk = createExtensionCommandSdk(pmRoot, client, "preset-history-test", "presets apply");
@@ -43,7 +44,7 @@ test("all seven presets preserve audited settings history through merge, replace
       const applied = JSON.parse(readFileSync(join(pmRoot, "settings.json"), "utf8")) as { id_prefix: string; governance: { preset: string } };
       assert.equal(applied.id_prefix, preset.idPrefix, `${preset.id} replace=${replace} commits its prefix`);
       assert.equal(applied.governance.preset, preset.governance, `${preset.id} replace=${replace} commits its governance`);
-      const health = spawnSync(process.execPath, [cli, "--no-extensions", "health", "--strict-exit", "--json"], { cwd: root, encoding: "utf8" });
+      const health = spawnSync(process.execPath, [cli, "--path", join(root, ".agents", "pm"), "--no-extensions", "health", "--strict-exit", "--json"], { cwd: root, encoding: "utf8" });
       assert.equal(health.status, 0, `${preset.id} replace=${replace}: ${health.stdout}\n${health.stderr}`);
     }
   }
@@ -58,8 +59,9 @@ test("all seven presets preserve audited settings history through merge, replace
 test("a missing host settings capability refuses application before any write", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "pm-presets-old-host-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
+  // Explicit roots override tracker routing inherited from linked-test runners.
   const cli = resolve("node_modules/@unbrained/pm-cli/dist/cli.js");
-  const init = spawnSync(process.execPath, [cli, "--no-extensions", "init", "--yes"], { cwd: root, encoding: "utf8" });
+  const init = spawnSync(process.execPath, [cli, "--path", join(root, ".agents", "pm"), "--no-extensions", "init", "--yes"], { cwd: root, encoding: "utf8" });
   assert.equal(init.status, 0, init.stderr);
   const pmRoot = join(root, ".agents", "pm");
   const before = readFileSync(join(pmRoot, "settings.json"), "utf8");

@@ -1,3 +1,4 @@
+import { testDepth } from "./support/depth.ts";
 /**
  * params-property.test.ts — seeded model-based property test for the parameter
  * round-trip paths.
@@ -50,7 +51,7 @@ function mulberry32(seed: number): () => number {
 }
 
 const SEED = Number(process.env.PM_PRESETS_PROPERTY_SEED ?? "20261027");
-const SEQUENCE_COUNT = 520;
+const SEQUENCE_COUNT = testDepth(520);
 const TRACKER_BATCH = 20;
 
 /** One successful application recorded for later replays. */
@@ -294,12 +295,12 @@ test("model-based property sequences round-trip parameters through the SDK again
       assert.equal(result.inSync, sdkSettings.id_prefix === `${value}-`, "diff preview must agree with the reference model");
     }
   }
-  assert.ok(history.length > 50, `expected many applied sequences, got ${history.length}`);
+  assert.ok(history.length > Math.min(50, SEQUENCE_COUNT / 10), `expected many applied sequences, got ${history.length}`);
 });
 
 test("synthetic manifests resolve to the generator's expected strings or typed refusals", async () => {
   const rng = mulberry32(SEED ^ 0x5f5f);
-  for (let sequence = 0; sequence < 600; sequence += 1) {
+  for (let sequence = 0; sequence < testDepth(600); sequence += 1) {
     const nameCount = 1 + Math.floor(rng() * 3);
     const declared: PresetParameter[] = [];
     const expectedValues: Record<string, string> = {};

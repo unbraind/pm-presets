@@ -1,3 +1,4 @@
+import { testDepth } from "./support/depth.ts";
 /**
  * params-review.test.ts — adversarial regression tests for the re-review
  * findings, one per violated rule, each written to catch ANY instance of its
@@ -625,7 +626,7 @@ function adversarialSecrets(): string[] {
 test("property: default and supplied values share canonical resolution in every preset part", async () => {
   const { collectParameterValues, resolveParameterValues, resolveParameterizedPreset, buildParameterViews, assertResolvedParameterValues } = await import("../src/params.ts");
   const spaces = [" ", "\u00a0", "\u2003", "\u202f", "\ufeff"];
-  for (let index = 0; index < 120; index++) {
+  for (let index = 0; index < testDepth(120); index++) {
     const value = `key${String.fromCharCode(97 + index % 26)}`;
     const padded = spaces[index % spaces.length] + value + spaces[(index + 2) % spaces.length];
     const manifest: PresetParameterManifest = [{ name: "key", type: index % 2 ? "enum" : "string", required: true,

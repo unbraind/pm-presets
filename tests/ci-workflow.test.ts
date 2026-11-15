@@ -28,3 +28,32 @@ test("every CI checkout disables persisted credentials before executing package 
     assert.match(checkout, /^        with:\s*\n(?:          [^\n]*\n)*?          persist-credentials: false\s*$/m);
   }
 });
+
+test("test depth defaults to full and quick retains a deterministic prefix of at least 25", async () => {
+  const { testDepth } = await import("./support/depth.ts");
+  const original = process.env.PM_TEST_DEPTH;
+  try {
+    for (const depth of [undefined, "full", "unknown", "quick"]) {
+      if (depth === undefined) delete process.env.PM_TEST_DEPTH;
+      else process.env.PM_TEST_DEPTH = depth;
+      for (const count of [20, 32, 40, 120, 180, 500, 520, 600]) {
+        const actual = testDepth(count);
+        assert.ok(actual <= count);
+        if (depth === "quick") assert.equal(actual, Math.min(count, Math.max(25, Math.ceil(count / 10))));
+        else assert.equal(actual, count);
+      }
+    }
+  } finally {
+    if (original === undefined) delete process.env.PM_TEST_DEPTH;
+    else process.env.PM_TEST_DEPTH = original;
+  }
+});
+
+test("slow-runner safety budgets remain finite and reject invalid scales", async () => {
+  const { testTime } = await import("./support/depth.ts");
+  assert.equal(testTime(60_000, "1"), 60_000);
+  assert.equal(testTime(60_000, "3"), 180_000);
+  for (const value of ["", "0", "-1", "NaN", "Infinity", "100000000"]) {
+    assert.throws(() => testTime(60_000, value), /PM_TEST_TIME_SCALE/);
+  }
+});
