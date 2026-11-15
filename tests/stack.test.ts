@@ -1,3 +1,4 @@
+import { testDepth } from "./support/depth.ts";
 /** Real host planning, strict input fuzzing and native-state preservation outside git. */
 import assert from "node:assert/strict";
 import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -187,7 +188,7 @@ test("source command handler uses the same schema, summary and bounded artifact 
   await assert.rejects(harness.runCommand({ command: "presets stack", pmRoot, sdk, options: {} }), refusal("invalid_input"));
 });
 
-test("seeded model: 500 random operation sequences preserve SDK-read native fields and relationships across old-input replays and CRLF", async (t) => {
+test("seeded model: deterministic random operation sequences preserve SDK-read native fields and relationships across old-input replays and CRLF", async (t) => {
   const { pmRoot, client, sdk } = await workspace(t);
   const parent = await client.create({ type: "Epic", title: "Native parent" });
   const child = await client.create({ type: "Task", title: "Native child", parent: parent.item.id, body: "Whitespace  \r\n\r\nNative body", priority: "1", tags: "alpha,beta" });
@@ -204,7 +205,7 @@ test("seeded model: 500 random operation sequences preserve SDK-read native fiel
   function random(max: number): number { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % max; }
   const archive: PresetStackInput[] = [];
   let operations = 0;
-  for (let sequence = 0; sequence < 500; sequence++) {
+  for (let sequence = 0; sequence < testDepth(500); sequence++) {
     const first = PRESET_REGISTRY[random(7)].id;
     const second = PRESET_REGISTRY.filter(({ id }) => id !== first)[random(6)].id;
     let input: PresetStackInput = { selections: [{ preset: first, settings: true, seeds: random(2) === 1 }, { preset: second, settings: false, templates: false, seeds: true }] };
@@ -223,5 +224,5 @@ test("seeded model: 500 random operation sequences preserve SDK-read native fiel
     for (const [id, expected] of model) assert.deepEqual(await read(id), expected, `native model after sequence ${sequence}`);
   }
   assert.deepEqual(snapshot(pmRoot), nativeBefore, "all native fields, relationship events, foreign records and history stay byte-identical");
-  assert.equal(operations, 2000);
+  assert.equal(operations, testDepth(500) * 4);
 });

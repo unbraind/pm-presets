@@ -1,0 +1,36 @@
+id: pm-presets-ci-v2
+title: Apply Fleet CI v2 quick PR and deep validation tiers
+description: "Companion pm-cli-website-dyhg. Preserve required checks while moving exhaustive validation to deep CI, use deterministic quick seeded prefixes, retain unchanged coverage thresholds and Windows platform contracts."
+type: Task
+status: in_progress
+priority: 2
+tags[2]: ci,performance
+created_at: "2026-11-15T12:07:59.050Z"
+updated_at: "2026-11-15T12:12:05.177Z"
+assignee: codex-sol
+claim_principal: codex-sol
+author: codex-sol
+comments[3]{created_at,author,text}:
+  "2026-11-15T12:08:01.577Z",codex-sol,"Oriented with context, CI/flaky searches and open items; no matching active CI tier task exists. Pilot pm-csv PR #258 reviewed. Required checks: test (22), test (26), windows-prepare-lifecycle. CodeQL is optional. Retain Windows parser/lifecycle contracts in quick CI and move duplicate simulation release gates into the full npm/Bun deep matrix. Release workflows and verifier scripts remain outside scope."
+  "2026-11-15T12:11:29.073Z",codex-sol,"Latest successful main CI run 43679647905: created-to-completed test (22) 32m37s, test (26) 27m50s, simulation gates 27m37s, Windows 2m32s. Logs retrieved through the run archive because gh run view --log returned empty. Slowest full-depth packed test 154.33s, stack model 28.93s, parameter model 15.29s. Wave-1 PR #221 has one successful CI run and no failures. Quick prefixes cover seven property corpora without threshold changes; operational packed/lock/admission watchdogs scale by PM_TEST_TIME_SCALE. Packed acceptance runs artifacts under Bun but does not prove Bun package-manager/bunx installation; explicit graph-install and pinned bunx CLI smoke added."
+  "2026-11-15T12:12:05.176Z",codex-sol,"Implemented quick/deep workflows and tier inventory. Typecheck, lint, build, test compilation and four CI/depth/watchdog contract tests passed (linked command 3.66s). Strict YAML parsing passed for all three workflows, with explicit timeouts on every job; actionlint is unavailable. Targeted quick tests are running. Push early for authoritative hosted CI feedback; local quick coverage will be bounded to 20 minutes. No full-depth suite is run locally."
+files[13]{path,scope}:
+  .github/workflows/ci-deep.yml,project
+  .github/workflows/ci.yml,project
+  .github/workflows/codeql.yml,project
+  tests/artifact-state.test.ts,project
+  tests/ci-workflow.test.ts,project
+  tests/fixtures/params-lock-scenario.ts,project
+  tests/ownership-review.test.ts,project
+  tests/params-packed.test.ts,project
+  tests/params-property.test.ts,project
+  tests/params-review.test.ts,project
+  tests/seed-normalization.test.ts,project
+  tests/stack.test.ts,project
+  tests/support/depth.ts,project
+tests[2]{command,scope,provenance{author,created_at,source_kind,source_ref}}:
+  "npm run typecheck && npm run lint && npm run build && npm run build:test && node --test tests/ci-workflow.test.ts",project,codex-sol,"2026-11-15T12:11:30.317Z",local_mutation,ci/quick-pr-tier-deep-local-tier
+  PM_TEST_DEPTH=quick node --test tests/stack.test.ts tests/params-property.test.ts tests/artifact-state.test.ts tests/params-review.test.ts tests/ownership-review.test.ts tests/seed-normalization.test.ts tests/params-packed.test.ts,project,codex-sol,"2026-11-15T12:11:41.708Z",local_mutation,ci/quick-pr-tier-deep-local-tier
+docs[1]{path,scope}:
+  docs/ci-tiers.md,project
+body: ""

@@ -1,3 +1,4 @@
+import { testDepth } from "./support/depth.ts";
 /** Regressions for ownership, retained identities, and every reviewed contract. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -31,7 +32,7 @@ test("property: random pre-existing trackers never grant ownership to collisions
   const harness = await createExtensionTestHarness(mod, { name: "pm-presets", capabilities: ["commands", "schema"] });
   const random = generator(170301);
   const modes = ["collision", "matching-collision", "history-collision", "deleted", "partial", "partial-collision", "template", "settings"] as const;
-  for (let iteration = 0; iteration < 40; iteration++) {
+  for (let iteration = 0; iteration < testDepth(40); iteration++) {
     const mode = modes[iteration % modes.length], pmRoot = join(root, String(iteration));
     const client = new PmClient({ pmRoot, noExtensions: true }); await client.init("indie-");
     fs.mkdirSync(join(pmRoot, "locks", "pm-presets-apply-claims"), { recursive: true });

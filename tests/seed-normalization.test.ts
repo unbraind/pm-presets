@@ -1,3 +1,4 @@
+import { testDepth } from "./support/depth.ts";
 /** Adversarial native-write oracles for every managed seed field and command surface. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -47,7 +48,7 @@ test("property: desired seed fields equal independently created native artifacts
   const types = await readSeedTypes(root, client);
   assert.deepEqual(await readSeedTypes(root), types);
   const tags = [" RoadMap, roadmap, ALPHA ", '["ALPHA","RoadMap","alpha"]', "", "z,é,A,a"];
-  for (let index = 0; index < 32; index++) {
+  for (let index = 0; index < testDepth(32); index++) {
     const seed: SeedItem = { type: index % 3 === 0 ? "work" : index % 2 ? " feature " : "Feature", title: ` \u2003Native ${index}\u00a0 `,
       priority: ["medium", "HIGH", "0", "minimal"][index % 4], tags: tags[index % tags.length], body: `\n\nBody ${index}\n\n` };
     const before = structuredClone(seed);

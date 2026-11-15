@@ -1,3 +1,4 @@
+import { testTime } from "../support/depth.ts";
 /** Reproduce ownership replacement at the last possible point before unlink in real processes. */
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -28,7 +29,7 @@ export async function verifyLockInterleavings(t: TestContext, moduleFile: string
       });
       let errors = "";
       child.stderr!.on("data", (value) => { errors += String(value); });
-      const timeout = setTimeout(() => child.kill("SIGTERM"), 60_000);
+      const timeout = setTimeout(() => child.kill("SIGTERM"), testTime(60_000));
       const done = new Promise<void>((resolveExit, reject) => {
         child.once("error", reject);
         child.once("exit", (code) => { clearTimeout(timeout); code === 0 ? resolveExit() : reject(new Error(`Apply worker failed (${code}): ${errors}`)); });
@@ -41,7 +42,7 @@ export async function verifyLockInterleavings(t: TestContext, moduleFile: string
     }
     /** Wait for an actual process phase, refusing early exits instead of sleeping blindly. */
     async function barrier(name: string, worker: { child: ChildProcess; done: Promise<void> }) {
-      const deadline = Date.now() + 45_000;
+      const deadline = Date.now() + testTime(45_000);
       while (!existsSync(join(root, name))) {
         if (worker.child.exitCode !== null) { await worker.done; assert.fail(`Missing worker phase ${name}`); }
         assert.ok(Date.now() < deadline, `Worker phase timed out: ${name}`);

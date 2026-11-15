@@ -1,22 +1,25 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PM_TEST_DEPTH: quick
     strategy:
       fail-fast: false
       matrix:
-        # 22 is the floor declared in `engines` and the first line that strips
-        # TypeScript without a flag; 26 is what the fleet develops against.
         node-version: [22, 26]
     steps:
       - name: Checkout
@@ -26,6 +29,29 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Detect code changes
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          code=true
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            code=false
+            git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/ci-changed-paths"
+            while IFS= read -r -d '' path; do
+              case "$path" in
+                # Executable tracker files use the same code tier in every package.
+                .agents/pm/*.mjs|.agents/pm/*.cjs|.agents/pm/*.js|.agents/pm/*.ts) code=true ;;
+                .agents/pm/*|*.md|docs/*|CHANGELOG.md|LICENSE) ;;
+                *) code=true ;;
+              esac
+            done < "$RUNNER_TEMP/ci-changed-paths"
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -33,6 +59,7 @@ jobs:
           cache: npm
 
       - name: Setup Bun
+        if: steps.changes.outputs.code == 'true'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
       - name: Install dependencies
@@ -57,10 +84,12 @@ jobs:
           # still exiting successfully.
           ./node_modules/.bin/pm health --strict-exit --require-merge-drivers
 
-      - name: Type check
-        run: npm run check
+      - name: Check documentation and tracker changes
+        if: steps.changes.outputs.code != 'true'
+        run: npm run changelog:check
 
       - name: Build and verify committed output is current
+        if: steps.changes.outputs.code == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -78,32 +107,28 @@ jobs:
           fi
           echo "Committed dist/ matches a fresh build."
 
-      - name: Verify complete docstring coverage
-        run: npm run docstring
+      - name: Engines floor tests
+        if: steps.changes.outputs.code == 'true' && matrix.node-version == 22
+        run: npm test
 
-      - name: Test with coverage gate
-        run: npm run coverage
+      - name: Quick npm release gate
+        if: steps.changes.outputs.code == 'true' && matrix.node-version == 26
+        run: npm run release:check
 
-      - name: Production dependency audit
-        run: npm run audit:prod
+      # Packed tests execute installed artifacts under Bun, but do not exercise
+      # Bun's package manager or bunx. Keep both smoke paths explicitly.
+      - name: Bun and bunx smoke
+        if: steps.changes.outputs.code == 'true' && matrix.node-version == 26
+        run: |
+          bun --version
+          bun install --no-save
+          bunx --bun --package @unbrained/pm-cli@2026.11.10 pm --version
 
-      - name: Verify npm package contents
-        run: npm run pack:dry-run
-
-      - name: Verify generated changelog
-        run: npm run changelog:check
-
-      - name: Verify every publish invocation is attested
-        run: npm run verify:release-publish-attestation
-
-      - name: Verify the changelog date is derived from the version
-        run: npm run verify:release-changelog-date
-
-      - name: Verify Bun can install the package graph
-        run: bun install --no-save
-
-  simulation-release-gates:
-    runs-on: ubuntu-latest
+  windows-prepare-lifecycle:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      PM_TEST_DEPTH: quick
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -111,27 +136,29 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           fetch-tags: true
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 26
-          cache: npm
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - name: Install pinned dependencies
-        run: npm ci
-      - name: Full npm release gate
-        run: npm run release:check
-      - name: Full Bun release gate
-        run: bun run release:check
 
-  windows-prepare-lifecycle:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
+      - name: Detect code changes
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          code=true
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            code=false
+            git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/ci-changed-paths"
+            while IFS= read -r -d '' path; do
+              case "$path" in
+                # Executable tracker files use the same code tier in every package.
+                .agents/pm/*.mjs|.agents/pm/*.cjs|.agents/pm/*.js|.agents/pm/*.ts) code=true ;;
+                .agents/pm/*|*.md|docs/*|CHANGELOG.md|LICENSE) ;;
+                *) code=true ;;
+              esac
+            done < "$RUNNER_TEMP/ci-changed-paths"
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -139,13 +166,21 @@ jobs:
           node-version: 22
           cache: npm
 
-      # npm ci runs the production prepare lifecycle through cmd.exe before the
-      # adversarial fixture below exercises spaces and percent-delimited paths.
+      # npm ci exercises production prepare through cmd.exe.
       - name: Install dependencies and merge drivers
         run: npm ci
 
+      - name: Check documentation and tracker changes
+        if: steps.changes.outputs.code != 'true'
+        shell: bash
+        run: |
+          ./node_modules/.bin/pm health --strict-exit --require-merge-drivers
+          npm run changelog:check
+
       - name: Exercise the real Windows command parser
+        if: steps.changes.outputs.code == 'true'
         run: node --test tests/windows-prepare.integration.ts
 
       - name: Verify Windows closeout npm launcher and behavioral revert
+        if: steps.changes.outputs.code == 'true'
         run: node --test --test-concurrency=1 tests/windows-closeout.integration.ts tests/closeout-history.test.ts tests/closeout-spawn.test.ts tests/tool-config.test.ts
