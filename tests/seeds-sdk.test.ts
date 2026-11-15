@@ -12,7 +12,8 @@ for (const scenario of ["all-presets", "corrupt-after-cache"]) {
     t.after(() => rmSync(root, { recursive: true, force: true }));
     const result = spawnSync(process.execPath, [join(import.meta.dirname, "fixtures", "seeds-sdk.ts"), scenario, root], {
       encoding: "utf8",
-      env: { ...process.env, PATH: "", GIT_CEILING_DIRECTORIES: tmpdir() },
+      // Descendant CLI calls must use the disposable tracker, even under pm test.
+      env: { ...process.env, PM_PATH: join(root, ".agents", "pm"), PATH: "", GIT_CEILING_DIRECTORIES: tmpdir() },
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
   });

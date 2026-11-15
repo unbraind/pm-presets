@@ -12,7 +12,8 @@ Windows after 15 minutes. CodeQL is optional, with a 30-minute timeout.
 | Strict pm health, required merge drivers | yes | yes | all three required checks | yes |
 | Fresh build and committed dist parity | yes | yes | — | yes |
 | Build, test compilation, entire tests suite | quick | quick via coverage | — | full via both gates |
-| Typecheck, lint, complete docstrings | via build/test compilation | npm release gate | — | npm + Bun release gates |
+| Typecheck | via build/test compilation | npm release gate | — | npm + Bun release gates |
+| Lint and complete docstrings | — | npm release gate | — | npm + Bun release gates |
 | Coverage: unchanged 100% lines/branches/functions and source scope | — | quick | — | full via both gates |
 | Production dependency audit, npm pack dry-run | — | npm release gate | — | npm + Bun release gates |
 | Closeout attribution verification | via tests | npm release gate | — | npm + Bun release gates |
@@ -75,3 +76,33 @@ and 2m32s for Windows, from job creation to completion, including queues. Across
 its logs the slowest packed test took 154.33s; the stack model took 28.93s and
 parameter model 15.29s. These individual test times are full-depth historical
 measurements, not controlled quick/full benchmarks.
+
+The same historical main jobs spent 4m25s (Node 22), 2m49s (Node 26),
+5m17s (simulation) and 1m00s (Windows) actually executing. Node 22 full
+coverage took 4m01s, Node 26 full coverage 2m26s; simulation npm/Bun gates
+took 2m28s and 2m27s. Queue time dominates the created-to-completed totals.
+Local quick and current PR measurements are recorded in the tracker and PR body.
+
+Runner environment and filter decisions were checked against the official
+[contexts reference](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts)
+and [workflow trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+Required CI always triggers; path filtering is confined to optional CodeQL.
+
+## Local validation receipt
+
+Typecheck, lint, build/test compilation and four CI/depth/watchdog tests passed.
+The seven original touched quick test files passed 73/73 with no skips or
+cancellations in 8m24.12s on Node 24. The single quick coverage invocation on
+Node 26 took 9m43.05s: 367/370 tests passed, with three disposable CLI fixtures
+misrouted by the linked-test runner's inherited `PM_PATH`. Two audited-settings
+fixtures now pass explicit `--path`; the SDK seed child pins `PM_PATH` to its
+own tracker. Both affected files then passed 9/9 under that same linked-test
+context in 20.63s, and typecheck/lint/test compilation passed again.
+
+The failed coverage invocation reported 100% lines/branches/functions. Independent
+LCOV inspection confirmed exactly all 36 configured source files, 6,645/6,645
+lines, 1,972/1,972 branches and 388/388 functions hit. This is coverage evidence,
+not a successful complete gate: no second local coverage run was performed.
+Final hosted quick CI must certify the combined suite after the fixture fix;
+full-depth and native Windows validation remain external. Strict YAML parsing
+and six real Git-diff classifier cases passed; actionlint was unavailable.
