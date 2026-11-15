@@ -74,8 +74,10 @@ test("model: successful applies and every manual artifact edit agree with full-s
   assert.equal((await verify("beta")).inSync, false);
   await apply("beta", true); last = "beta";
   assert.equal((await verify(last)).inSync, true);
-  let successes = 2, refusals = 1, edits = 0;
-  for (let step = 0; step < testDepth(180); step++) {
+  // Count generated outcomes independently of the fixed setup cases above.
+  const generatedCases = testDepth(180);
+  let successes = 0, refusals = 0, edits = 0;
+  for (let step = 0; step < generatedCases; step++) {
     const operation = next() % 8;
     if (operation < 3) {
       const binding = `k${next().toString(36).slice(0, 6)}`, force = operation === 0;
@@ -98,7 +100,9 @@ test("model: successful applies and every manual artifact edit agree with full-s
     }
     await verify(last);
   }
-  assert.ok(successes > Math.min(5, testDepth(180) / 36) && refusals > Math.min(5, testDepth(180) / 36) && edits > Math.min(20, testDepth(180) / 9), "the model must exercise successes, pre-write refusals and manual edits");
+  assert.ok(successes > Math.min(5, generatedCases / 36), "generated cases must exercise successful applies");
+  assert.ok(refusals > Math.min(5, generatedCases / 36), "generated cases must exercise pre-write refusals");
+  assert.ok(edits > Math.min(20, generatedCases / 9), "generated cases must exercise manual edits");
 });
 
 test("complete planner validates ownership and compares every controlled field without inherited data", async () => {
