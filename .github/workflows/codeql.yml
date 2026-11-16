@@ -3,18 +3,52 @@ name: CodeQL
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '.agents/pm/**'
-      - '**/*.md'
-      - 'docs/**'
-      - 'package-lock.json'
+    # Ordered filters preserve scans for executable tracker code and extensions.
+    paths:
+      - '**'
+      - '!.agents/pm/**'
+      - '!**/*.md'
+      - '!docs/**'
+      - '!package-lock.json'
+      - '!bun.lock'
+      - '!bun.lockb'
+      - '!pnpm-lock.yaml'
+      - '!yarn.lock'
+      - '!npm-shrinkwrap.json'
+      - '.agents/pm/**/*.mjs'
+      - '.agents/pm/**/*.cjs'
+      - '.agents/pm/**/*.js'
+      - '.agents/pm/**/*.jsx'
+      - '.agents/pm/**/*.ts'
+      - '.agents/pm/**/*.tsx'
+      - '.agents/pm/**/*.mts'
+      - '.agents/pm/**/*.cts'
+      - '.agents/pm/**/*.sh'
+      - '.agents/pm/extensions/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '.agents/pm/**'
-      - '**/*.md'
-      - 'docs/**'
-      - 'package-lock.json'
+    # Ordered filters preserve scans for executable tracker code and extensions.
+    paths:
+      - '**'
+      - '!.agents/pm/**'
+      - '!**/*.md'
+      - '!docs/**'
+      - '!package-lock.json'
+      - '!bun.lock'
+      - '!bun.lockb'
+      - '!pnpm-lock.yaml'
+      - '!yarn.lock'
+      - '!npm-shrinkwrap.json'
+      - '.agents/pm/**/*.mjs'
+      - '.agents/pm/**/*.cjs'
+      - '.agents/pm/**/*.js'
+      - '.agents/pm/**/*.jsx'
+      - '.agents/pm/**/*.ts'
+      - '.agents/pm/**/*.tsx'
+      - '.agents/pm/**/*.mts'
+      - '.agents/pm/**/*.cts'
+      - '.agents/pm/**/*.sh'
+      - '.agents/pm/extensions/**'
   schedule:
     # Weekly CodeQL scan. The minute/hour slot is unique to this repository so
     # the pm fleet does not fire every scan against the API in the same minute.
