@@ -6,7 +6,7 @@ PRs cancel. Linux checks use GitHub-hosted Ubuntu, and the real Windows command
 parser contract stays on Windows. Linux jobs time out after 30 minutes and
 Windows after 15 minutes. CodeQL is optional, with a 30-minute timeout.
 
-| Check / contract | Code PR: test (22) | Code PR: test (26) | Docs/tracker-only PR | Deep: deep (22), deep (26) |
+| Check / contract | Code PR: test (22) | Code PR: test (26) | Docs/tracker-only PR | Deep: Node 22/26 × npm/Bun |
 | --- | --- | --- | --- | --- |
 | npm ci and prepare merge drivers | yes | yes | all three required checks | yes |
 | Strict pm health, required merge drivers | yes | yes | all three required checks | yes |
@@ -27,7 +27,8 @@ Windows after 15 minutes. CodeQL is optional, with a 30-minute timeout.
 
 Docs/tracker-only means all changed paths match `.agents/pm/**`, `*.md`,
 `docs/**`, `CHANGELOG.md` or `LICENSE`. As in the pilot, executable tracker
-JavaScript/TypeScript selects code CI. Diff detection compares actual PR
+JavaScript/TypeScript/shell, executable docs files and all tracker extensions
+select code CI. Diff detection compares actual PR
 endpoints, uses NUL-separated names and disables rename folding so moving code
 into documentation still runs code checks. Manual dispatch always selects code.
 The cheap path runs only npm ci, strict health and changelog consistency, while
@@ -35,11 +36,11 @@ reporting all required check names. There is no separate Markdown linter.
 
 Deep runs on main pushes, daily at 02:53 UTC and dispatch, at full depth and
 `PM_TEST_TIME_SCALE=3`. This avoids the release schedules (03:23 UTC and hourly
-at :41) and weekly CodeQL. Both Node 22 and 26 run the full npm and Bun release
-gates. Jobs use the self-hosted `pm-local` pool unless `PM_LOCAL_DEEP=off`, then
-Ubuntu hosted runners; each job has a 120-minute timeout and older runs on the
-same ref cancel. Local runners keep their persistent npm cache and preinstalled
-Bun; GitHub cache restore and Bun setup run only on hosted runners. Bun's version
+at :41) and weekly CodeQL. The Node 22/26 × npm/Bun matrix runs exactly one
+full release gate per job. Jobs use the self-hosted `pm-local` pool unless
+`PM_LOCAL_DEEP=off`, then Ubuntu hosted runners. Each job has a 120-minute timeout.
+Per-ref concurrency preserves active runs and retains one pending run. Local
+runners keep their persistent npm cache and preinstalled Bun; GitHub cache restore and Bun setup run only on hosted runners. Bun's version
 is logged. Deep checks have distinct names and do not satisfy required PR checks.
 Full-depth certification happens after merge; it has not been run locally.
 
@@ -106,3 +107,26 @@ not a successful complete gate: no second local coverage run was performed.
 Final hosted quick CI must certify the combined suite after the fixture fix;
 full-depth and native Windows validation remain external. Strict YAML parsing
 and six real Git-diff classifier cases passed; actionlint was unavailable.
+
+## Final-template follow-up (2026-11-16)
+
+Latest successful PR CI: [run 43728186611](https://github.com/unbraind/pm-presets/actions/runs/43728186611).
+These are historical workflow job measurements, not a controlled benchmark of this change.
+
+| Job | Execution (started → completed) | Wall time (created → completed) |
+| --- | --- | --- |
+| simulation-release-gates | 7m45s | 103m18s |
+| windows-prepare-lifecycle | 1m07s | 34m12s |
+| test (22) | 5m27s | 111m24s |
+| test (26) | 4m07s | 110m33s |
+
+Every measured job executed within the 15-minute quick-tier target. Queueing
+explains any larger wall time. No test-depth adjustment or sharding is included.
+CodeQL is optional: ordered paths exclude tracker data, Markdown, docs and
+lockfiles, then restore all executable tracker suffixes (`mjs,cjs,js,jsx,ts,tsx,mts,cts,sh`)
+and `.agents/pm/extensions/**`. Required CI still runs on every PR.
+
+The workflow contracts strictly parse all three tier YAML files, exercise each PR
+classifier against data and executable paths, and verify one full gate per matrix
+job, self-hosted setup, the runner expression and non-cancelling deep concurrency.
+Full-depth execution remains post-merge deep-CI evidence.
