@@ -16,6 +16,7 @@ test("untagged closeouts generate and verify history without accepting it for pu
   const manifest = JSON.parse(readFileSync("package.json", "utf8")) as { version: string; scripts: Record<string, string> };
   manifest.version = "2026.12.1";
   writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
+  cpSync(".gitattributes", join(root, ".gitattributes"));
   cpSync("scripts", join(root, "scripts"), { recursive: true });
   mkdirSync(join(root, "src"));
   cpSync("src/sdk-loader.ts", join(root, "src", "sdk-loader.ts"));
@@ -51,6 +52,21 @@ test("untagged closeouts generate and verify history without accepting it for pu
     assert.equal(result.status, status, `${command}: ${result.error?.message ?? ""}\n${result.stdout}${result.stderr}`);
     return result;
   }
+  /** Feed CRLF notes through a Windows-style checkout and the real byte checker. */
+  function checkWindowsCheckout(notes: string) {
+    const changelog = join(root, "CHANGELOG.md");
+    const crlf = notes.replace(/\r?\n/g, "\r\n");
+    assert.notEqual(crlf, notes, "fixture must actually contain CRLF");
+    writeFileSync(changelog, crlf);
+    run("npm", ["run", "changelog:check"], 1);
+    assert.equal(readFileSync(changelog, "utf8"), crlf, "failed checks must not rewrite notes");
+    run("git", ["-c", "core.autocrlf=true", "add", ".gitattributes", "CHANGELOG.md"]);
+    rmSync(changelog);
+    run("git", ["-c", "core.autocrlf=true", "checkout-index", "--force", "--", "CHANGELOG.md"]);
+    assert.equal(readFileSync(changelog, "utf8"), notes, "the repository attribute must override autocrlf and check out LF");
+    run("npm", ["run", "changelog:check"]);
+    assert.equal(readFileSync(changelog, "utf8"), notes, "successful checks must not rewrite notes");
+  }
   const pmRoot = join(root, ".agents", "pm");
   const client = new PmClient({ cwd: root, pmRoot, noExtensions: true, author: "test-author" });
   await client.init();
@@ -66,6 +82,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
   assert.ok(!notes.includes("## 2026.12.1"));
   run("npm", ["run", "changelog:check"]);
 
+  checkWindowsCheckout(notes);
+
   const pending = (await client.create({ type: "Issue", title: "Newly delivered package mitigation", status: "closed", closeReason: "Fixture closeout", completedAt: "2026-11-06T12:00:00Z" })).item;
   run("npm", ["run", "closeout:check"]);
   notes = readFileSync(join(root, "CHANGELOG.md"), "utf8");
@@ -79,6 +97,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
   const releaseNotes = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   assert.ok(releaseNotes.includes("## 2026.12.1"));
   run("npm", ["run", "changelog:check"]);
+  run("npm", ["run", "changelog:check:release"]);
+  checkWindowsCheckout(releaseNotes);
   run("npm", ["run", "changelog:check:release"]);
   assert.equal(manifest.scripts.prepublishOnly, "npm run release:check && npm run changelog:check:release");
   writeFileSync(join(root, "CHANGELOG.md"), releaseNotes.replace(pending.title, "Incorrect entry"));
