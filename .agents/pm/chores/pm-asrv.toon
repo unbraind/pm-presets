@@ -1,0 +1,15 @@
+id: pm-asrv
+title: Keep dependency bullets when a closed item covers a release window
+description: "Review-thread follow-up from the 2026-11-14 sweep PR rebase: the pinned pm-changelog generator renders the git-derived Dependencies section only for windows without closed tracker items, so evidenced closures covering a window replace its published dependency bullets. Consider opting the changelog generation into dependency-updates rendering so published dependency entries survive alongside item notes."
+type: Chore
+status: open
+priority: 3
+tags[3]: changelog,"gh:unbraind/pm-presets#218",maintenance
+created_at: "2026-11-16T15:08:05.657Z"
+updated_at: "2026-11-16T15:08:10.527Z"
+author: pi-glm
+estimated_minutes: 30
+acceptance_criteria: "A decision records whether changelog:full should render git-derived dependency bullets alongside item-covered windows; any script change regenerates and checks the changelog and passes release gates"
+files[1]{path,scope,note}:
+  CHANGELOG.md,project,Generated release notes whose dependency rendering is affected
+body: ""
