@@ -1,0 +1,17 @@
+id: pm-a8is
+title: Keep changelog checks stable when Windows checks out CRLF text
+description: "The sweep PR Windows documentation gate passed tracker health but failed both prepared-release and historical changelog checks. An isolated checkout of the exact pushed commit with core.autocrlf=true reproduced the failure (505 CRLF lines); checking out the same commit with LF made the unchanged npm run changelog:check pass. The generator compares exact bytes, while the repository has no canonical LF policy for CHANGELOG.md. A persistent fix requires repository attributes or generator/checker behavior, outside this tracker-only sweep."
+type: Chore
+status: open
+priority: 2
+tags[3]: changelog,ci,"gh:unbraind/pm-presets#218"
+created_at: "2026-11-16T16:00:28.110Z"
+updated_at: "2026-11-16T16:00:34.320Z"
+author: codex-sol
+estimated_minutes: 30
+acceptance_criteria: "The same canonical generated changelog passes the unchanged check after ordinary Linux and Windows checkouts, with regression evidence for LF and CRLF checkout policy."
+files[3]{path,scope}:
+  .gitattributes,project
+  CHANGELOG.md,project
+  scripts/check-changelog.ts,project
+body: ""
