@@ -1,6 +1,7 @@
 /** Properties for typed file faults and generation-safe apply ownership. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -233,5 +234,46 @@ test("all SDK setup/apply/diff entry points refuse bad params files before nativ
     assert.equal(fs.readFileSync(join(pmRoot, "settings.json"), "utf8"), before);
     assert.ok(!fs.existsSync(join(pmRoot, "templates")));
     assert.equal((await client.listAllComplete()).items.length, 0);
+  }
+});
+
+// Invalid configuration must fail before an independent process can be orphaned.
+test("lock interleavings reject an invalid time scale before spawning", async (t) => {
+  const previous = process.env.PM_TEST_TIME_SCALE;
+  const spawn = t.mock.method(childProcess, "spawn", () => { throw new Error("unexpected worker spawn"); });
+  syncBuiltinESMExports();
+  try {
+    process.env.PM_TEST_TIME_SCALE = "0";
+    await assert.rejects(verifyLockInterleavings(t, resolve("src/presets/shared.ts"), [process.execPath]), /PM_TEST_TIME_SCALE/);
+    assert.equal(spawn.mock.callCount(), 0);
+  } finally {
+    spawn.mock.restore();
+    syncBuiltinESMExports();
+    if (previous === undefined) delete process.env.PM_TEST_TIME_SCALE;
+    else process.env.PM_TEST_TIME_SCALE = previous;
+  }
+});
+
+test("independent workers expire both polling loops without a parent watchdog", async (t) => {
+  const { PmClient } = await import("@unbrained/pm-cli/sdk");
+  for (const actor of ["alpha", "beta"]) {
+    const root = fs.mkdtempSync(join(tmpdir(), "preset-worker-deadline-"));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const pmRoot = join(root, ".agents", "pm");
+    await new PmClient({ cwd: root, pmRoot, noExtensions: true }).init();
+    if (actor === "alpha") {
+      const lock = join(pmRoot, "locks", "pm-presets-apply.lock");
+      fs.mkdirSync(join(pmRoot, "locks"), { recursive: true });
+      fs.writeFileSync(lock, "observed-dead-generation");
+      const stale = new Date(Date.now() - 600_000);
+      fs.utimesSync(lock, stale, stale);
+    }
+    const result = childProcess.spawnSync(process.execPath, [resolve("tests/fixtures/params-lock-worker.ts"), root, actor, "stale", resolve("src/presets/shared.ts"), "300"], {
+      encoding: "utf8", timeout: 15_000,
+      env: { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" },
+    });
+    assert.equal(result.error, undefined, "worker must expire itself before the subprocess watchdog");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`Worker ${actor === "alpha" ? "resume-alpha" : "release-beta"} deadline exceeded`));
   }
 });

@@ -1,3 +1,4 @@
+import { testDepth, testTime } from "./support/depth.ts";
 /** Independent state-machine properties for complete preset application and drift. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -73,8 +74,10 @@ test("model: successful applies and every manual artifact edit agree with full-s
   assert.equal((await verify("beta")).inSync, false);
   await apply("beta", true); last = "beta";
   assert.equal((await verify(last)).inSync, true);
-  let successes = 2, refusals = 1, edits = 0;
-  for (let step = 0; step < 180; step++) {
+  // Count generated outcomes independently of the fixed setup cases above.
+  const generatedCases = testDepth(180);
+  let successes = 0, refusals = 0, edits = 0;
+  for (let step = 0; step < generatedCases; step++) {
     const operation = next() % 8;
     if (operation < 3) {
       const binding = `k${next().toString(36).slice(0, 6)}`, force = operation === 0;
@@ -97,7 +100,9 @@ test("model: successful applies and every manual artifact edit agree with full-s
     }
     await verify(last);
   }
-  assert.ok(successes > 5 && refusals > 5 && edits > 20, "the model must exercise successes, pre-write refusals and manual edits");
+  assert.ok(successes > Math.min(5, generatedCases / 36), "generated cases must exercise successful applies");
+  assert.ok(refusals > Math.min(5, generatedCases / 36), "generated cases must exercise pre-write refusals");
+  assert.ok(edits > Math.min(20, generatedCases / 9), "generated cases must exercise manual edits");
 });
 
 test("complete planner validates ownership and compares every controlled field without inherited data", async () => {
@@ -565,7 +570,7 @@ test("admitted plans refuse missing audits and ownership changes from every comp
     const pending = applyPreset(context, input); pending.catch(() => {});
     try {
       if (delayed) {
-        const deadline = Date.now() + 10_000, claims = join(pmRoot, "locks", "pm-presets-apply-claims");
+        const deadline = Date.now() + testTime(10_000), claims = join(pmRoot, "locks", "pm-presets-apply-claims");
         while (fs.readdirSync(claims).length === 0) { assert.ok(Date.now() < deadline, "application must reach its admission before interference"); await new Promise((resolve) => setTimeout(resolve, 5)); }
         await interfere();
       }

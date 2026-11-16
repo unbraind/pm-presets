@@ -1,3 +1,4 @@
+import { testTime } from "./support/depth.ts";
 /** Packed commands protect defaults and secrets under both supported runtimes and renderers. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -27,7 +28,7 @@ test("packed applies and both strict diff forms agree on complete artifacts unde
     await new PmClient({ pmRoot, cwd: work, noExtensions: true }).init();
     /** Execute installed artifacts with isolated user state and explicit exit assertions. */
     function run(args: string[], status = 0) {
-      const result = spawnSync(runtime, [cli, "--path", pmRoot, ...args], { cwd: work, encoding: "utf8", timeout: 60_000,
+      const result = spawnSync(runtime, [cli, "--path", pmRoot, ...args], { cwd: work, encoding: "utf8", timeout: testTime(60_000),
         env: { ...consumerEnv, HOME: work, USERPROFILE: work, XDG_CONFIG_HOME: work, XDG_CACHE_HOME: work } });
       assert.equal(result.status, status, result.stdout + result.stderr);
       return result.stdout + result.stderr;
@@ -78,7 +79,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   const packed = spawnSync("npm", ["pack", "--ignore-scripts", "--pack-destination", root, "--json"], { encoding: "utf8", env: consumerEnv });
   assert.equal(packed.status, 0, packed.stderr);
   const archive = join(root, packedArchiveFilename(packed.stdout));
-  const install = spawnSync(process.execPath, [cli, "--path", pmRoot, "package", "install", archive, "--project"], { cwd: root, encoding: "utf8", env: consumerEnv, timeout: 60_000 });
+  const install = spawnSync(process.execPath, [cli, "--path", pmRoot, "package", "install", archive, "--project"], { cwd: root, encoding: "utf8", env: consumerEnv, timeout: testTime(60_000) });
   assert.equal(install.status, 0, install.stderr + install.stdout);
   const entry = join(pmRoot, "extensions", "pm-presets", "dist", "presets", "startup-roadmap", "index.js");
   assert.ok(existsSync(entry));
@@ -95,7 +96,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   writeFileSync(settingsFile, JSON.stringify(settings));
   // Establish preset provenance before exercising audited credential-reference rotation.
   const baselineApply = spawnSync(process.execPath, [cli, "--path", pmRoot, "presets", "apply", "startup-roadmap", "--param", "token=@PREVIOUS_TOKEN"], {
-    cwd: root, encoding: "utf8", timeout: 60_000, env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root },
+    cwd: root, encoding: "utf8", timeout: testTime(60_000), env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root },
   });
   assert.equal(baselineApply.status, 0, baselineApply.stdout + baselineApply.stderr);
   let before = readFileSync(settingsFile, "utf8");
@@ -107,7 +108,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
   for (const runtime of runtimes) {
     /** Invoke the actual installed parser/renderer with isolated user state. */
     function run(args: string[]) {
-      const result = spawnSync(runtime, [cli, "--path", pmRoot, ...(args[0].endsWith("-setup") ? args : ["presets", ...args])], { cwd: root, encoding: "utf8", timeout: 60_000,
+      const result = spawnSync(runtime, [cli, "--path", pmRoot, ...(args[0].endsWith("-setup") ? args : ["presets", ...args])], { cwd: root, encoding: "utf8", timeout: testTime(60_000),
         env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, XDG_CACHE_HOME: root, GIT_CEILING_DIRECTORIES: root, PRESET_PACKED_TOKEN: credentials[0], PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" } });
       assert.equal(result.status, 0, result.stdout + result.stderr);
       assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
@@ -117,7 +118,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
     // parameters must refuse them before an export can create a tracked file.
     for (const json of [[], ["--json"]]) {
       for (const args of [["--list"], ["--custom", "refused-copy", "--output", join(pmRoot, "refused-copy.json")]]) {
-        const result = spawnSync(runtime, [cli, "--path", pmRoot, "presets", ...args, "--param", `token=${credentials[0]}`, ...json], { cwd: root, encoding: "utf8", timeout: 60_000,
+        const result = spawnSync(runtime, [cli, "--path", pmRoot, "presets", ...args, "--param", `token=${credentials[0]}`, ...json], { cwd: root, encoding: "utf8", timeout: testTime(60_000),
           env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" } });
         assert.equal(result.status, 2, "unused parameter inputs must refuse before dispatch");
         assert.match(result.stdout + result.stderr, /invalid_param_flag/);
@@ -138,7 +139,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
       for (const json of [[], ["--json"]]) {
         const command = args[0].endsWith("-setup") ? args : ["presets", ...args];
         const output = spawnSync(runtime, [cli, "--path", pmRoot, ...command, "--params-file", index % 2 ? root : invalid, ...json], {
-          cwd: root, encoding: "utf8", timeout: 60_000,
+          cwd: root, encoding: "utf8", timeout: testTime(60_000),
           env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" },
         });
         assert.equal(output.status, 2, output.stdout + output.stderr);
@@ -163,7 +164,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
             legacy.secret_references = { deploy: variant % 2 ? { nested: [credential] } : credential };
             writeFileSync(settingsFile, JSON.stringify(legacy));
             const trackerBefore = trackerBytes(pmRoot);
-            const output = spawnSync(runtime, [cli, "--path", pmRoot, "presets", ...args, ...json], { cwd: root, encoding: "utf8", timeout: 60_000,
+            const output = spawnSync(runtime, [cli, "--path", pmRoot, "presets", ...args, ...json], { cwd: root, encoding: "utf8", timeout: testTime(60_000),
               env: { ...consumerEnv, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root, PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" } });
             assert.equal(output.status, 0, "static-reference diff must remain available for legacy values");
             assertNoCredentials(output.stdout + output.stderr, credentials);
@@ -229,7 +230,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
           const paramsFile = join(root, "secret-params.json");
           writeFileSync(paramsFile, JSON.stringify({ token: credential }));
           const supplied = json.length ? ["--params-file", paramsFile] : ["--param", `token=${credential}`];
-          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...supplied, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...supplied, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(result.status, 2, "literal credentials must refuse on every parameter-bearing command");
           assert.match(result.stdout + result.stderr, /invalid_secret_reference/);
           assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
@@ -244,7 +245,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
           ...entryPoints.slice(0, 7).map((args) => [...args, "--dry-run", "--force", "--param", "token=@PRESET_PACKED_TOKEN"])];
         for (const [index, command] of commands.entries()) {
           env.PRESET_PACKED_TOKEN = credentials[index % credentials.length];
-          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(result.status, 0, result.stdout + result.stderr);
           assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
         }
@@ -254,7 +255,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
       // non-git seeds and append-only settings history must stay reference-only.
       for (const credential of credentials) {
         env.PRESET_PACKED_TOKEN = credential;
-        const result = spawnSync(runtime, [cli, "--path", pmRoot, "presets", "apply", "startup-roadmap", "--with-seeds", "--force", "--param", "token=@PRESET_PACKED_TOKEN"], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+        const result = spawnSync(runtime, [cli, "--path", pmRoot, "presets", "apply", "startup-roadmap", "--with-seeds", "--force", "--param", "token=@PRESET_PACKED_TOKEN"], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
         assert.equal(result.status, 0, result.stdout + result.stderr);
         assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
         assert.equal(JSON.parse(readFileSync(settingsFile, "utf8")).secret_references.deploy, "@PRESET_PACKED_TOKEN");
@@ -271,7 +272,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         for (const command of [["templates", "list"], ["templates", "show", "initiative"],
           ["presets", "upgrade", "plan", "--from", vendor1, "--to", vendor2, "--decisions", decisions, "--receipt", receipt, "--generation", `${runtime === "bun" ? "bun" : "node"}-${index}`],
           ["presets", "upgrade", "apply", receipt], ["presets", "upgrade", "rollback", receipt]]) {
-          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(result.status, 0, result.stdout + result.stderr);
           assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
         }
@@ -282,7 +283,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
       writeFileSync(sdkLoader, loaderSource.replace("export function resolveSimulationSdk(anchors) {", 'export function resolveSimulationSdk(anchors) { throw new Error("synthetic SDK lookup fault");'));
       try {
         for (const json of [[], ["--json"]]) {
-          const result = spawnSync(runtime, [cli, "--path", pmRoot, "roadmap-setup", "--param", `token=${credentials[0]}`, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const result = spawnSync(runtime, [cli, "--path", pmRoot, "roadmap-setup", "--param", `token=${credentials[0]}`, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(result.status, 2, "SDK transport faults must preserve the typed refusal result");
           assert.match(result.stdout + result.stderr, /invalid_secret_reference/);
           assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
@@ -295,7 +296,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
       ]) {
         writeFileSync(entry, source);
         for (const command of [["presets", "apply", "startup-roadmap", "--with-seeds"], ["roadmap-setup"], ["presets", "show", "startup-roadmap", "--json"]]) {
-          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...(expected === "secret_in_public_prose" && command[1] !== "show" ? ["--param", "token=@PRESET_PACKED_TOKEN"] : [])], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...(expected === "secret_in_public_prose" && command[1] !== "show" ? ["--param", "token=@PRESET_PACKED_TOKEN"] : [])], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(result.status, 2, result.stdout + result.stderr);
           assert.match(result.stdout + result.stderr, new RegExp(expected));
           if (command[1] === "show") assert.equal(JSON.parse(result.stderr).code, expected);
@@ -322,7 +323,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
               ["presets", "--diff", "startup-roadmap"], ["presets", "show", "startup-roadmap"]];
             if (destination !== "seeds") commands.push(["roadmap-setup"]);
             for (const command of commands) {
-              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
               assert.equal(result.status, 2, "composed bindings must refuse before output or mutation");
               assert.match(result.stdout + result.stderr, /invalid_value/);
               assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
@@ -340,7 +341,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         const invalidBefore = trackerBytes(pmRoot);
         for (const json of [[], ["--json"]]) {
           for (const command of [["presets", "apply", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"], ["roadmap-setup", "--params-file", keyParams]]) {
-            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
             assert.equal(result.status, 2, "unsupported native keys must refuse before writing");
             assert.match(result.stdout + result.stderr, /invalid_manifest/);
             assert.equal(trackerBytes(pmRoot), invalidBefore);
@@ -350,7 +351,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
         for (const json of [[], ["--json"]]) {
           for (const command of [["presets", "apply", "startup-roadmap", "--with-seeds", "--force", "--param", "token=@PRESET_PACKED_TOKEN"],
             ["roadmap-setup", "--force", "--params-file", keyParams]]) {
-            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
             assert.equal(result.status, 0, result.stdout + result.stderr);
             const refs = JSON.parse(readFileSync(settingsFile, "utf8")).secret_references;
             assert.deepEqual(refs, Object.fromEntries(ownKeys.map((key) => [key, "@PRESET_PACKED_TOKEN"])));
@@ -361,13 +362,13 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
             assertNoCredentials(result.stdout + result.stderr + trackerBytes(pmRoot), credentials);
           }
           const ownBefore = trackerBytes(pmRoot);
-          const absent = spawnSync(runtime, [cli, "--path", pmRoot, "templates", "show", "constructor", ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+          const absent = spawnSync(runtime, [cli, "--path", pmRoot, "templates", "show", "constructor", ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
           assert.equal(absent.status, 3, "template names must come from the own SDK inventory");
           assert.equal(trackerBytes(pmRoot), ownBefore);
           for (const command of [["presets", "show", "startup-roadmap"], ["presets", "diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"],
             ["presets", "--diff", "startup-roadmap", "--param", "token=@PRESET_PACKED_TOKEN"], ["presets", "export", "own-key-copy"],
             ["presets", "--custom", "own-key-copy"], ["templates", "show", "initiative"]]) {
-            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+            const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
             assert.equal(result.status, 0, result.stdout + result.stderr);
             assert.ok(result.stdout.includes(command[0] === "templates" ? "constructor" : "__proto__"), "the output must preserve the accepted own key");
             if (json.length) {
@@ -401,7 +402,7 @@ test("packed parameter classes hold for npm/Node and Bun CLI in JSON and TOON on
           const legacyBefore = trackerBytes(pmRoot), refusedOutput = join(pmRoot, "refused-own-export.json");
           for (const json of [[], ["--json"]]) {
             for (const command of [["presets", "export", "refused-copy", "--output", refusedOutput], ["presets", "--custom", "refused-copy", "--output", refusedOutput], ["templates", "show", "initiative"]]) {
-              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: 60_000 });
+              const result = spawnSync(runtime, [cli, "--path", pmRoot, ...command, ...json], { cwd: root, encoding: "utf8", env, timeout: testTime(60_000) });
               assert.equal(result.status, 2, "legacy template loss must refuse instead of producing a partial projection");
               assert.match(result.stdout + result.stderr, /invalid_manifest/);
               assert.ok(!existsSync(refusedOutput));

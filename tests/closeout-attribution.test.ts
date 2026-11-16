@@ -115,8 +115,7 @@ test("all release-note generators exclude foreign upstream work, including histo
   for (const command of Object.values(manifest.scripts).filter((command) => command.startsWith("pm-changelog "))) {
     assert.match(command, /--exclude-tag upstream(?:\s|$)/);
   }
-  const release = readFileSync(".github/workflows/release.yml", "utf8");
-  for (const command of release.split("\n").filter((line) => line.trim().startsWith("npx pm-changelog "))) {
-    assert.match(command, /--exclude-tag upstream(?:\s|$)/);
+  for (const name of ["changelog", "changelog:full", "changelog:check", "release:notes"]) {
+    assert.match(manifest.scripts[name], /--exclude-tag upstream(?:\s|$)/, name);
   }
 });

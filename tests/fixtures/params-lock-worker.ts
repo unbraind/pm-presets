@@ -1,4 +1,5 @@
 /** One independent apply process with deterministic pauses at stale removal or release. */
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
@@ -6,7 +7,16 @@ import { pathToFileURL } from "node:url";
 import { PmClient, createExtensionCommandSdk } from "@unbrained/pm-cli/sdk";
 import type { CommandHandlerContext } from "@unbrained/pm-cli/sdk/authoring";
 
-const [root, actor, phase, moduleFile] = process.argv.slice(2);
+const [root, actor, phase, moduleFile, timeoutArgument] = process.argv.slice(2);
+const timeout = Number(timeoutArgument);
+assert.ok(Number.isFinite(timeout) && timeout > 0 && timeout <= 2_147_483_647, "Worker requires a finite positive timeout");
+const deadline = Date.now() + timeout;
+/** Exit independently even when product cleanup catches filesystem exceptions. */
+function checkDeadline(marker: string): void {
+  if (Date.now() < deadline) return;
+  process.stderr.write(`Worker ${marker} deadline exceeded\n`);
+  process.exit(1);
+}
 const pmRoot = join(root, ".agents", "pm");
 const primary = join(pmRoot, "locks", "pm-presets-apply.lock");
 const nativeRemove = fs.rmSync;
@@ -20,7 +30,10 @@ fs.rmSync = ((file, options) => {
     }
     fs.writeFileSync(join(root, "alpha-observed"), "ready");
     const cell = new Int32Array(new SharedArrayBuffer(4));
-    while (!fs.existsSync(join(root, "resume-alpha"))) Atomics.wait(cell, 0, 0, 20);
+    while (!fs.existsSync(join(root, "resume-alpha"))) {
+      checkDeadline("resume-alpha");
+      Atomics.wait(cell, 0, 0, 20);
+    }
   }
   return nativeRemove(file, options);
 }) as typeof fs.rmSync;
@@ -37,7 +50,10 @@ const context: CommandHandlerContext = {
       const result = await sdk.mutateWorkspaceSettings(input);
       fs.writeFileSync(join(root, `${actor}-mutated`), "written");
       if (actor === "beta") {
-        while (!fs.existsSync(join(root, "release-beta"))) await new Promise((resolve) => setTimeout(resolve, 10));
+        while (!fs.existsSync(join(root, "release-beta"))) {
+          checkDeadline("release-beta");
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
       }
       return result;
     },
