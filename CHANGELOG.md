@@ -40,12 +40,9 @@ No changes.
 
 ## 2026.11.10 - 2026-11-10
 
-### Dependencies
+### Closed
 
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#206](https://github.com/unbraind/pm-presets/pull/206))
-- Bump unbraind/pm-github/.github/workflows/pm-github-sync.yml ([#202](https://github.com/unbraind/pm-presets/pull/202))
-- Bump unbraind/pm-github/.github/workflows/pm-github-closeout.yml ([#201](https://github.com/unbraind/pm-presets/pull/201))
-- Bump @unbrained/pm-cli ([#200](https://github.com/unbraind/pm-presets/pull/200))
+- Closed: Node 22 main coverage gate fails at 99.95% despite 344 passing tests ([pm-github-314514b3037c-194](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-194.toon))
 
 ## 2026.11.5 - 2026-11-05
 
@@ -68,6 +65,11 @@ No changes.
 ### Fixed
 
 - Resolve the host SDK through symlinked pm entry points ([pm-jzy6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jzy6.toon))
+
+### Closed
+
+- Closed: Secret parameter redaction misses JSON-escaped values in dry-run settings output ([pm-github-314514b3037c-173](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-173.toon))
+- Closed: Parameter defaults validate trimmed values but resolve raw whitespace ([pm-github-314514b3037c-171](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-171.toon))
 
 ## 2026.10.29 - 2026-10-29
 
@@ -94,6 +96,10 @@ No changes.
 ### Other
 
 - Point the npm homepage at the package catalog and link the author ([pm-39f2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-39f2.toon))
+
+### Closed
+
+- Closed: Point the npm homepage at the package's website and link the author ([pm-github-314514b3037c-161](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-161.toon))
 
 ## 2026.10.25 - 2026-10-25
 
