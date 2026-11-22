@@ -1,8 +1,20 @@
 # Changelog
 
-## 2026.11.15 - 2026-11-15
+## 2026.11.20 - 2026-11-20
 
 No changes.
+
+## 2026.11.18 - 2026-11-18
+
+### Dependencies
+
+- Bump @unbrained/pm-cli from 2026.11.13 to 2026.11.14 in the pm-toolchain group ([#231](https://github.com/unbraind/pm-presets/pull/231))
+
+## 2026.11.15 - 2026-11-17
+
+### Dependencies
+
+- Bump the pm-toolchain group with 2 updates ([#228](https://github.com/unbraind/pm-presets/pull/228))
 
 ## 2026.11.14 - 2026-11-14
 

@@ -2,16 +2,24 @@ id: pm-a8is
 title: Keep changelog checks stable when Windows checks out CRLF text
 description: "The sweep PR Windows documentation gate passed tracker health but failed both prepared-release and historical changelog checks. An isolated checkout of the exact pushed commit with core.autocrlf=true reproduced the failure (505 CRLF lines); checking out the same commit with LF made the unchanged npm run changelog:check pass. The generator compares exact bytes, while the repository has no canonical LF policy for CHANGELOG.md. A persistent fix requires repository attributes or generator/checker behavior, outside this tracker-only sweep."
 type: Chore
-status: open
+status: in_progress
 priority: 2
 tags[3]: changelog,ci,"gh:unbraind/pm-presets#218"
 created_at: "2026-11-16T16:00:28.110Z"
-updated_at: "2026-11-16T16:00:34.320Z"
+updated_at: "2026-11-16T20:18:30.286Z"
 author: codex-sol
 estimated_minutes: 30
 acceptance_criteria: "The same canonical generated changelog passes the unchanged check after ordinary Linux and Windows checkouts, with regression evidence for LF and CRLF checkout policy."
-files[3]{path,scope}:
+comments[4]{created_at,author,text}:
+  "2026-11-16T20:13:09.024Z",codex-sol,"Round V: fetch all release tags, reproduce generator drift on current main, compare regenerated output, and reproduce Windows CRLF checking separately. Preserve generator-owned published sections and add a real CRLF checker regression. The existing item and its complete history were carried into this branch."
+  "2026-11-16T20:15:14.426Z",codex-sol,"Evidence: PR 218 Linux job 133535580938 changes only the generated dependency bullet from an unlinked pm-toolchain update to PR 228. After git fetch --tags, regeneration with pinned pm-changelog 2026.11.13 reproduces exactly that one-line diff: squash commit 7e5994b adds (#228), parsed by the generator into a PR link. No tag-date or release-assignment drift. Windows job 133535581131 instead shows whole-file CRLF drift; CHANGELOG.md previously had unspecified text/eol attributes and the generator compares raw strings. Set CHANGELOG.md text eol=lf and exercise CRLF notes through core.autocrlf=true checkout plus the unchanged checker for historical and prepared-release projections."
+  "2026-11-16T20:17:45.686Z",codex-sol,"Gates PASS: npm run typecheck; npm run lint; npm run build:test; node --test tests/closeout-history.test.ts; npm run changelog:check, all executed by pm test --run --progress. The regression feeds CRLF notes to the unchanged checker (expected refusal without rewriting), stages them with repository attributes, checks out with core.autocrlf=true, verifies exact LF bytes and successful checks for historical and prepared-release notes. Regeneration changed only the dependency PR 228 link; published sections were not hand-edited. The fixture explicitly removes its generated working copy before checkout-index to force a fresh checkout. Native Windows and full-suite results remain for ordinary PR CI."
+  "2026-11-16T20:18:30.285Z",codex-sol,"Implementation commit: c1126853a2408f080c8f8322dd1879e6341bc338. Targeted typecheck, lint, test compilation, the real changelog/CRLF lifecycle regression and changelog:check all passed. Tracker ownership released; item remains in progress for orchestrator verification. Native Windows and full-suite CI results are pending ordinary PR checks."
+files[4]{path,scope}:
   .gitattributes,project
   CHANGELOG.md,project
   scripts/check-changelog.ts,project
+  tests/closeout-history.test.ts,project
+tests[1]{command,scope,timeout_seconds,provenance{author,created_at,source_kind,source_ref}}:
+  "npm run typecheck && npm run lint && npm run build:test && node --test tests/closeout-history.test.ts && npm run changelog:check",project,600,codex-sol,"2026-11-16T20:15:16.513Z",local_mutation,fix/changelog-check-crlf
 body: ""

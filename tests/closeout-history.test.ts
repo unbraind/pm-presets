@@ -16,6 +16,7 @@ test("untagged closeouts generate and verify history without accepting it for pu
   const manifest = JSON.parse(readFileSync("package.json", "utf8")) as { version: string; scripts: Record<string, string> };
   manifest.version = "2026.12.1";
   writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
+  cpSync(".gitattributes", join(root, ".gitattributes"));
   cpSync("scripts", join(root, "scripts"), { recursive: true });
   mkdirSync(join(root, "src"));
   cpSync("src/sdk-loader.ts", join(root, "src", "sdk-loader.ts"));
@@ -41,8 +42,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
   Object.assign(env, { HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: root,
     GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: "1", NPM_CONFIG_USERCONFIG: config,
     NPM_CONFIG_UPDATE_NOTIFIER: "false",
-    GIT_AUTHOR_NAME: "SteveBot", GIT_AUTHOR_EMAIL: "1153461+unbraind@users.noreply.github.com",
-    GIT_COMMITTER_NAME: "SteveBot", GIT_COMMITTER_EMAIL: "1153461+unbraind@users.noreply.github.com",
+    GIT_AUTHOR_NAME: "unbrained", GIT_AUTHOR_EMAIL: "1153461+unbraind@users.noreply.github.com",
+    GIT_COMMITTER_NAME: "unbrained", GIT_COMMITTER_EMAIL: "1153461+unbraind@users.noreply.github.com",
     GIT_AUTHOR_DATE: "2026-11-05T23:00:00Z", GIT_COMMITTER_DATE: "2026-11-05T23:00:00Z",
     PM_TELEMETRY_DISABLED: "1", DO_NOT_TRACK: "1" });
   /** Run real tools only against the disposable fixture, preserving failure diagnostics. */
@@ -51,13 +52,28 @@ test("untagged closeouts generate and verify history without accepting it for pu
     assert.equal(result.status, status, `${command}: ${result.error?.message ?? ""}\n${result.stdout}${result.stderr}`);
     return result;
   }
+  /** Feed CRLF notes through a Windows-style checkout and the real byte checker. */
+  function checkWindowsCheckout(notes: string) {
+    const changelog = join(root, "CHANGELOG.md");
+    const crlf = notes.replace(/\r?\n/g, "\r\n");
+    assert.notEqual(crlf, notes, "fixture must actually contain CRLF");
+    writeFileSync(changelog, crlf);
+    run("npm", ["run", "changelog:check"], 1);
+    assert.equal(readFileSync(changelog, "utf8"), crlf, "failed checks must not rewrite notes");
+    run("git", ["-c", "core.autocrlf=true", "add", ".gitattributes", "CHANGELOG.md"]);
+    rmSync(changelog);
+    run("git", ["-c", "core.autocrlf=true", "checkout-index", "--force", "--", "CHANGELOG.md"]);
+    assert.equal(readFileSync(changelog, "utf8"), notes, "the repository attribute must override autocrlf and check out LF");
+    run("npm", ["run", "changelog:check"]);
+    assert.equal(readFileSync(changelog, "utf8"), notes, "successful checks must not rewrite notes");
+  }
   const pmRoot = join(root, ".agents", "pm");
   const client = new PmClient({ cwd: root, pmRoot, noExtensions: true, author: "test-author" });
   await client.init();
   const historical = (await client.create({ type: "Issue", title: "Previously delivered package fix", status: "closed", closeReason: "Fixture delivery", release: "v2026.11.5", completedAt: "2026-11-05T12:00:00Z" })).item;
   run("git", ["init", "--quiet"]);
   run("git", ["add", "package.json", ".agents/pm/settings.json", `.agents/pm/issues/${historical.id}.toon`, `.agents/pm/history/${historical.id}.jsonl`]);
-  run("git", ["-c", "user.name=SteveBot", "-c", "user.email=1153461+unbraind@users.noreply.github.com", "commit", "--quiet", "-m", "Synthetic historical fixture"]);
+  run("git", ["-c", "user.name=unbrained", "-c", "user.email=1153461+unbraind@users.noreply.github.com", "commit", "--quiet", "-m", "Synthetic historical fixture"]);
   // This tag exists only inside the disposable test repository.
   run("git", ["tag", "v2026.11.5"]);
   run("npm", ["run", "closeout:check"]);
@@ -65,6 +81,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
   assert.ok(notes.includes(historical.title));
   assert.ok(!notes.includes("## 2026.12.1"));
   run("npm", ["run", "changelog:check"]);
+
+  checkWindowsCheckout(notes);
 
   const pending = (await client.create({ type: "Issue", title: "Newly delivered package mitigation", status: "closed", closeReason: "Fixture closeout", completedAt: "2026-11-06T12:00:00Z" })).item;
   run("npm", ["run", "closeout:check"]);
@@ -79,6 +97,8 @@ test("untagged closeouts generate and verify history without accepting it for pu
   const releaseNotes = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   assert.ok(releaseNotes.includes("## 2026.12.1"));
   run("npm", ["run", "changelog:check"]);
+  run("npm", ["run", "changelog:check:release"]);
+  checkWindowsCheckout(releaseNotes);
   run("npm", ["run", "changelog:check:release"]);
   assert.equal(manifest.scripts.prepublishOnly, "npm run release:check && npm run changelog:check:release");
   writeFileSync(join(root, "CHANGELOG.md"), releaseNotes.replace(pending.title, "Incorrect entry"));
