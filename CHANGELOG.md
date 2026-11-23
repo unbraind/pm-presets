@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.11.23 - 2026-11-23
+
+No changes.
+
 ## 2026.11.20 - 2026-11-20
 
 No changes.
@@ -45,13 +49,6 @@ No changes.
 - Make diff coverage deterministic across supported Node runtimes ([pm-b86q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-b86q.toon))
 - Certify saved typed-binding snapshot hardening against current main ([pm-xm9t](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xm9t.toon))
 
-### Dependencies
-
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#206](https://github.com/unbraind/pm-presets/pull/206))
-- Bump unbraind/pm-github/.github/workflows/pm-github-sync.yml ([#202](https://github.com/unbraind/pm-presets/pull/202))
-- Bump unbraind/pm-github/.github/workflows/pm-github-closeout.yml ([#201](https://github.com/unbraind/pm-presets/pull/201))
-- Bump @unbrained/pm-cli ([#200](https://github.com/unbraind/pm-presets/pull/200))
-
 ## 2026.11.5 - 2026-11-05
 
 ### Fixed
@@ -61,13 +58,6 @@ No changes.
 ### Security
 
 - Salvage sensitive legacy setting refusals and snapshot capture from the unmerged typed-binding review ([pm-yaji](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-yaji.toon))
-
-### Dependencies
-
-- Bump @unbrained/pm-cli ([#197](https://github.com/unbraind/pm-presets/pull/197))
-- Bump the pm-toolchain group with 3 updates ([#193](https://github.com/unbraind/pm-presets/pull/193))
-- Bump @types/node ([#190](https://github.com/unbraind/pm-presets/pull/190))
-- Bump the pm-toolchain group with 2 updates ([#189](https://github.com/unbraind/pm-presets/pull/189))
 
 ## 2026.11.1 - 2026-11-01
 
@@ -81,28 +71,15 @@ No changes.
 
 - Resolve the host SDK through symlinked pm entry points ([pm-jzy6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jzy6.toon))
 
-### Dependencies
-
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#179](https://github.com/unbraind/pm-presets/pull/179))
-- Bump unbraind/pm-github/.github/workflows/pm-github-closeout.yml ([#178](https://github.com/unbraind/pm-presets/pull/178))
-- Bump the codeql-action group across 1 directory with 2 updates ([#176](https://github.com/unbraind/pm-presets/pull/176))
-- Bump unbraind/pm-github/.github/workflows/pm-github-sync.yml ([#177](https://github.com/unbraind/pm-presets/pull/177))
-
 ## 2026.10.29 - 2026-10-29
 
-### Dependencies
-
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#172](https://github.com/unbraind/pm-presets/pull/172))
+No changes.
 
 ## 2026.10.28 - 2026-10-28
 
 ### Other
 
 - Stop Hound from linting generated dist/ output ([pm-hound-generated-dist](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-hound-generated-dist.toon))
-
-### Dependencies
-
-- Bump the pm-toolchain group with 3 updates ([#166](https://github.com/unbraind/pm-presets/pull/166))
 
 ## 2026.10.27 - 2026-10-27
 
@@ -135,9 +112,7 @@ No changes.
 
 ## 2026.10.24 - 2026-10-24
 
-### Dependencies
-
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#146](https://github.com/unbraind/pm-presets/pull/146))
+No changes.
 
 ## 2026.10.23 - 2026-10-23
 
@@ -163,50 +138,29 @@ No changes.
 
 - Closed: Fix release publish ordering before protected main push ([pm-g33z](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-g33z.toon))
 
-### Dependencies
-
-- Bump the codeql-action group across 1 directory with 2 updates ([#149](https://github.com/unbraind/pm-presets/pull/149))
-- Bump unbraind/pm-github/.github/workflows/pm-github-sync.yml ([#152](https://github.com/unbraind/pm-presets/pull/152))
-- Bump unbraind/pm-github/.github/workflows/pm-github-closeout.yml ([#150](https://github.com/unbraind/pm-presets/pull/150))
-- Bump actions/setup-node from 7.0.0 to 7.1.0 ([#151](https://github.com/unbraind/pm-presets/pull/151))
-
 ## 2026.10.21 - 2026-10-21
 
-### Dependencies
-
-- Bump the pm-toolchain group with 2 updates ([#144](https://github.com/unbraind/pm-presets/pull/144))
+No changes.
 
 ## 2026.10.20 - 2026-10-20
 
-### Dependencies
-
-- Bump the pm-toolchain group with 3 updates ([#142](https://github.com/unbraind/pm-presets/pull/142))
+No changes.
 
 ## 2026.10.17 - 2026-10-17
 
-### Dependencies
-
-- Bump the pm-toolchain group with 3 updates ([#140](https://github.com/unbraind/pm-presets/pull/140))
+No changes.
 
 ## 2026.10.16 - 2026-10-16
 
-### Dependencies
-
-- Bump the codeql-action group with 2 updates ([#137](https://github.com/unbraind/pm-presets/pull/137))
-- Bump the pm-toolchain group with 3 updates ([#136](https://github.com/unbraind/pm-presets/pull/136))
+No changes.
 
 ## 2026.10.15 - 2026-10-15
 
-### Dependencies
-
-- Bump @unbrained/pm-cli ([#134](https://github.com/unbraind/pm-presets/pull/134))
+No changes.
 
 ## 2026.10.14 - 2026-10-14
 
-### Dependencies
-
-- Bump @unbrained/pm-cli ([#130](https://github.com/unbraind/pm-presets/pull/130))
-- Bump @types/node ([#131](https://github.com/unbraind/pm-presets/pull/131))
+No changes.
 
 ## 2026.10.12 - 2026-10-12
 
@@ -214,33 +168,19 @@ No changes.
 
 - Keep weekly toolchain bumps compatible with audited preset replacement and prepare behavior ([pm-0czt](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-0czt.toon))
 
-### Dependencies
-
-- Bump the pm-toolchain group across 1 directory with 3 updates ([#126](https://github.com/unbraind/pm-presets/pull/126))
-
 ## 2026.10.7 - 2026-10-07
 
-### Dependencies
-
-- Bump @unbrained/pm-cli ([#124](https://github.com/unbraind/pm-presets/pull/124))
+No changes.
 
 ## 2026.10.6 - 2026-10-06
 
-### Dependencies
-
-- Bump @types/node ([#122](https://github.com/unbraind/pm-presets/pull/122))
+No changes.
 
 ## 2026.10.5 - 2026-10-05
 
 ### Other
 
 - Auto-merge green Dependabot updates and group the pm toolchain into one daily PR ([pm-v1it](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/tasks/pm-v1it.toon))
-
-### Dependencies
-
-- Bump the codeql-action group across 1 directory with 2 updates ([#115](https://github.com/unbraind/pm-presets/pull/115))
-- Bump the dependencies group with 2 updates ([#119](https://github.com/unbraind/pm-presets/pull/119))
-- Bump @unbrained/pm-cli from 2026.9.30 to 2026.10.1 ([#111](https://github.com/unbraind/pm-presets/pull/111))
 
 ## 2026.10.4 - 2026-10-04
 
@@ -254,10 +194,7 @@ No changes.
 
 ## 2026.9.25 - 2026-09-25
 
-### Dependencies
-
-- Bump @types/node from 26.5.1 to 26.6.2 ([#104](https://github.com/unbraind/pm-presets/pull/104))
-- Bump the codeql-action group with 2 updates ([#105](https://github.com/unbraind/pm-presets/pull/105))
+No changes.
 
 ## 2026.9.22 - 2026-09-22
 
@@ -275,14 +212,6 @@ No changes.
 
 - Certify pm CLI 2026.9.17 ([pm-yffv](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-yffv.toon))
 
-### Dependencies
-
-- Bump pm-changelog from 2026.9.6 to 2026.9.13 ([#95](https://github.com/unbraind/pm-presets/pull/95))
-- Bump @types/node from 26.5.0 to 26.5.1 ([#96](https://github.com/unbraind/pm-presets/pull/96))
-- Bump @unbrained/pm-cli from 2026.9.12 to 2026.9.14 ([#97](https://github.com/unbraind/pm-presets/pull/97))
-- Bump pm-ops from 2026.9.11 to 2026.9.13 ([#98](https://github.com/unbraind/pm-presets/pull/98))
-- Bump the codeql-action group with 2 updates ([#99](https://github.com/unbraind/pm-presets/pull/99))
-
 ## 2026.9.13 - 2026-09-13
 
 ### Other
@@ -294,10 +223,6 @@ No changes.
 ### Other
 
 - Certify pm CLI 2026.9.10 and pick up the canonical auditor fixes the lockfile was holding back ([pm-1kos](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-1kos.toon))
-
-### Dependencies
-
-- Bump @types/node from 26.4.0 to 26.5.0 ([#89](https://github.com/unbraind/pm-presets/pull/89))
 
 ## 2026.9.9 - 2026-09-09
 
@@ -311,16 +236,9 @@ No changes.
 
 - Consume the canonical attestation gate instead of carrying a copy of it ([pm-y0j0](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-y0j0.toon))
 
-### Dependencies
-
-- Bump @unbrained/pm-cli from 2026.8.27 to 2026.8.31 ([#80](https://github.com/unbraind/pm-presets/pull/80))
-
 ## 2026.9.4 - 2026-09-04
 
-### Dependencies
-
-- Bump pm-ops from 2026.8.17 to 2026.8.31 ([#82](https://github.com/unbraind/pm-presets/pull/82))
-- Bump pm-changelog from 2026.8.22 to 2026.8.31 ([#81](https://github.com/unbraind/pm-presets/pull/81))
+No changes.
 
 ## 2026.9.1 - 2026-09-01
 
@@ -328,11 +246,6 @@ No changes.
 
 - This repository has never produced a static analysis, because it runs no CodeQL workflow ([pm-q9vo](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-q9vo.toon))
 - Group codeql-action bumps into one pull request to end the split-PR deadlock ([pm-jg3f](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jg3f.toon))
-
-### Dependencies
-
-- Bump @types/node from 26.2.0 to 26.4.0 ([#77](https://github.com/unbraind/pm-presets/pull/77))
-- Bump @unbrained/pm-cli from 2026.8.24 to 2026.8.27 ([#78](https://github.com/unbraind/pm-presets/pull/78))
 
 ## 2026.8.31 - 2026-08-31
 
@@ -363,13 +276,6 @@ No changes.
 
 - Closed: The identity gate deadlocks the one remediation its own failure message prescribes ([pm-dc4q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-dc4q.toon))
 
-### Dependencies
-
-- Bump @unbrained/pm-cli from 2026.8.22 to 2026.8.24
-- Bump pm-changelog from 2026.8.7 to 2026.8.17 ([#59](https://github.com/unbraind/pm-presets/pull/59))
-- Bump @unbrained/pm-cli from 2026.8.15 to 2026.8.17 ([#58](https://github.com/unbraind/pm-presets/pull/58))
-- Bump pm-ops from 2026.8.10 to 2026.8.17 ([#57](https://github.com/unbraind/pm-presets/pull/57))
-
 ## 2026.8.17 - 2026-08-17
 
 ### Fixed
@@ -381,10 +287,6 @@ No changes.
 ### Fixed
 
 - A Dependabot bump to pm-cli 2026.8.10 turned the tracker's own history into a CI failure ([pm-q6jk](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-q6jk.toon))
-
-### Dependencies
-
-- Bump pm-ops from 2026.8.8 to 2026.8.10 ([#52](https://github.com/unbraind/pm-presets/pull/52))
 
 ## 2026.8.10 - 2026-08-10
 
@@ -422,11 +324,7 @@ No changes.
 
 ## 2026.7.31 - 2026-07-31
 
-### Dependencies
-
-- Bump pm-changelog from 2026.7.26 to 2026.7.29 ([#38](https://github.com/unbraind/pm-presets/pull/38))
-- Bump @types/node from 26.1.1 to 26.1.2 ([#39](https://github.com/unbraind/pm-presets/pull/39))
-- Bump @unbrained/pm-cli from 2026.7.29 to 2026.7.30 ([#40](https://github.com/unbraind/pm-presets/pull/40))
+No changes.
 
 ## 2026.7.29 - 2026-07-29
 
@@ -468,10 +366,7 @@ No changes.
 
 ## 2026.7.24 - 2026-07-24
 
-### Dependencies
-
-- Bump pm-changelog from 2026.7.15 to 2026.7.23 ([#26](https://github.com/unbraind/pm-presets/pull/26))
-- Bump @unbrained/pm-cli from 2026.7.22 to 2026.7.23 ([#27](https://github.com/unbraind/pm-presets/pull/27))
+No changes.
 
 ## 2026.7.23 - 2026-07-23
 
@@ -497,18 +392,11 @@ No changes.
 
 ## 2026.7.17 - 2026-07-17
 
-### Dependencies
-
-- Bump pm-changelog from 2026.7.10 to 2026.7.15 ([#21](https://github.com/unbraind/pm-presets/pull/21))
-- Bump @unbrained/pm-cli from 2026.7.10 to 2026.7.16 ([#20](https://github.com/unbraind/pm-presets/pull/20))
-- Bump actions/setup-node from 6 to 7 ([#19](https://github.com/unbraind/pm-presets/pull/19))
+No changes.
 
 ## 2026.7.11 - 2026-07-11
 
-### Dependencies
-
-- Bump @types/node from 26.1.0 to 26.1.1 ([#17](https://github.com/unbraind/pm-presets/pull/17))
-- Bump typescript from 6.0.3 to 7.0.2 ([#18](https://github.com/unbraind/pm-presets/pull/18))
+No changes.
 
 ## 2026.7.10-1 - 2026-07-10
 
