@@ -44,6 +44,11 @@ No changes.
 
 ## 2026.11.10 - 2026-11-10
 
+### Fixed
+
+- Make diff coverage deterministic across supported Node runtimes ([pm-b86q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-b86q.toon))
+- Certify saved typed-binding snapshot hardening against current main ([pm-xm9t](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xm9t.toon))
+
 ### Dependencies
 
 - Bump the pm-toolchain group across 1 directory with 3 updates ([#206](https://github.com/unbraind/pm-presets/pull/206))
