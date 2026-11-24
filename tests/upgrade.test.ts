@@ -243,8 +243,8 @@ test("the complete command flow runs with no git executable or enclosing reposit
   const script = `
     import {writeFileSync,readFileSync} from 'node:fs';
     import {join} from 'node:path';
-    import {PmClient,createExtensionCommandSdk} from ${JSON.stringify(resolve("node_modules/@unbrained/pm-cli/dist/sdk/index.js"))};
-    import {createExtensionTestHarness} from ${JSON.stringify(resolve("node_modules/@unbrained/pm-cli/dist/sdk/testing.js"))};
+    import {PmClient,createExtensionCommandSdk} from ${JSON.stringify(import.meta.resolve("@unbrained/pm-cli/sdk"))};
+    import {createExtensionTestHarness} from ${JSON.stringify(import.meta.resolve("@unbrained/pm-cli/sdk/testing"))};
     import mod from ${JSON.stringify(resolve("src/index.ts"))};
     const root=process.cwd(),pmRoot=join(root,'.agents','pm');
     const client=new PmClient({pmRoot,cwd:root,noExtensions:true});await client.init();
