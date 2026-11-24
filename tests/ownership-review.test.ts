@@ -41,12 +41,20 @@ test("property: random pre-existing trackers never grant ownership to collisions
     const input = { label: "Indie", presetId: "indie-dev", settings: definition.settings, templates: definition.templateDocuments!, nextSteps: [] };
     const marker = `Unrelated ${random()}`;
     for (let n = random() % 4; n > 0; n--) await client.create({ type: "Task", title: `${marker} ${n}`, body: String(random()) });
-    /** Shared writer, unified command, and setup alias must make the same preflight decision. */
-    const run = (dryRun: boolean, force: boolean) => iteration % 3 === 0
-      ? applyPreset({ command: "property", args: [], options: { dryRun, force, withSeeds: true }, global: {}, pm_root: pmRoot, sdk }, input)
-      : harness.runCommand({ command: iteration % 3 === 1 ? "presets apply" : definition.command, args: iteration % 3 === 1 ? ["indie-dev"] : [], options: { dryRun, force, withSeeds: true }, pmRoot, sdk });
+    const needsSeedSelection = mode === "collision" || mode === "matching-collision" || mode === "history-collision";
+    /** Use the alias for settings, templates, and seeds that were already enrolled. */
+    const run = (dryRun: boolean, force: boolean, enrollSeeds = false) => {
+      const options = { dryRun, force, withSeeds: true };
+      if (iteration % 3 === 0) {
+        return applyPreset({ command: "property", args: [], options, global: {}, pm_root: pmRoot, sdk }, input);
+      }
+      if (iteration % 3 === 2 && !enrollSeeds && !needsSeedSelection) {
+        return harness.runCommand({ command: definition.command, options: { dryRun, force }, pmRoot, sdk });
+      }
+      return harness.runCommand({ command: "presets apply", args: ["indie-dev"], options, pmRoot, sdk });
+    };
     if (mode === "deleted" || mode === "partial" || mode === "partial-collision") {
-      await run(false, true);
+      await run(false, true, true);
       if (mode === "deleted") fs.rmSync(join(pmRoot, "tasks", `${id}.toon`));
       else {
         // The audited enrollment survived, but native item creation never happened.
@@ -89,6 +97,21 @@ test("property: random pre-existing trackers never grant ownership to collisions
       await run(false, true);
     }
   }
+});
+
+test("setup alias refuses explicit seed enrollment before changing tracker state", async (t) => {
+  const pmRoot = fs.mkdtempSync(join(tmpdir(), "preset-setup-option-"));
+  t.after(() => fs.rmSync(pmRoot, { recursive: true, force: true }));
+  const client = new PmClient({ pmRoot, noExtensions: true });
+  await client.init("indie-");
+  const sdk = createExtensionCommandSdk(pmRoot, client);
+  const harness = await createExtensionTestHarness(mod, { name: "pm-presets", capabilities: ["commands", "schema"] });
+  const before = trackerBytes(pmRoot);
+  await assert.rejects(
+    harness.runCommand({ command: "indie-setup", options: { withSeeds: true }, pmRoot, sdk }),
+    { code: "unknown_option", exitCode: 2 },
+  );
+  assert.equal(trackerBytes(pmRoot), before);
 });
 
 test("settings replacement preserves unowned leaves and ownership metadata is never portable", async (t) => {

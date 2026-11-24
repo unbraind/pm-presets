@@ -97,7 +97,9 @@ test("all seed command writers and strict diff renderers share native normalizat
     const definition = requirePresetDefinition(preset);
     for (const type of definition.itemTypes) await client.schemaAddType(type.name);
     for (const command of ["presets apply", definition.command]) {
-      await harness.runCommand({ command, args: command === "presets apply" ? [preset] : [], options: { withSeeds: true }, pmRoot });
+      // The unified command enrolls seeds. The setup alias reconciles the resulting inventory.
+      const enrollment = command === "presets apply" ? { args: [preset], options: { withSeeds: true } } : {};
+      await harness.runCommand({ command, pmRoot, ...enrollment });
       for (const json of [false, true]) for (const rootForm of [false, true]) {
         const before = trackerBytes(pmRoot);
         await harness.runCommand({ command: rootForm ? "presets" : "presets diff", args: rootForm ? [] : [preset],
