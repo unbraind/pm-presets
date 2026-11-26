@@ -4,16 +4,27 @@
       "item": "pm-7km8",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -23,16 +34,27 @@
       "item": "pm-915f",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -42,35 +64,57 @@
       "item": "pm-a8is",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
       ]
     },
     {
-      "item": "pm-b86q",
+      "item": "pm-asrv",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -80,16 +124,27 @@
       "item": "pm-he6i",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -99,16 +154,27 @@
       "item": "pm-presets-ci-v2",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -118,16 +184,27 @@
       "item": "pm-presets-identity-legacy",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -137,16 +214,27 @@
       "item": "pm-presets-identity-unbrained",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -156,16 +244,57 @@
       "item": "pm-presets-release-caller-rollout",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        }
+      ]
+    },
+    {
+      "item": "pm-presets-sdk-1122",
+      "action": "needs_review",
+      "candidates": [
+        77,
+        118
+      ],
+      "missing_evidence": [
+        {
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -175,16 +304,27 @@
       "item": "pm-vsn5",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
+          "code": "head_evidence_unavailable",
+          "reason": "Commit delivery evidence unavailable or incomplete."
+        },
+        {
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
@@ -194,35 +334,27 @@
       "item": "pm-wefh",
       "action": "needs_review",
       "candidates": [
-        142
+        77,
+        118
       ],
       "missing_evidence": [
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/77 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 77,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
-        }
-      ]
-    },
-    {
-      "item": "pm-xm9t",
-      "action": "needs_review",
-      "candidates": [
-        142
-      ],
-      "missing_evidence": [
-        {
-          "pr": 142,
-          "code": "head_evidence_unavailable",
-          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/142 failed; verify token read access and retry: HTTP 422"
         },
         {
-          "pr": 142,
+          "pr": 118,
+          "code": "head_evidence_unavailable",
+          "reason": "GitHub GET /repos/unbraind/pm-presets/pulls/118 failed; verify token read access and retry: HTTP 422"
+        },
+        {
+          "pr": 118,
           "code": "head_evidence_unavailable",
           "reason": "Commit delivery evidence unavailable or incomplete."
         }
