@@ -2,6 +2,10 @@
 
 ## 2026.11.26 - 2026-11-26
 
+### Closed
+
+- Closed: Release timeout reports stale approval state after successful automatic approvals ([pm-github-314514b3037c-198](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-198.toon))
+
 ### Dependencies
 
 - Bump @unbrained/pm-cli from 2026.11.23 to 2026.11.24 in the pm-toolchain group ([#250](https://github.com/unbraind/pm-presets/pull/250))
@@ -56,6 +60,10 @@ No changes.
 - Make diff coverage deterministic across supported Node runtimes ([pm-b86q](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-b86q.toon))
 - Certify saved typed-binding snapshot hardening against current main ([pm-xm9t](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-xm9t.toon))
 
+### Closed
+
+- Closed: Node 22 main coverage gate fails at 99.95% despite 344 passing tests ([pm-github-314514b3037c-194](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-194.toon))
+
 ### Dependencies
 
 - Bump the pm-toolchain group across 1 directory with 3 updates ([#206](https://github.com/unbraind/pm-presets/pull/206))
@@ -91,6 +99,11 @@ No changes.
 ### Fixed
 
 - Resolve the host SDK through symlinked pm entry points ([pm-jzy6](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-jzy6.toon))
+
+### Closed
+
+- Closed: Secret parameter redaction misses JSON-escaped values in dry-run settings output ([pm-github-314514b3037c-173](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-173.toon))
+- Closed: Parameter defaults validate trimmed values but resolve raw whitespace ([pm-github-314514b3037c-171](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-171.toon))
 
 ### Dependencies
 
@@ -130,6 +143,10 @@ No changes.
 ### Other
 
 - Point the npm homepage at the package catalog and link the author ([pm-39f2](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/chores/pm-39f2.toon))
+
+### Closed
+
+- Closed: Point the npm homepage at the package's website and link the author ([pm-github-314514b3037c-161](https://github.com/unbraind/pm-presets/blob/main/.agents/pm/issues/pm-github-314514b3037c-161.toon))
 
 ## 2026.10.25 - 2026-10-25
 
