@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "repository": "unbraind/pm-presets",
-  "baseSha": "1c3c010a13d19ab128f6d42fc6fe532a902091fa",
+  "baseSha": "19b59aeaf1801dbc077db92045ec7a68c9c5dc16",
   "version": "2026.11.26",
-  "runId": 46001640480,
+  "runId": 46142464483,
   "runAttempt": 1,
   "configDigest": "19f861084767fcd1b42ece3bc60c873d40cadd652aba909211d2aaf4f1e1ede6"
 }
