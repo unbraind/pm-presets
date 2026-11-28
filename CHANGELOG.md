@@ -4,7 +4,7 @@
 
 ### Dependencies
 
-- Bump @unbrained/pm-cli
+- Bump @unbrained/pm-cli from 2026.11.23 to 2026.11.24 in the pm-toolchain group ([#250](https://github.com/unbraind/pm-presets/pull/250))
 - Bump unbraind/pm-ops/.github/workflows/daily-release.yml from 2026.11.14 to 2026.11.22 ([#245](https://github.com/unbraind/pm-presets/pull/245))
 
 ## 2026.11.23 - 2026-11-24
